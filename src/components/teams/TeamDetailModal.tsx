@@ -5,6 +5,7 @@ import { GlassBadge, GlassButton } from '../ui/GlassCard';
 import { Team } from '../../types/festival';
 import { useFestival } from '../../context/FestivalContext';
 import { ActiveTab } from '../layout/Sidebar';
+import { TeamLogo } from '../ui/TeamLogo';
 
 interface TeamDetailModalProps {
   team: Team | null;
@@ -42,7 +43,7 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
       maxWidth="4xl"
       title={
         <div className="flex items-center gap-3">
-          <span className="text-3xl">{team.logo}</span>
+          <TeamLogo logo={team.logo} name={team.name} color={team.color} size="xl" />
           <div>
             <div className="flex items-center gap-2">
               <span className="text-base sm:text-lg font-bold font-display text-white">

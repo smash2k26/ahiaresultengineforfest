@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti';
 import { useFestival } from '../../context/FestivalContext';
 import { Participant } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
+import { TeamLogo } from '../ui/TeamLogo';
 
 interface ParticipantsHubProps {
   setActiveTab: (tab: ActiveTab) => void;
@@ -573,7 +574,7 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                       {/* House & Category */}
                       <div className="mt-3 p-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs text-slate-700">
                         <div className="flex items-center gap-1.5 truncate">
-                          <span>{team?.logo || '🛡️'}</span>
+                          <TeamLogo logo={team?.logo} name={team?.name} color={team?.color} size="xs" fallbackEmoji="🛡️" />
                           <span className="truncate font-semibold">{team?.name || p.teamId}</span>
                         </div>
                         <span className="text-slate-500 font-mono text-[11px] shrink-0">
@@ -652,8 +653,8 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                         </td>
                         <td className="py-3 px-4 text-slate-700">
                           <div className="flex items-center gap-1.5">
-                            <span>{team?.logo}</span>
-                            <span>{team?.name}</span>
+                            <TeamLogo logo={team?.logo} name={team?.name} color={team?.color} size="xs" />
+                            <span>{team?.name || p.teamId}</span>
                           </div>
                         </td>
                         <td className="py-3 px-4 font-mono text-slate-500">{p.admissionNo}</td>

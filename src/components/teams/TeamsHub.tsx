@@ -4,6 +4,7 @@ import { useFestival } from '../../context/FestivalContext';
 import { GlassCard, GlassBadge, GlassButton } from '../ui/GlassCard';
 import { Team } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
+import { TeamLogo } from '../ui/TeamLogo';
 
 interface TeamsHubProps {
   onSelectTeam: (team: Team) => void;
@@ -55,9 +56,13 @@ export const TeamsHub: React.FC<TeamsHubProps> = ({
                 {/* House Crest Header */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-4xl filter drop-shadow group-hover:scale-110 transition-transform">
-                      {team.logo}
-                    </span>
+                    <TeamLogo
+                      logo={team.logo}
+                      name={team.name}
+                      color={team.color}
+                      size="2xl"
+                      className="filter drop-shadow group-hover:scale-110 transition-transform"
+                    />
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/5 text-gray-400">

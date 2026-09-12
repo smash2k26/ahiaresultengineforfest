@@ -3,6 +3,7 @@ import { Activity02Icon as Activity, Add01Icon as Plus, Delete01Icon as Trash2, 
 import { useFestival } from '../../context/FestivalContext';
 import { SportsMatch, SportType, CategoryType, EventStatus } from '../../types/festival';
 import { AdminBulkDataModal } from './AdminBulkDataModal';
+import { TeamLogo } from '../ui/TeamLogo';
 
 export const AdminSportsSection: React.FC = () => {
   const {
@@ -256,8 +257,8 @@ export const AdminSportsSection: React.FC = () => {
 
               {/* Match Versus Board */}
               <div className="flex items-center justify-between gap-4 py-2">
-                <div className="flex-1 text-center">
-                  <span className="text-2xl block">{teamA?.logo || '🛡️'}</span>
+                <div className="flex-1 text-center flex flex-col items-center">
+                  <TeamLogo logo={teamA?.logo} name={teamA?.name} color={teamA?.color} size="xl" fallbackEmoji="🛡️" />
                   <span className="text-sm font-bold text-slate-900 truncate block mt-1">
                     {teamA?.name || 'Team A'}
                   </span>
@@ -268,8 +269,8 @@ export const AdminSportsSection: React.FC = () => {
 
                 <div className="text-xs font-bold text-slate-400 font-mono">VS</div>
 
-                <div className="flex-1 text-center">
-                  <span className="text-2xl block">{teamB?.logo || '🛡️'}</span>
+                <div className="flex-1 text-center flex flex-col items-center">
+                  <TeamLogo logo={teamB?.logo} name={teamB?.name} color={teamB?.color} size="xl" fallbackEmoji="🛡️" />
                   <span className="text-sm font-bold text-slate-900 truncate block mt-1">
                     {teamB?.name || 'Team B'}
                   </span>

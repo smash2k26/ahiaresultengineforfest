@@ -3,6 +3,7 @@ import { Award01Icon as Trophy, CrownIcon as Crown, ArrowUpRight01Icon as Trendi
 import confetti from 'canvas-confetti';
 import { useFestival } from '../../context/FestivalContext';
 import { ActiveTab } from '../layout/Sidebar';
+import { TeamLogo } from '../ui/TeamLogo';
 
 interface PodiumLeaderboardProps {
   setActiveTab: (tab: ActiveTab) => void;
@@ -111,8 +112,8 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
           </div>
 
           <div className="text-center pt-3 space-y-2">
-            <div className="text-3xl filter drop-shadow-xs group-hover:scale-110 transition-transform">
-              {second.logo}
+            <div className="flex items-center justify-center filter drop-shadow-xs group-hover:scale-110 transition-transform">
+              <TeamLogo logo={second.logo} name={second.name} color={second.color} size="2xl" />
             </div>
             <div>
               <h3 className="text-base font-bold font-display text-slate-900 group-hover:text-purple-600 transition-colors">
@@ -159,8 +160,8 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
           </div>
 
           <div className="text-center pt-5 space-y-3">
-            <div className="text-5xl filter drop-shadow-sm group-hover:scale-115 transition-transform duration-300">
-              {first.logo}
+            <div className="flex items-center justify-center filter drop-shadow-sm group-hover:scale-115 transition-transform duration-300">
+              <TeamLogo logo={first.logo} name={first.name} color={first.color} size="3xl" />
             </div>
 
             <div>
@@ -209,8 +210,8 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
           </div>
 
           <div className="text-center pt-3 space-y-2">
-            <div className="text-3xl filter drop-shadow-xs group-hover:scale-110 transition-transform">
-              {third.logo}
+            <div className="flex items-center justify-center filter drop-shadow-xs group-hover:scale-110 transition-transform">
+              <TeamLogo logo={third.logo} name={third.name} color={third.color} size="2xl" />
             </div>
             <div>
               <h3 className="text-base font-bold font-display text-slate-900 group-hover:text-orange-600 transition-colors">

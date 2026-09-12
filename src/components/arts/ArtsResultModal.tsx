@@ -5,6 +5,7 @@ import { GlassModal } from '../ui/GlassModal';
 import { GlassBadge, GlassButton } from '../ui/GlassCard';
 import { ArtsProgram } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
+import { TeamLogo } from '../ui/TeamLogo';
 
 interface ArtsResultModalProps {
   program: ArtsProgram | null;
@@ -251,7 +252,7 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
                         <td className="py-3 px-3 font-bold text-white">{res.participantName}</td>
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-1.5 text-gray-300">
-                            <span>{team?.logo || '🛡️'}</span>
+                            <TeamLogo logo={team?.logo} name={team?.name} color={team?.color} size="xs" fallbackEmoji="🛡️" />
                             <span className="truncate">{team?.name || res.teamId}</span>
                           </div>
                         </td>

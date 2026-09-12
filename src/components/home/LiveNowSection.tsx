@@ -4,6 +4,7 @@ import { useFestival } from '../../context/FestivalContext';
 import { GlassCard, GlassBadge, GlassButton } from '../ui/GlassCard';
 import { ActiveTab } from '../layout/Sidebar';
 import { ArtsProgram, SportsMatch } from '../../types/festival';
+import { TeamLogo } from '../ui/TeamLogo';
 
 interface LiveNowSectionProps {
   setActiveTab: (tab: ActiveTab) => void;
@@ -131,7 +132,7 @@ export const LiveNowSection: React.FC<LiveNowSectionProps> = ({
                   <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                     {/* Team A */}
                     <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                      <span className="text-2xl">{teamA?.logo || '🛡️'}</span>
+                      <TeamLogo logo={teamA?.logo} name={teamA?.name} color={teamA?.color} size="lg" fallbackEmoji="🛡️" />
                       <div className="truncate">
                         <div className="text-xs sm:text-sm font-bold text-slate-900 truncate">
                           {teamA?.name || 'Team A'}
@@ -159,7 +160,7 @@ export const LiveNowSection: React.FC<LiveNowSectionProps> = ({
                         </div>
                         <div className="text-[10px] text-slate-500">{teamB?.shortCode}</div>
                       </div>
-                      <span className="text-2xl">{teamB?.logo || '⚔️'}</span>
+                      <TeamLogo logo={teamB?.logo} name={teamB?.name} color={teamB?.color} size="lg" fallbackEmoji="⚔️" />
                     </div>
                   </div>
 

@@ -3,6 +3,7 @@ import { SparklesIcon as Sparkles, UserGroupIcon as Users, Award01Icon as Award,
 import { useFestival } from '../../context/FestivalContext';
 import { GlassCard, GlassBadge, GlassButton } from '../ui/GlassCard';
 import { ActiveTab } from '../layout/Sidebar';
+import { TeamLogo } from '../ui/TeamLogo';
 
 interface HeroSectionProps {
   setActiveTab: (tab: ActiveTab) => void;
@@ -166,12 +167,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
                     <span className="text-xs font-mono font-bold text-slate-400 w-4">
                       0{idx + 1}
                     </span>
-                    <span
-                      className="w-6 h-6 rounded-md flex items-center justify-center text-xs text-white font-bold"
-                      style={{ backgroundColor: team.color || '#4f46e5' }}
-                    >
-                      {team.logo || team.name.slice(0, 1)}
-                    </span>
+                    <TeamLogo
+                      logo={team.logo}
+                      name={team.name}
+                      color={team.color}
+                      size="sm"
+                      roundedClassName="rounded-md"
+                    />
                     <span className="text-xs font-bold text-slate-900 truncate">{team.name}</span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">

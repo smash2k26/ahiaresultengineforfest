@@ -3,6 +3,7 @@ import { Award01Icon as Trophy, ArrowUp01Icon as ArrowUp, ArrowDown01Icon as Arr
 import { useFestival } from '../../context/FestivalContext';
 import { GlassCard, GlassBadge } from '../ui/GlassCard';
 import { ActiveTab } from '../layout/Sidebar';
+import { TeamLogo } from '../ui/TeamLogo';
 
 interface OverallLeaderboardTableProps {
   setActiveTab: (tab: ActiveTab) => void;
@@ -135,9 +136,13 @@ export const OverallLeaderboardTable: React.FC<OverallLeaderboardTableProps> = (
                   <td className="py-4 px-4">
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-3">
-                        <span className="text-xl group-hover:scale-110 transition-transform">
-                          {team.logo}
-                        </span>
+                        <TeamLogo
+                          logo={team.logo}
+                          name={team.name}
+                          color={team.color}
+                          size="md"
+                          className="group-hover:scale-110 transition-transform"
+                        />
                         <div>
                           <div className="font-bold text-slate-900 group-hover:text-purple-600 transition-colors flex items-center gap-2">
                             <span>{team.name}</span>

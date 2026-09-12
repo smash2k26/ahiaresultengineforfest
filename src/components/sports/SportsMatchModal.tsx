@@ -5,6 +5,7 @@ import { GlassModal } from '../ui/GlassModal';
 import { GlassBadge, GlassButton } from '../ui/GlassCard';
 import { SportsMatch } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
+import { TeamLogo } from '../ui/TeamLogo';
 
 interface SportsMatchModalProps {
   match: SportsMatch | null;
@@ -70,9 +71,9 @@ export const SportsMatchModal: React.FC<SportsMatchModalProps> = ({
 
           <div className="grid grid-cols-3 items-center py-6">
             {/* Team A */}
-            <div className="text-center space-y-2">
-              <div className="text-4xl sm:text-5xl filter drop-shadow">
-                {teamA?.logo || '🛡️'}
+            <div className="text-center space-y-2 flex flex-col items-center">
+              <div className="flex items-center justify-center filter drop-shadow">
+                <TeamLogo logo={teamA?.logo} name={teamA?.name} color={teamA?.color} size="3xl" fallbackEmoji="🛡️" />
               </div>
               <h4 className="text-sm sm:text-base font-bold text-white leading-tight">
                 {teamA?.name || 'Team A'}
@@ -93,9 +94,9 @@ export const SportsMatchModal: React.FC<SportsMatchModalProps> = ({
             </div>
 
             {/* Team B */}
-            <div className="text-center space-y-2">
-              <div className="text-4xl sm:text-5xl filter drop-shadow">
-                {teamB?.logo || '⚔️'}
+            <div className="text-center space-y-2 flex flex-col items-center">
+              <div className="flex items-center justify-center filter drop-shadow">
+                <TeamLogo logo={teamB?.logo} name={teamB?.name} color={teamB?.color} size="3xl" fallbackEmoji="⚔️" />
               </div>
               <h4 className="text-sm sm:text-base font-bold text-white leading-tight">
                 {teamB?.name || 'Team B'}

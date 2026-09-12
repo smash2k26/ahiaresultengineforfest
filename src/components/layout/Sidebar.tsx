@@ -2,6 +2,7 @@ import React from 'react';
 import { Home01Icon as Home, Award01Icon as Trophy, BrushIcon as Palette, Activity02Icon as Activity, Calendar01Icon as Calendar, Search01Icon as Search, UserGroupIcon as Users, Award01Icon as Award, Image01Icon as Image01Icon, File01Icon as FileText, Shield02Icon as ShieldCheck, FireIcon as Flame, ArrowRight01Icon as ChevronRight, ArrowLeft01Icon as ChevronLeft, PanelLeftCloseIcon as PanelLeftClose, PanelLeftOpenIcon as PanelLeftOpen, UserCheck01Icon as UserCheck } from 'hugeicons-react';
 import { useFestival } from '../../context/FestivalContext';
 import { GlassBadge } from '../ui/GlassCard';
+import { TeamLogo } from '../ui/TeamLogo';
 
 export type ActiveTab =
   | 'home'
@@ -160,7 +161,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-base">{topTeam.logo}</span>
+                      <TeamLogo logo={topTeam.logo} name={topTeam.name} color={topTeam.color} size="sm" />
                       <div>
                         <div className="text-xs font-bold text-slate-800 group-hover:text-amber-700 transition-colors">
                           {topTeam.name}

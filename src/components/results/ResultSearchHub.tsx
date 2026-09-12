@@ -4,6 +4,7 @@ import { useFestival } from '../../context/FestivalContext';
 import { GlassBadge, GlassButton } from '../ui/GlassCard';
 import { Participant, ArtsResultEntry, ArtsProgram } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
+import { TeamLogo } from '../ui/TeamLogo';
 
 interface ResultSearchHubProps {
   initialChestNo?: string;
@@ -348,7 +349,7 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
                     {team && (
                       <div className="mt-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
-                          <span className="text-base">{team.logo}</span>
+                          <TeamLogo logo={team.logo} name={team.name} color={team.color} size="sm" />
                           <span className="font-bold text-slate-800">{team.name}</span>
                         </div>
                         <span className="text-[11px] text-slate-500 font-mono">House #{team.rank}</span>
@@ -525,7 +526,14 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
                                   {res.participantName}
                                 </td>
                                 <td className="py-2.5 px-3 text-slate-600">
-                                  {team ? `${team.logo} ${team.name}` : res.teamId}
+                                  {team ? (
+                                    <div className="flex items-center gap-1.5">
+                                      <TeamLogo logo={team.logo} name={team.name} color={team.color} size="xs" />
+                                      <span>{team.name}</span>
+                                    </div>
+                                  ) : (
+                                    res.teamId
+                                  )}
                                 </td>
                                 <td className="py-2.5 px-3 font-mono text-slate-900 font-semibold">
                                   {res.marks}/100
@@ -586,7 +594,7 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl">{team.logo}</span>
+                    <TeamLogo logo={team.logo} name={team.name} color={team.color} size="xl" />
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">

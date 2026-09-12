@@ -4,6 +4,7 @@ import { useFestival } from '../../context/FestivalContext';
 import { GlassCard, GlassBadge, GlassButton } from '../ui/GlassCard';
 import { SportsMatch } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
+import { TeamLogo } from '../ui/TeamLogo';
 
 interface SportsHubProps {
   onOpenSportsDetail: (match: SportsMatch) => void;
@@ -180,7 +181,7 @@ export const SportsHub: React.FC<SportsHubProps> = ({
                 <div className="my-3 p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between">
                   {/* Team A */}
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <span className="text-3xl">{teamA?.logo || '🛡️'}</span>
+                    <TeamLogo logo={teamA?.logo} name={teamA?.name} color={teamA?.color} size="xl" fallbackEmoji="🛡️" />
                     <div className="truncate">
                       <div className="text-sm font-bold text-white truncate">
                         {teamA?.name || 'Team A'}
@@ -218,7 +219,7 @@ export const SportsHub: React.FC<SportsHubProps> = ({
                         {teamB?.shortCode} • {match.scoreB}
                       </div>
                     </div>
-                    <span className="text-3xl">{teamB?.logo || '⚔️'}</span>
+                    <TeamLogo logo={teamB?.logo} name={teamB?.name} color={teamB?.color} size="xl" fallbackEmoji="⚔️" />
                   </div>
                 </div>
 

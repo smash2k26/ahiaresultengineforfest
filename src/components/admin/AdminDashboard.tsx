@@ -17,6 +17,7 @@ import { AdminScheduleSection } from './AdminScheduleSection';
 import { AdminScoringSection } from './AdminScoringSection';
 import { AdminCertificatesSection } from './AdminCertificatesSection';
 import { AdminBulkDataModal } from './AdminBulkDataModal';
+import { TeamLogo } from '../ui/TeamLogo';
 
 interface AdminDashboardProps {
   onClose?: () => void;
@@ -2222,12 +2223,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
 
                 <div className="flex items-center justify-between pt-1">
                   <div className="flex items-center gap-3">
-                    <div
-                      className="w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white text-base shadow-xs"
-                      style={{ backgroundColor: t.color || '#4f46e5' }}
-                    >
-                      {t.name.slice(0, 2).toUpperCase()}
-                    </div>
+                    <TeamLogo logo={t.logo} name={t.name} color={t.color} size="lg" roundedClassName="rounded-xl" />
                     <div>
                       <h3 className="text-base font-bold text-slate-900">{t.name}</h3>
                       <p className="text-xs text-slate-500">{t.slogan || 'Championship Contender'}</p>
@@ -2330,13 +2326,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                       Emblem / Logo URL
                     </label>
-                    <input
-                      type="text"
-                      value={t.logo || ''}
-                      onChange={(e) => editTeam(t.id, { logo: e.target.value })}
-                      placeholder="https://images.unsplash.com/..."
-                      className="w-full px-3 py-1.5 text-xs text-slate-600 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none truncate"
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={t.logo || ''}
+                        onChange={(e) => editTeam(t.id, { logo: e.target.value })}
+                        placeholder="Image URL or Drive link (e.g. https://...)"
+                        className="w-full px-3 py-1.5 text-xs text-slate-600 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none truncate"
+                      />
+                      <TeamLogo logo={t.logo} name={t.name} color={t.color} size="md" roundedClassName="rounded-md" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2447,13 +2446,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                       Emblem / Logo URL (Optional)
                     </label>
-                    <input
-                      type="text"
-                      value={newTeamLogo}
-                      onChange={(e) => setNewTeamLogo(e.target.value)}
-                      placeholder="https://images.unsplash.com/..."
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newTeamLogo}
+                        onChange={(e) => setNewTeamLogo(e.target.value)}
+                        placeholder="Image URL or Drive link (e.g. https://...)"
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      />
+                      <TeamLogo logo={newTeamLogo} name={newTeamName || 'Team'} color={newTeamColor} size="md" roundedClassName="rounded-md" />
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">

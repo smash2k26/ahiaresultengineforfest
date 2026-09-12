@@ -102,6 +102,7 @@ interface FestivalContextType {
   addSportsMatch: (match: Omit<SportsMatch, 'id' | 'events'>) => void;
   editSportsMatch: (id: string, matchData: Partial<SportsMatch>) => void;
   deleteSportsMatch: (id: string) => void;
+  bulkImportSportsMatches: (matches: SportsMatch[]) => void;
 
   // Participant & Team Management
   addParticipant: (participant: Omit<Participant, 'id' | 'totalPoints' | 'golds' | 'silvers' | 'bronzes' | 'participatedPrograms'>) => void;
@@ -932,6 +933,28 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTimeout(recalculateAllStandings, 0);
   }, [showToast, recalculateAllStandings, triggerAutoPush, dispatchRemoteDelete]);
 
+  const bulkImportSportsMatches = useCallback((newMatches: SportsMatch[]) => {
+    setSportsMatches((prev) => {
+      const matchMap = new Map<string, SportsMatch>();
+      prev.forEach((m) => matchMap.set(m.id, m));
+      newMatches.forEach((m) => {
+        const existing = matchMap.get(m.id);
+        if (existing) {
+          matchMap.set(m.id, { ...existing, ...m });
+        } else {
+          matchMap.set(m.id, m);
+        }
+        clearDeletedId(m.id);
+      });
+      const updated = Array.from(matchMap.values());
+      localStorage.setItem('ahia_sports_matches', JSON.stringify(updated));
+      triggerAutoPush({ sportsMatches: updated });
+      return updated;
+    });
+    showToast('Bulk Matches Imported', `Imported / updated ${newMatches.length} sports fixtures.`, 'success');
+    setTimeout(recalculateAllStandings, 0);
+  }, [showToast, recalculateAllStandings, triggerAutoPush, clearDeletedId]);
+
   // Participants & Teams Actions
   const addParticipant = useCallback((partData: Omit<Participant, 'id' | 'totalPoints' | 'golds' | 'silvers' | 'bronzes' | 'participatedPrograms'>) => {
     const newPart: Participant = {
@@ -983,18 +1006,28 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const bulkImportParticipants = useCallback((newParts: Participant[]) => {
     setParticipants((prev) => {
-      const existingIds = new Set(prev.map((p) => p.chestNo));
-      const filteredNew = newParts.filter((p) => !existingIds.has(p.chestNo));
-      filteredNew.forEach((p) => {
+      const partMap = new Map<string, Participant>();
+      prev.forEach((p) => {
+        const key = p.chestNo || p.id;
+        partMap.set(key, p);
+      });
+      newParts.forEach((p) => {
+        const key = p.chestNo || p.id;
+        const existing = partMap.get(key);
+        if (existing) {
+          partMap.set(key, { ...existing, ...p });
+        } else {
+          partMap.set(key, p);
+        }
         clearDeletedId(p.id);
         if (p.chestNo) clearDeletedId(p.chestNo);
       });
-      const updated = [...prev, ...filteredNew];
+      const updated = Array.from(partMap.values());
       localStorage.setItem('ahia_participants', JSON.stringify(updated));
       triggerAutoPush({ participants: updated });
       return updated;
     });
-    showToast('Bulk Import Completed', `Imported participants into registry.`, 'success');
+    showToast('Bulk Import Completed', `Imported / updated ${newParts.length} participants in registry.`, 'success');
   }, [showToast, triggerAutoPush, clearDeletedId]);
 
   const addTeam = useCallback((teamData: Omit<Team, 'id' | 'artsPoints' | 'sportsPoints' | 'totalPoints' | 'golds' | 'silvers' | 'bronzes' | 'totalWins' | 'rank' | 'previousRank' | 'trend'>) => {
@@ -1764,7 +1797,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       return true;
     }
-  }, [festConfig, googleSheetsConfig.appsScriptUrl, googleSheetsConfig.deploymentId, teams, participants, artsPrograms, sportsMatches, schedule, announcements, certificates, scoringRules, showToast]);
+  }, [festConfig, googleSheetsConfig.appsScriptUrl, googleSheetsConfig.deploymentId, teams, participants, artsPrograms, sportsMatches, schedule, announcements, certificates, documents, scoringRules, showToast]);
 
   pushToGoogleSheetsRef.current = pushToGoogleSheets;
 
@@ -2056,6 +2089,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addSportsMatch,
         editSportsMatch,
         deleteSportsMatch,
+        bulkImportSportsMatches,
         addParticipant,
         editParticipant,
         deleteParticipant,

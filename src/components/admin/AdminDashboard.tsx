@@ -16,6 +16,7 @@ import { AdminAnnouncementsSection } from './AdminAnnouncementsSection';
 import { AdminScheduleSection } from './AdminScheduleSection';
 import { AdminScoringSection } from './AdminScoringSection';
 import { AdminCertificatesSection } from './AdminCertificatesSection';
+import { AdminBulkDataModal } from './AdminBulkDataModal';
 
 interface AdminDashboardProps {
   onClose?: () => void;
@@ -79,6 +80,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
+
+  // Bulk CSV Import/Export Modal State
+  const [isBulkCsvModalOpen, setIsBulkCsvModalOpen] = useState(false);
+  const [bulkCsvInitialTab, setBulkCsvInitialTab] = useState<'participants' | 'sports'>('participants');
 
   // -------------------------------------------------------------
   // TAB 1: RESULTS & MARKS EVALUATION
@@ -751,6 +756,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   // -------------------------------------------------------------
   const [sheetScriptUrl, setSheetScriptUrl] = useState(googleSheetsConfig.appsScriptUrl || '');
   const [isCopiedCode, setIsCopiedCode] = useState(false);
+  const [diagStatus, setDiagStatus] = useState<{
+    running: boolean;
+    status?: 'success' | 'warning' | 'error';
+    title?: string;
+    details?: string;
+    version?: string;
+    actionRequired?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (googleSheetsConfig.appsScriptUrl) {
@@ -780,6 +793,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       sheetUrl: trimmed,
     });
     showToast('Saved', 'Google Apps Script deployment URL updated.', 'success');
+  };
+
+  const handleTestWebhookDiagnostics = async () => {
+    const url = sheetScriptUrl.trim() || googleSheetsConfig.appsScriptUrl;
+    if (!url) {
+      showToast('No URL', 'Please enter your Google Apps Script Web App URL first.', 'warning');
+      return;
+    }
+    setDiagStatus({ running: true });
+    try {
+      const getRes = await fetch(url, { method: 'GET', redirect: 'follow' });
+      if (!getRes.ok) {
+        throw new Error(`HTTP ${getRes.status}: ${getRes.statusText}`);
+      }
+      const data = await getRes.json();
+      
+      if (data.version === '2.1-gridlines-fixed') {
+        setDiagStatus({
+          running: false,
+          status: 'success',
+          title: 'Webhook Online & Healthy (v2.1)',
+          details: 'Your deployed Google Apps Script is running the latest version with designed headers, row heights, column widths, and gridline safeguards.',
+          version: data.version,
+        });
+        showToast('Webhook Verified', 'Apps Script is live with the latest updated code!', 'success');
+      } else {
+        setDiagStatus({
+          running: false,
+          status: 'warning',
+          title: 'Older Deployment Version Running in Google Sheets',
+          details: 'Your Google Apps Script Web App answered, but it is running an OLDER deployment version without the latest fixes.',
+          actionRequired: 'In your Google Apps Script editor: Click Deploy → Manage deployments → Click the Edit (pencil) icon → Under Version, select "New version" → Click Deploy. Then data will reach your sheet immediately!',
+          version: data.version || 'Unversioned (Old build)',
+        });
+        showToast('New Version Needed', 'Please deploy a "New version" in Apps Script.', 'warning');
+      }
+    } catch (err: any) {
+      setDiagStatus({
+        running: false,
+        status: 'error',
+        title: 'Connection / Permission Blocked',
+        details: err.message || String(err),
+        actionRequired: 'Ensure when deploying as Web App: "Execute as" is set to "Me", and "Who has access" is set to "Anyone".',
+      });
+      showToast('Webhook Error', 'Could not reach the Apps Script endpoint.', 'error');
+    }
   };
 
   // -------------------------------------------------------------
@@ -886,6 +945,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={() => {
+              setBulkCsvInitialTab('participants');
+              setIsBulkCsvModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer"
+            title="Bulk CSV Import & Export for Participants and Sports"
+          >
+            <Upload className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Bulk CSV Hub</span>
+          </button>
           <button
             onClick={() => syncWithGoogleSheets()}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
@@ -1786,13 +1856,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 Manage admission numbers, house affiliations, and category divisions.
               </p>
             </div>
-            <button
-              onClick={handleOpenNewPartModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Register Participant</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => {
+                  setBulkCsvInitialTab('participants');
+                  setIsBulkCsvModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-semibold rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
+                title="Bulk Import / Export Participants using CSV"
+              >
+                <Upload className="w-4 h-4 text-indigo-600" />
+                <span>Bulk CSV Import / Export</span>
+              </button>
+
+              <button
+                onClick={handleOpenNewPartModal}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Register Participant</span>
+              </button>
+            </div>
           </div>
 
           {/* Register Participant Modal */}
@@ -3179,7 +3263,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 Admin Portal Credentials
               </h2>
               <p className="text-sm text-slate-600 mb-6">
-                Master login details for festival management. Default configured username is <span className="font-mono font-semibold text-slate-900">smash2k26</span>.
+                Configure administrative login credentials for festival score management.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -3191,7 +3275,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     type="text"
                     value={festAdminUsernameInput}
                     onChange={(e) => setFestAdminUsernameInput(e.target.value)}
-                    placeholder="smash2k26"
+                    placeholder="Enter admin username"
                     className="w-full px-3.5 py-2.5 text-sm font-mono rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                 </div>
@@ -3366,7 +3450,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
               </div>
             </div>
 
-            {/* Sync Action Buttons matching the video */}
+            {/* Sync Action Buttons */}
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <button
                 onClick={() => syncWithGoogleSheets()}
@@ -3383,6 +3467,80 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <Upload className="w-3.5 h-3.5" />
                 <span>Push Live Data &amp; Schema to Google Sheets</span>
               </button>
+
+              <button
+                onClick={handleTestWebhookDiagnostics}
+                disabled={diagStatus?.running}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-semibold rounded-lg text-xs shadow-xs transition-colors cursor-pointer"
+              >
+                <Activity className="w-3.5 h-3.5 text-indigo-600" />
+                <span>{diagStatus?.running ? 'Testing Webhook...' : 'Test Webhook & Diagnose'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setBulkCsvInitialTab('participants');
+                  setIsBulkCsvModalOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs shadow-xs transition-colors cursor-pointer"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Bulk CSV Import / Export Center</span>
+              </button>
+            </div>
+
+            {/* Live Webhook Diagnostic Result Card */}
+            {diagStatus && (
+              <div
+                className={`p-4 rounded-xl border text-xs transition-all ${
+                  diagStatus.status === 'success'
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                    : diagStatus.status === 'warning'
+                    ? 'bg-amber-50 border-amber-300 text-amber-900'
+                    : diagStatus.running
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-900 animate-pulse'
+                    : 'bg-rose-50 border-rose-300 text-rose-900'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="pt-0.5 font-bold">
+                    {diagStatus.status === 'success' && '✅'}
+                    {diagStatus.status === 'warning' && '⚠️'}
+                    {diagStatus.status === 'error' && '❌'}
+                    {diagStatus.running && '⏳'}
+                  </div>
+                  <div className="space-y-1.5 flex-1">
+                    <div className="font-bold text-sm">
+                      {diagStatus.running ? 'Checking Google Apps Script Webhook...' : diagStatus.title}
+                    </div>
+                    {diagStatus.details && <p className="text-xs leading-relaxed">{diagStatus.details}</p>}
+                    {diagStatus.actionRequired && (
+                      <div className="p-3 bg-white/80 border border-current/20 rounded-lg mt-2 font-medium">
+                        <strong className="block mb-1 text-[11px] uppercase tracking-wider">Required Action to Fix:</strong>
+                        <p>{diagStatus.actionRequired}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Why Data Is Not Reaching Google Sheets - Immediate Fix Guide */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-300/80 text-xs text-amber-900 space-y-2">
+              <div className="flex items-center gap-2 font-bold text-sm text-amber-950">
+                <span>🚨 Why Data is Not Reaching Google Sheets &amp; How to Fix It in 30 Seconds</span>
+              </div>
+              <ul className="space-y-1.5 list-disc list-inside text-amber-900 leading-relaxed">
+                <li>
+                  <strong>Step 1: Deploy a "New Version" (Most Critical):</strong> In Google Apps Script, merely clicking <em>Save</em> (Ctrl+S) does <strong>NOT</strong> update your live Web App. You must click <strong>Deploy → Manage deployments</strong>, click the <strong>Edit (pencil) icon</strong>, change the <strong>Version dropdown to "New version"</strong>, and click <strong>Deploy</strong>!
+                </li>
+                <li>
+                  <strong>Step 2: "Who has access" must be "Anyone":</strong> If set to "Only myself", browser push requests are blocked by Google authentication.
+                </li>
+                <li>
+                  <strong>Step 3: Run Setup Once in Apps Script:</strong> In your Google Apps Script editor, select <code>setupFestivalSheets</code> in the function dropdown at the top and click <strong>Run</strong>. All 10 sheets (SiteSettings, Teams, Participants, Programs, ResultsMarks, etc.) will instantly appear in your Google Spreadsheet with formatted and aligned headers!
+                </li>
+              </ul>
             </div>
 
             <p className="text-xs text-slate-500">
@@ -3686,6 +3844,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
           </div>
         </div>
       )}
+
+      {/* Bulk CSV Import & Export Hub Modal */}
+      <AdminBulkDataModal
+        isOpen={isBulkCsvModalOpen}
+        onClose={() => setIsBulkCsvModalOpen(false)}
+        initialTab={bulkCsvInitialTab}
+      />
     </div>
   );
 };

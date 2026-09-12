@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Activity02Icon as Activity, Add01Icon as Plus, Delete01Icon as Trash2, Edit02Icon as Edit2, Search01Icon as Search, Tick01Icon as CheckCircle2, Clock01Icon as Clock, Award01Icon as Trophy, Cancel01Icon as X, PlayIcon as Play, ReloadIcon as RotateCcw } from 'hugeicons-react';
+import { Activity02Icon as Activity, Add01Icon as Plus, Delete01Icon as Trash2, Edit02Icon as Edit2, Search01Icon as Search, Tick01Icon as CheckCircle2, Clock01Icon as Clock, Award01Icon as Trophy, Cancel01Icon as X, PlayIcon as Play, ReloadIcon as RotateCcw, Upload01Icon as Upload } from 'hugeicons-react';
 import { useFestival } from '../../context/FestivalContext';
 import { SportsMatch, SportType, CategoryType, EventStatus } from '../../types/festival';
+import { AdminBulkDataModal } from './AdminBulkDataModal';
 
 export const AdminSportsSection: React.FC = () => {
   const {
@@ -17,6 +18,7 @@ export const AdminSportsSection: React.FC = () => {
   const [search, setSearch] = useState('');
   const [sportFilter, setSportFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [isBulkCsvOpen, setIsBulkCsvOpen] = useState(false);
 
   // New Match Modal
   const [isNewMatchOpen, setIsNewMatchOpen] = useState(false);
@@ -156,13 +158,24 @@ export const AdminSportsSection: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsNewMatchOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors shrink-0 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Fixture</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsBulkCsvOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl text-xs sm:text-sm font-semibold transition-colors shrink-0 cursor-pointer"
+            title="Import or Export Sports Fixtures via CSV"
+          >
+            <Upload className="w-4 h-4 text-indigo-600" />
+            <span>Bulk CSV Fixtures</span>
+          </button>
+
+          <button
+            onClick={() => setIsNewMatchOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors shrink-0 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add New Fixture</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -702,6 +715,13 @@ export const AdminSportsSection: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Bulk CSV Import/Export Modal */}
+      <AdminBulkDataModal
+        isOpen={isBulkCsvOpen}
+        onClose={() => setIsBulkCsvOpen(false)}
+        initialTab="sports"
+      />
     </div>
   );
 };

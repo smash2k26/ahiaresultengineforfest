@@ -193,10 +193,12 @@ function setupFestivalSheets() {
     if (tabName === "SiteSettings") return;
     var cfg = FEST_SHEETS_CONFIG[tabName];
     var sheet = ss.getSheetByName(tabName) || ss.insertSheet(tabName);
-    sheet.setTabColor(cfg.tabColor);
-    if (typeof sheet.setHiddenGridlines === "function") {
-      sheet.setHiddenGridlines(false);
-    }
+    try { sheet.setTabColor(cfg.tabColor); } catch (e) {}
+    try {
+      if (typeof sheet.setHiddenGridlines === "function") {
+        sheet.setHiddenGridlines(false);
+      }
+    } catch (e) {}
 
     if (sheet.getLastRow() === 0) {
       writeDecoratedSheetData(sheet, [], cfg);
@@ -212,6 +214,18 @@ function setupFestivalSheets() {
 function doGet(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Direct setup or ping via browser URL: ?action=setup or ?action=test
+    if (e && e.parameter && (e.parameter.action === "setup" || e.parameter.setup === "1")) {
+      var setupResult = setupFestivalSheets();
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        version: "2.1-gridlines-fixed",
+        action: "setup",
+        message: setupResult,
+        timestamp: new Date().toISOString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
 
     // Verify SiteSettings exists
     var settingsSheet = ss.getSheetByName("SiteSettings");
@@ -272,6 +286,7 @@ function doGet(e) {
 
     var responseData = {
       status: "success",
+      version: "2.1-gridlines-fixed",
       timestamp: new Date().toISOString(),
       festConfig: festConfig,
       siteSettings: festConfig,
@@ -291,6 +306,7 @@ function doGet(e) {
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
       status: "error",
+      version: "2.1-gridlines-fixed",
       message: err.toString()
     })).setMimeType(ContentService.MimeType.JSON);
   }
@@ -550,11 +566,23 @@ function doPost(e) {
  * 4. SITE SETTINGS SHEET BUILDER & DECORATOR
  */
 function initSiteSettingsSheet(sheet, config) {
-  sheet.clear();
-  sheet.setTabColor(FEST_SHEETS_CONFIG.SiteSettings.tabColor);
-  if (typeof sheet.setHiddenGridlines === "function") {
-    sheet.setHiddenGridlines(false);
+  if (!sheet) return;
+  
+  // Safeguard column and row counts
+  if (sheet.getMaxColumns() < 4) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), 4 - sheet.getMaxColumns());
   }
+  if (sheet.getMaxRows() < 35) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), 35 - sheet.getMaxRows());
+  }
+
+  try { sheet.clear(); } catch (e) {}
+  try { sheet.setTabColor(FEST_SHEETS_CONFIG.SiteSettings.tabColor); } catch (e) {}
+  try {
+    if (typeof sheet.setHiddenGridlines === "function") {
+      sheet.setHiddenGridlines(false);
+    }
+  } catch (e) {}
 
   // Row 1: Merged Festival Header Title Banner (Height: 42px, Font: 12pt Bold)
   sheet.getRange("A1:D1").merge();
@@ -686,6 +714,10 @@ function readSiteSettings(sheet) {
  * Formats: Head Coloring, Height: 38px, Widths: custom, Font: Arial, Size: 11pt, Aligned Headings
  */
 function formatHeaderRow(sheet, colCount, headerColor, alignments) {
+  if (!sheet || colCount <= 0) return;
+  if (sheet.getMaxColumns() < colCount) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), colCount - sheet.getMaxColumns());
+  }
   var headerRange = sheet.getRange(1, 1, 1, colCount);
   headerRange.setBackground(headerColor || "#1E1B4B");
   headerRange.setFontColor("#FFFFFF");
@@ -693,38 +725,54 @@ function formatHeaderRow(sheet, colCount, headerColor, alignments) {
   headerRange.setFontSize(11);
   headerRange.setFontWeight("bold");
   headerRange.setVerticalAlignment("middle");
-  headerRange.setBorder(true, true, true, true, true, true, "#CBD5E1", SpreadsheetApp.BorderStyle.SOLID);
+  try {
+    headerRange.setBorder(true, true, true, true, true, true, "#CBD5E1", SpreadsheetApp.BorderStyle.SOLID);
+  } catch (e) {}
   
   // Explicit Header Row Height: 38px
-  sheet.setRowHeight(1, 38);
+  try {
+    sheet.setRowHeight(1, 38);
+  } catch (e) {}
 
   // Explicitly Align Every Column Heading to match its data type
   if (alignments && Array.isArray(alignments)) {
     for (var c = 0; c < colCount; c++) {
       var align = alignments[c] || "left";
-      sheet.getRange(1, c + 1).setHorizontalAlignment(align);
+      try {
+        sheet.getRange(1, c + 1).setHorizontalAlignment(align);
+      } catch (e) {}
     }
   }
 
   // Freeze the Header Row so it stays locked during scroll
-  sheet.setFrozenRows(1);
+  try {
+    sheet.setFrozenRows(1);
+  } catch (e) {}
 }
 
 function writeDecoratedSheetData(sheet, items, tabConfig) {
   if (!sheet) return;
 
-  // Fully clear existing contents and formatting
-  sheet.clearContents();
-  sheet.clearFormats();
-  sheet.clear();
-
-  sheet.setTabColor(tabConfig.tabColor);
-  if (typeof sheet.setHiddenGridlines === "function") {
-    sheet.setHiddenGridlines(false);
-  }
-
   var headers = tabConfig.headers;
   var numCols = headers.length;
+
+  // Safeguard column and row counts before writing
+  if (sheet.getMaxColumns() < numCols) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), numCols - sheet.getMaxColumns());
+  }
+  var neededRows = (items && Array.isArray(items) && items.length > 0) ? items.length + 5 : 20;
+  if (sheet.getMaxRows() < neededRows) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), neededRows - sheet.getMaxRows());
+  }
+
+  // Fully clear existing contents and formatting
+  try { sheet.clear(); } catch (e) {}
+  try { sheet.setTabColor(tabConfig.tabColor); } catch (e) {}
+  try {
+    if (typeof sheet.setHiddenGridlines === "function") {
+      sheet.setHiddenGridlines(false);
+    }
+  } catch (e) {}
 
   // =========================================================================
   // ROW 1: DESIGNED & ALIGNED COLUMN HEADERS

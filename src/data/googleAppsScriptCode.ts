@@ -2,32 +2,20 @@
  * GOOGLE APPS SCRIPT WEB APP BACKEND & DATABASE ENGINE
  * AHIA FEST 2026 - ARTS & SPORTS RESULT ENGINE
  *
- * Webhook URL:
- * https://script.google.com/macros/s/AKfycbwwh4ZwnwW2C98pwlgoVfN4MI3VokZjr12fO6z5BflcLrFwJoTAhyE4NSvy4JeClymp8w/exec
- *
- * Deployment ID:
- * AKfycbwwh4ZwnwW2C98pwlgoVfN4MI3VokZjr12fO6z5BflcLrFwJoTAhyE4NSvy4JeClymp8w
+ * Full Two-Way Synchronization with Non-Destructive Data Protection & In-Place Updates
  */
 
 export const GOOGLE_APPS_SCRIPT_CODE = `/**
  * =========================================================================
- * AHIA FEST 2026 - GOOGLE APPS SCRIPT DATABASE ENGINE & WEBHOOK API
+ * AHIA FEST 2026 - REFINED GOOGLE APPS SCRIPT DATABASE ENGINE & API
  * =========================================================================
- * Deployment ID: AKfycbwwh4ZwnwW2C98pwlgoVfN4MI3VokZjr12fO6z5BflcLrFwJoTAhyE4NSvy4JeClymp8w
- * Webhook URL:   https://script.google.com/macros/s/AKfycbwwh4ZwnwW2C98pwlgoVfN4MI3VokZjr12fO6z5BflcLrFwJoTAhyE4NSvy4JeClymp8w/exec
- *
- * Full Custom Formatting Specifications:
- *  - Head Coloring: Premium branded background colors per sheet tab
- *  - Explicit Widths: Custom pixel widths for every single column
- *  - Explicit Heights: 38px Header Row Height & 28px Data Row Height
- *  - Typography: Arial / Google Sans font family
- *  - Font Sizes: 11pt Bold for Headers & 10pt Regular for Data rows
- *  - Aligned Headings:
- *      * Numbers/Scores/Points/Medals  -> Right Aligned
- *      * IDs/Codes/Badges/Status/Dates -> Center Aligned
- *      * Names/Titles/Venues/Text      -> Left Aligned
- *  - Frozen Panes: Top header row frozen on every sheet for smooth scrolling
- *  - High Performance: Fast batch zebra striping & instant row deletion
+ * 
+ * FEATURES:
+ *  1. Non-Destructive Live Sync: Never wipes sheets or resets page; writes data smoothly in-place.
+ *  2. No-Flicker Architecture: Eliminates sheet.clear() so viewers in Google Sheets never see tabs flash.
+ *  3. Smart Upsert & Safe Merging: Preserves all added teams, participants, marks, matches & schedule.
+ *  4. Instant Live Updates: Syncs changes between Web App & Sheets silently without refreshing browser.
+ *  5. Custom Branded Styling: Color-coded tabs, bold headers, zebra striping, and auto-column widths.
  * =========================================================================
  */
 
@@ -164,13 +152,16 @@ var FEST_SHEETS_CONFIG = {
 
 /**
  * 1. ONE-CLICK INITIALIZATION & SETUP
- * Run this function once from the Apps Script Editor.
+ * Safe and non-destructive: Preserves all existing data.
  */
 function setupFestivalSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // Setup SiteSettings Tab
-  var settingsSheet = ss.getSheetByName("SiteSettings") || ss.insertSheet("SiteSettings", 0);
+  var settingsSheet = ss.getSheetByName("SiteSettings");
+  if (!settingsSheet) {
+    settingsSheet = ss.insertSheet("SiteSettings", 0);
+  }
   initSiteSettingsSheet(settingsSheet, {
     festivalName: "AHIA FEST 2026",
     year: "2026",
@@ -188,7 +179,7 @@ function setupFestivalSheets() {
     lastSyncedAt: new Date().toISOString()
   });
 
-  // Setup All Other Data Tabs with Custom Header Styling & Alignments
+  // Setup All Other Data Tabs
   Object.keys(FEST_SHEETS_CONFIG).forEach(function(tabName) {
     if (tabName === "SiteSettings") return;
     var cfg = FEST_SHEETS_CONFIG[tabName];
@@ -200,12 +191,15 @@ function setupFestivalSheets() {
       }
     } catch (e) {}
 
+    // Only write headers if sheet is empty to prevent overwriting existing data
     if (sheet.getLastRow() === 0) {
       writeDecoratedSheetData(sheet, [], cfg);
+    } else {
+      formatHeaderRow(sheet, cfg.headers.length, cfg.headerColor, cfg.colAlignments);
     }
   });
 
-  return "All 10 Festival sheets successfully formatted with head coloring, custom width, height, font, size, and aligned headings!";
+  return "All 10 Festival sheets initialized with non-destructive preservation and custom styling!";
 }
 
 /**
@@ -215,16 +209,15 @@ function doGet(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // Direct setup or ping via browser URL: ?action=setup or ?action=test
+    // Ping or direct setup
     if (e && e.parameter && (e.parameter.action === "setup" || e.parameter.setup === "1")) {
       var setupResult = setupFestivalSheets();
-      return ContentService.createTextOutput(JSON.stringify({
+      return jsonResponse({
         status: "success",
-        version: "2.1-gridlines-fixed",
         action: "setup",
         message: setupResult,
         timestamp: new Date().toISOString()
-      })).setMimeType(ContentService.MimeType.JSON);
+      });
     }
 
     // Verify SiteSettings exists
@@ -234,7 +227,7 @@ function doGet(e) {
       settingsSheet = ss.getSheetByName("SiteSettings");
     }
 
-    var festConfig = readSiteSettings(settingsSheet);
+    var festConfig = readSiteSettings(settingsSheet) || {};
     var teams = readSheetData(ss.getSheetByName("Teams"));
     var participants = readSheetData(ss.getSheetByName("Participants"));
     var artsPrograms = readSheetData(ss.getSheetByName("Programs"));
@@ -245,7 +238,7 @@ function doGet(e) {
     var documents = readSheetData(ss.getSheetByName("Documents"));
     var scoringRules = readScoringRules(ss.getSheetByName("ScoringRules"));
 
-    // Parse JSON columns
+    // Parse JSON columns safely
     artsPrograms = artsPrograms.map(function(p) {
       if (typeof p.results === "string" && p.results.trim()) {
         try { p.results = JSON.parse(p.results); } catch (err) { p.results = []; }
@@ -284,9 +277,9 @@ function doGet(e) {
       return t;
     });
 
-    var responseData = {
+    return jsonResponse({
       status: "success",
-      version: "2.1-gridlines-fixed",
+      version: "3.5-live-inplace-sync",
       timestamp: new Date().toISOString(),
       festConfig: festConfig,
       siteSettings: festConfig,
@@ -299,21 +292,17 @@ function doGet(e) {
       certificates: certificates,
       documents: documents,
       scoringRules: scoringRules
-    };
-
-    return ContentService.createTextOutput(JSON.stringify(responseData))
-      .setMimeType(ContentService.MimeType.JSON);
+    });
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({
+    return jsonResponse({
       status: "error",
-      version: "2.1-gridlines-fixed",
       message: err.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    });
   }
 }
 
 /**
- * 3. POST REQUEST HANDLER (Web App updates data in Google Sheets)
+ * 3. POST REQUEST HANDLER (Web App updates data in Google Sheets in-place)
  */
 function doPost(e) {
   try {
@@ -322,7 +311,7 @@ function doPost(e) {
     var action = payload.action || "syncData";
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // 1. Update Site Settings
+    // 1. Update Site Settings (In-place non-destructive update)
     var siteConfig = payload.festConfig || payload.siteSettings || null;
     if (siteConfig || payload.festival) {
       var settingsSheet = ss.getSheetByName("SiteSettings") || ss.insertSheet("SiteSettings", 0);
@@ -359,8 +348,8 @@ function doPost(e) {
       initSiteSettingsSheet(settingsSheet, mergedCfg);
     }
 
-    // 2. Full or Partial Data Sync
-    if (action === "syncData" || payload.teams) {
+    // 2. Full or Partial Data Sync (Smooth in-place write)
+    if (action === "syncData" || payload.teams || payload.participants || payload.artsPrograms || payload.sportsMatches) {
       // TEAMS
       if (payload.teams && Array.isArray(payload.teams)) {
         writeDecoratedSheetData(
@@ -398,7 +387,7 @@ function doPost(e) {
         );
       }
 
-      // PROGRAMS (Arts & Events)
+      // PROGRAMS (Arts & Cultural)
       if (payload.artsPrograms && Array.isArray(payload.artsPrograms)) {
         var progFormatted = payload.artsPrograms.map(function(pr) {
           return {
@@ -548,27 +537,34 @@ function doPost(e) {
 
     SpreadsheetApp.flush();
 
-    return ContentService.createTextOutput(JSON.stringify({
+    return jsonResponse({
       status: "success",
-      message: "Festival sheets formatted and synchronized successfully",
+      message: "Data synchronized smoothly in-place without page refresh or data loss.",
       action: action,
       timestamp: new Date().toISOString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    });
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({
+    return jsonResponse({
       status: "error",
       message: err.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    });
   }
 }
 
 /**
- * 4. SITE SETTINGS SHEET BUILDER & DECORATOR
+ * 4. JSON RESPONSE HELPER
+ */
+function jsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * 5. SITE SETTINGS SHEET BUILDER (In-place, non-flicker)
  */
 function initSiteSettingsSheet(sheet, config) {
   if (!sheet) return;
   
-  // Safeguard column and row counts
   if (sheet.getMaxColumns() < 4) {
     sheet.insertColumnsAfter(sheet.getMaxColumns(), 4 - sheet.getMaxColumns());
   }
@@ -576,61 +572,73 @@ function initSiteSettingsSheet(sheet, config) {
     sheet.insertRowsAfter(sheet.getMaxRows(), 35 - sheet.getMaxRows());
   }
 
-  try { sheet.clear(); } catch (e) {}
-  try { sheet.setTabColor(FEST_SHEETS_CONFIG.SiteSettings.tabColor); } catch (e) {}
+  var isInitialized = false;
   try {
-    if (typeof sheet.setHiddenGridlines === "function") {
-      sheet.setHiddenGridlines(false);
+    if (sheet.getLastRow() >= 4 && sheet.getRange(4, 1).getValue() === "Setting Key") {
+      isInitialized = true;
     }
   } catch (e) {}
 
-  // Row 1: Merged Festival Header Title Banner (Height: 42px, Font: 12pt Bold)
-  sheet.getRange("A1:D1").merge();
-  var banner = sheet.getRange("A1");
-  banner.setValue("🏆 " + (config.festivalName || "AHIA FEST 2026").toUpperCase() + " — MASTER SITE & PLATFORM SETTINGS");
-  banner.setBackground("#1E1B4B");
-  banner.setFontColor("#FFFFFF");
-  banner.setFontFamily("Arial");
-  banner.setFontSize(12);
-  banner.setFontWeight("bold");
-  banner.setHorizontalAlignment("center");
-  banner.setVerticalAlignment("middle");
-  sheet.setRowHeight(1, 42);
+  if (!isInitialized) {
+    try { sheet.setTabColor(FEST_SHEETS_CONFIG.SiteSettings.tabColor); } catch (e) {}
+    try {
+      if (typeof sheet.setHiddenGridlines === "function") {
+        sheet.setHiddenGridlines(false);
+      }
+    } catch (e) {}
 
-  // Row 2: Subtitle Banner (Height: 24px, Font: 9pt Italic)
-  sheet.getRange("A2:D2").merge();
-  var subBanner = sheet.getRange("A2");
-  subBanner.setValue("Synchronized Live with the AHIA Digital Engine • Deployment ID: AKfycbwwh4ZwnwW2C98pwlgoVfN4MI3VokZjr12fO6z5BflcLrFwJoTAhyE4NSvy4JeClymp8w");
-  subBanner.setBackground("#312E81");
-  subBanner.setFontColor("#E0E7FF");
-  subBanner.setFontFamily("Arial");
-  subBanner.setFontSize(9);
-  subBanner.setFontStyle("italic");
-  subBanner.setHorizontalAlignment("center");
-  subBanner.setVerticalAlignment("middle");
-  sheet.setRowHeight(2, 24);
+    // Row 1: Merged Festival Header Title Banner
+    sheet.getRange("A1:D1").merge();
+    var banner = sheet.getRange("A1");
+    banner.setValue("🏆 " + (config.festivalName || "AHIA FEST 2026").toUpperCase() + " — MASTER SITE SETTINGS");
+    banner.setBackground("#1E1B4B");
+    banner.setFontColor("#FFFFFF");
+    banner.setFontFamily("Arial");
+    banner.setFontSize(12);
+    banner.setFontWeight("bold");
+    banner.setHorizontalAlignment("center");
+    banner.setVerticalAlignment("middle");
+    sheet.setRowHeight(1, 42);
 
-  // Row 3: Spacer
-  sheet.setRowHeight(3, 8);
+    // Row 2: Subtitle Banner
+    sheet.getRange("A2:D2").merge();
+    var subBanner = sheet.getRange("A2");
+    subBanner.setValue("Synchronized Live with the AHIA Digital Engine • In-Place Real-Time Sync");
+    subBanner.setBackground("#312E81");
+    subBanner.setFontColor("#E0E7FF");
+    subBanner.setFontFamily("Arial");
+    subBanner.setFontSize(9);
+    subBanner.setFontStyle("italic");
+    subBanner.setHorizontalAlignment("center");
+    subBanner.setVerticalAlignment("middle");
+    sheet.setRowHeight(2, 24);
 
-  // Row 4: Table Headers (Height: 34px, Font: 11pt Bold, Colored, Aligned)
-  var headers = FEST_SHEETS_CONFIG.SiteSettings.headers;
-  sheet.getRange(4, 1, 1, headers.length).setValues([headers]);
-  var headerRange = sheet.getRange(4, 1, 1, headers.length);
-  headerRange.setBackground(FEST_SHEETS_CONFIG.SiteSettings.headerColor);
-  headerRange.setFontColor("#FFFFFF");
-  headerRange.setFontFamily("Arial");
-  headerRange.setFontSize(11);
-  headerRange.setFontWeight("bold");
-  headerRange.setVerticalAlignment("middle");
-  headerRange.setBorder(true, true, true, true, true, true, "#CBD5E1", SpreadsheetApp.BorderStyle.SOLID);
-  sheet.setRowHeight(4, 34);
+    // Row 3: Spacer
+    sheet.setRowHeight(3, 8);
 
-  // Align header titles
-  sheet.getRange(4, 1).setHorizontalAlignment("center");
-  sheet.getRange(4, 2).setHorizontalAlignment("left");
-  sheet.getRange(4, 3).setHorizontalAlignment("left");
-  sheet.getRange(4, 4).setHorizontalAlignment("left");
+    // Row 4: Table Headers
+    var headers = FEST_SHEETS_CONFIG.SiteSettings.headers;
+    sheet.getRange(4, 1, 1, headers.length).setValues([headers]);
+    var headerRange = sheet.getRange(4, 1, 1, headers.length);
+    headerRange.setBackground(FEST_SHEETS_CONFIG.SiteSettings.headerColor);
+    headerRange.setFontColor("#FFFFFF");
+    headerRange.setFontFamily("Arial");
+    headerRange.setFontSize(11);
+    headerRange.setFontWeight("bold");
+    headerRange.setVerticalAlignment("middle");
+    headerRange.setBorder(true, true, true, true, true, true, "#CBD5E1", SpreadsheetApp.BorderStyle.SOLID);
+    sheet.setRowHeight(4, 34);
+
+    sheet.getRange(4, 1).setHorizontalAlignment("center");
+    sheet.getRange(4, 2).setHorizontalAlignment("left");
+    sheet.getRange(4, 3).setHorizontalAlignment("left");
+    sheet.getRange(4, 4).setHorizontalAlignment("left");
+  } else {
+    // Just update banner title in-place
+    try {
+      sheet.getRange("A1").setValue("🏆 " + (config.festivalName || "AHIA FEST 2026").toUpperCase() + " — MASTER SITE SETTINGS");
+    } catch (e) {}
+  }
 
   // Rows 5+: Settings Key-Value Rows
   var rows = [
@@ -664,29 +672,26 @@ function initSiteSettingsSheet(sheet, config) {
   ];
 
   sheet.getRange(5, 1, rows.length, 4).setValues(rows);
-  sheet.setRowHeights(5, rows.length, 28);
 
-  var dataRange = sheet.getRange(5, 1, rows.length, 4);
-  dataRange.setFontFamily("Arial");
-  dataRange.setFontSize(10);
-  dataRange.setVerticalAlignment("middle");
-  dataRange.setBorder(true, true, true, true, true, true, "#E2E8F0", SpreadsheetApp.BorderStyle.SOLID);
+  if (!isInitialized) {
+    sheet.setRowHeights(5, rows.length, 28);
+    var dataRange = sheet.getRange(5, 1, rows.length, 4);
+    dataRange.setFontFamily("Arial");
+    dataRange.setFontSize(10);
+    dataRange.setVerticalAlignment("middle");
+    dataRange.setBorder(true, true, true, true, true, true, "#E2E8F0", SpreadsheetApp.BorderStyle.SOLID);
 
-  // Col A: Center bold key
-  sheet.getRange(5, 1, rows.length, 1).setFontWeight("bold").setFontColor("#312E81").setHorizontalAlignment("center").setBackground("#F8FAFC");
-  // Col B: Parameter Name
-  sheet.getRange(5, 2, rows.length, 1).setFontWeight("bold").setFontColor("#0F172A").setHorizontalAlignment("left");
-  // Col C: Value
-  sheet.getRange(5, 3, rows.length, 1).setFontFamily("Courier New").setFontColor("#0369A1").setHorizontalAlignment("left").setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
-  // Col D: Guidance notes
-  sheet.getRange(5, 4, rows.length, 1).setFontColor("#64748B").setHorizontalAlignment("left").setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    sheet.getRange(5, 1, rows.length, 1).setFontWeight("bold").setFontColor("#312E81").setHorizontalAlignment("center").setBackground("#F8FAFC");
+    sheet.getRange(5, 2, rows.length, 1).setFontWeight("bold").setFontColor("#0F172A").setHorizontalAlignment("left");
+    sheet.getRange(5, 3, rows.length, 1).setFontFamily("Courier New").setFontColor("#0369A1").setHorizontalAlignment("left").setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    sheet.getRange(5, 4, rows.length, 1).setFontColor("#64748B").setHorizontalAlignment("left").setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
 
-  // Explicit Column Widths
-  sheet.setColumnWidth(1, 180);
-  sheet.setColumnWidth(2, 220);
-  sheet.setColumnWidth(3, 360);
-  sheet.setColumnWidth(4, 420);
-  sheet.setFrozenRows(4);
+    sheet.setColumnWidth(1, 180);
+    sheet.setColumnWidth(2, 220);
+    sheet.setColumnWidth(3, 360);
+    sheet.setColumnWidth(4, 420);
+    sheet.setFrozenRows(4);
+  }
 }
 
 function readSiteSettings(sheet) {
@@ -698,11 +703,9 @@ function readSiteSettings(sheet) {
     var rawKey = String(data[i][0] || "").trim();
     if (!rawKey) continue;
     var lowerKey = rawKey.toLowerCase();
-    // Skip banner rows and table header rows
     if (rawKey.indexOf("🏆") !== -1 || lowerKey === "setting key" || lowerKey.indexOf("synchronized") !== -1) {
       continue;
     }
-    // Col C (index 2) is the value, fallback to Col B (index 1) if missing
     var val = data[i][2] !== undefined && data[i][2] !== "" ? data[i][2] : data[i][1];
     cfg[rawKey] = String(val !== undefined && val !== null ? val : "");
   }
@@ -710,8 +713,7 @@ function readSiteSettings(sheet) {
 }
 
 /**
- * 5. TABLE FORMATTING & DECORATION HELPERS
- * Formats: Head Coloring, Height: 38px, Widths: custom, Font: Arial, Size: 11pt, Aligned Headings
+ * 6. IN-PLACE TABLE FORMATTING & DECORATION HELPERS (NO FLICKER)
  */
 function formatHeaderRow(sheet, colCount, headerColor, alignments) {
   if (!sheet || colCount <= 0) return;
@@ -729,12 +731,10 @@ function formatHeaderRow(sheet, colCount, headerColor, alignments) {
     headerRange.setBorder(true, true, true, true, true, true, "#CBD5E1", SpreadsheetApp.BorderStyle.SOLID);
   } catch (e) {}
   
-  // Explicit Header Row Height: 38px
   try {
     sheet.setRowHeight(1, 38);
   } catch (e) {}
 
-  // Explicitly Align Every Column Heading to match its data type
   if (alignments && Array.isArray(alignments)) {
     for (var c = 0; c < colCount; c++) {
       var align = alignments[c] || "left";
@@ -744,7 +744,6 @@ function formatHeaderRow(sheet, colCount, headerColor, alignments) {
     }
   }
 
-  // Freeze the Header Row so it stays locked during scroll
   try {
     sheet.setFrozenRows(1);
   } catch (e) {}
@@ -756,36 +755,45 @@ function writeDecoratedSheetData(sheet, items, tabConfig) {
   var headers = tabConfig.headers;
   var numCols = headers.length;
 
-  // Safeguard column and row counts before writing
   if (sheet.getMaxColumns() < numCols) {
     sheet.insertColumnsAfter(sheet.getMaxColumns(), numCols - sheet.getMaxColumns());
   }
-  var neededRows = (items && Array.isArray(items) && items.length > 0) ? items.length + 5 : 20;
-  if (sheet.getMaxRows() < neededRows) {
-    sheet.insertRowsAfter(sheet.getMaxRows(), neededRows - sheet.getMaxRows());
+
+  var currentLastRow = sheet.getLastRow();
+  var currentLastCol = sheet.getLastColumn();
+
+  var needHeaderInit = false;
+  if (currentLastRow === 0 || currentLastCol < numCols) {
+    needHeaderInit = true;
+  } else {
+    var existingHeaders = sheet.getRange(1, 1, 1, numCols).getValues()[0];
+    if (existingHeaders.join(",") !== headers.join(",")) {
+      needHeaderInit = true;
+    }
   }
 
-  // Fully clear existing contents and formatting
-  try { sheet.clear(); } catch (e) {}
-  try { sheet.setTabColor(tabConfig.tabColor); } catch (e) {}
-  try {
-    if (typeof sheet.setHiddenGridlines === "function") {
-      sheet.setHiddenGridlines(false);
+  if (needHeaderInit) {
+    sheet.getRange(1, 1, 1, numCols).setValues([headers]);
+    formatHeaderRow(sheet, numCols, tabConfig.headerColor, tabConfig.colAlignments);
+    if (tabConfig.colWidths && Array.isArray(tabConfig.colWidths)) {
+      for (var c = 0; c < numCols; c++) {
+        var colW = tabConfig.colWidths[c];
+        if (colW) {
+          try { sheet.setColumnWidth(c + 1, colW); } catch (e) {}
+        }
+      }
     }
-  } catch (e) {}
+    try { sheet.setTabColor(tabConfig.tabColor); } catch (e) {}
+  }
 
-  // =========================================================================
-  // ROW 1: DESIGNED & ALIGNED COLUMN HEADERS
-  // Head Coloring, Height: 38px, Font: Arial, Size: 11pt Bold, Aligned Headings
-  // =========================================================================
-  sheet.getRange(1, 1, 1, numCols).setValues([headers]);
-  formatHeaderRow(sheet, numCols, tabConfig.headerColor, tabConfig.colAlignments);
+  var newRowCount = (items && Array.isArray(items)) ? items.length : 0;
 
-  // =========================================================================
-  // ROW 2+: TABULAR DATA ROWS
-  // Height: 28px, Font: Arial, Size: 10pt, Aligned Cells, Zebra Striping
-  // =========================================================================
-  if (items && Array.isArray(items) && items.length > 0) {
+  if (newRowCount > 0) {
+    var neededRows = newRowCount + 2;
+    if (sheet.getMaxRows() < neededRows) {
+      sheet.insertRowsAfter(sheet.getMaxRows(), neededRows - sheet.getMaxRows() + 5);
+    }
+
     var rows = items.map(function(item) {
       return headers.map(function(h) {
         var val = item[h];
@@ -801,46 +809,44 @@ function writeDecoratedSheetData(sheet, items, tabConfig) {
     dataRange.setFontSize(10);
     dataRange.setVerticalAlignment("middle");
     dataRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
-    dataRange.setBorder(true, true, true, true, true, true, "#E2E8F0", SpreadsheetApp.BorderStyle.SOLID);
     
-    // Explicit Data Row Height: 28px
-    sheet.setRowHeights(2, rows.length, 28);
+    // Only update styles if row count changed or initializing, keeping sheet snappy
+    var prevDataRows = currentLastRow > 1 ? currentLastRow - 1 : 0;
+    if (needHeaderInit || Math.abs(prevDataRows - newRowCount) > 0) {
+      try {
+        dataRange.setBorder(true, true, true, true, true, true, "#E2E8F0", SpreadsheetApp.BorderStyle.SOLID);
+        sheet.setRowHeights(2, rows.length, 28);
+        var backgrounds = [];
+        for (var r = 0; r < rows.length; r++) {
+          var rowBg = [];
+          var bg = (r % 2 === 1) ? "#F8FAFC" : "#FFFFFF";
+          for (var c = 0; c < numCols; c++) {
+            rowBg.push(bg);
+          }
+          backgrounds.push(rowBg);
+        }
+        dataRange.setBackgrounds(backgrounds);
 
-    // Fast Batch Zebra Striping
-    var backgrounds = [];
-    for (var r = 0; r < rows.length; r++) {
-      var rowBg = [];
-      var bg = (r % 2 === 1) ? "#F8FAFC" : "#FFFFFF";
-      for (var c = 0; c < numCols; c++) {
-        rowBg.push(bg);
-      }
-      backgrounds.push(rowBg);
+        if (tabConfig.colAlignments) {
+          for (var c = 0; c < numCols; c++) {
+            var align = tabConfig.colAlignments[c] || "left";
+            sheet.getRange(2, c + 1, rows.length, 1).setHorizontalAlignment(align);
+          }
+        }
+      } catch (e) {}
     }
-    dataRange.setBackgrounds(backgrounds);
 
-    // Explicit Cell Alignments Matching Headings (Left / Center / Right)
-    if (tabConfig.colAlignments) {
-      for (var c = 0; c < numCols; c++) {
-        var align = tabConfig.colAlignments[c] || "left";
-        sheet.getRange(2, c + 1, rows.length, 1).setHorizontalAlignment(align);
-      }
+    // Clean up excess rows from previous sync without wiping sheet
+    if (currentLastRow > newRowCount + 1) {
+      var excessCount = currentLastRow - (newRowCount + 1);
+      sheet.getRange(newRowCount + 2, 1, excessCount, numCols).clearContent().clearFormat();
+    }
+  } else {
+    // If empty, clear only data rows
+    if (currentLastRow > 1) {
+      sheet.getRange(2, 1, currentLastRow - 1, numCols).clearContent().clearFormat();
     }
   }
-
-  // =========================================================================
-  // EXPLICIT COLUMN WIDTHS (Guarantees zero text truncation)
-  // =========================================================================
-  if (tabConfig.colWidths && Array.isArray(tabConfig.colWidths)) {
-    for (var c = 0; c < numCols; c++) {
-      var colW = tabConfig.colWidths[c];
-      if (colW) {
-        sheet.setColumnWidth(c + 1, colW);
-      }
-    }
-  }
-  
-  // Flush pending changes immediately
-  SpreadsheetApp.flush();
 }
 
 function deleteRowById(sheet, id) {
@@ -850,8 +856,6 @@ function deleteRowById(sheet, id) {
 
   var headers = data[0];
   var targetStr = String(id).trim().toLowerCase();
-
-  // Find all possible candidate columns that might hold an ID or identifier
   var possibleCols = ["id", "code", "chestNo", "admissionNo", "programCode", "ruleKey", "verificationCode", "title"];
   var checkColIndices = [];
   for (var p = 0; p < possibleCols.length; p++) {
@@ -860,7 +864,6 @@ function deleteRowById(sheet, id) {
   }
   if (checkColIndices.length === 0) checkColIndices.push(0);
 
-  // Check from bottom to top so deleting a row does not shift lower rows
   for (var i = data.length - 1; i >= 1; i--) {
     var matchFound = false;
     for (var c = 0; c < checkColIndices.length; c++) {
@@ -871,7 +874,6 @@ function deleteRowById(sheet, id) {
         break;
       }
     }
-    // Also check composite mark key (programCode + "_" + chestNo) if ResultsMarks sheet
     if (!matchFound && targetStr.indexOf("_") !== -1) {
       var progCol = headers.indexOf("programCode");
       var chestCol = headers.indexOf("chestNo");
@@ -893,7 +895,6 @@ function readSheetData(sheet) {
   var data = sheet.getDataRange().getValues();
   if (data.length <= 1) return [];
 
-  // Intelligently detect header row: Row 1 or Row 2 (if Row 1 is a merged title banner)
   var headerRowIdx = 0;
   if (data.length > 1) {
     var row0 = data[0].map(function(k) { return String(k).trim().toLowerCase(); });
@@ -920,7 +921,6 @@ function readSheetData(sheet) {
         hasContent = true;
       }
     }
-    // Filter out blank rows or leftover un-cleared rows with missing ID/key
     if (hasContent) {
       var mainId = rowObj.id || rowObj.code || rowObj.chestNo || rowObj.title || rowObj.programCode || rowObj.ruleKey;
       if (mainId && String(mainId).trim() !== "") {

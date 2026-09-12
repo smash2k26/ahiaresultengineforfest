@@ -147,6 +147,7 @@ const MainFestivalApp: React.FC = () => {
             <div className="animate-in fade-in duration-200">
               <SportsHub
                 onOpenSportsDetail={(match) => setSelectedSportsMatch(match)}
+                onOpenArtsDetail={(prog) => setSelectedArtsProgram(prog)}
                 setActiveTab={setActiveTab}
               />
             </div>

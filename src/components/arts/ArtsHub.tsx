@@ -22,7 +22,12 @@ export const ArtsHub: React.FC<ArtsHubProps> = ({
   const [sectionFilter, setSectionFilter] = useState<'All' | 'Individual' | 'Group'>('All');
   const [statusFilter, setStatusFilter] = useState<'All' | 'LIVE' | 'COMPLETED' | 'UPCOMING'>('All');
 
-  const filtered = artsPrograms.filter((p) => {
+  // Only include Arts discipline programs (exclude Sports events)
+  const artsOnlyPrograms = artsPrograms.filter(
+    (p) => !p.disciplineType || p.disciplineType === 'Arts'
+  );
+
+  const filtered = artsOnlyPrograms.filter((p) => {
     const q = (search || '').toLowerCase();
     const matchesSearch =
       !q ||
@@ -36,9 +41,9 @@ export const ArtsHub: React.FC<ArtsHubProps> = ({
     return matchesSearch && matchesCat && matchesSec && matchesStatus;
   });
 
-  const liveCount = artsPrograms.filter((p) => p.status === 'LIVE').length;
-  const completedCount = artsPrograms.filter((p) => p.status === 'COMPLETED').length;
-  const publishedCount = artsPrograms.filter((p) => p.publishStatus === 'Published').length;
+  const liveCount = artsOnlyPrograms.filter((p) => p.status === 'LIVE').length;
+  const completedCount = artsOnlyPrograms.filter((p) => p.status === 'COMPLETED').length;
+  const publishedCount = artsOnlyPrograms.filter((p) => p.publishStatus === 'Published').length;
 
   return (
     <div className="space-y-6">
@@ -65,7 +70,7 @@ export const ArtsHub: React.FC<ArtsHubProps> = ({
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="px-4 py-2.5 rounded-2xl bg-white/[0.04] border border-white/8 text-center">
-              <div className="text-xl font-bold font-mono text-purple-400">{artsPrograms.length}</div>
+              <div className="text-xl font-bold font-mono text-purple-400">{artsOnlyPrograms.length}</div>
               <div className="text-[10px] text-gray-400 uppercase">Total Items</div>
             </div>
             <div className="px-4 py-2.5 rounded-2xl bg-white/[0.04] border border-white/8 text-center">

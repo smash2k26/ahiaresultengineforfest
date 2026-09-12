@@ -162,23 +162,6 @@ interface FestivalContextType {
 
 const FestivalContext = createContext<FestivalContextType | undefined>(undefined);
 
-// Ensure old mock storage is cleanly reset on first load of clean version
-if (typeof window !== 'undefined') {
-  const isClean = localStorage.getItem('ahia_data_clean_v4');
-  if (!isClean) {
-    localStorage.removeItem('ahia_teams');
-    localStorage.removeItem('ahia_participants');
-    localStorage.removeItem('ahia_arts_programs');
-    localStorage.removeItem('ahia_sports_matches');
-    localStorage.removeItem('ahia_schedule');
-    localStorage.removeItem('ahia_announcements');
-    localStorage.removeItem('ahia_live_updates');
-    localStorage.removeItem('ahia_certificates');
-    localStorage.removeItem('ahia_admin_user');
-    localStorage.setItem('ahia_data_clean_v4', 'true');
-  }
-}
-
 export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load saved state or default
   const [teams, setTeams] = useState<Team[]>(() => {
@@ -187,11 +170,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // If all saved teams have same name or corrupted, default to initial teams
-          const names = new Set(parsed.map(t => (t.name || '').trim().toLowerCase()));
-          if (names.size >= parsed.length && parsed.length >= 3) {
-            return parsed;
-          }
+          return parsed;
         }
       } catch (e) {}
     }
@@ -200,46 +179,102 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const [participants, setParticipants] = useState<Participant[]>(() => {
     const saved = localStorage.getItem('ahia_participants');
-    return saved ? JSON.parse(saved) : INITIAL_PARTICIPANTS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_PARTICIPANTS;
   });
 
   const [artsPrograms, setArtsPrograms] = useState<ArtsProgram[]>(() => {
     const saved = localStorage.getItem('ahia_arts_programs');
-    return saved ? JSON.parse(saved) : INITIAL_ARTS_PROGRAMS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_ARTS_PROGRAMS;
   });
 
   const [sportsMatches, setSportsMatches] = useState<SportsMatch[]>(() => {
     const saved = localStorage.getItem('ahia_sports_matches');
-    return saved ? JSON.parse(saved) : INITIAL_SPORTS_MATCHES;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_SPORTS_MATCHES;
   });
 
   const [schedule, setSchedule] = useState<ScheduleItem[]>(() => {
     const saved = localStorage.getItem('ahia_schedule');
-    return saved ? JSON.parse(saved) : INITIAL_SCHEDULE;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_SCHEDULE;
   });
 
   const [announcements, setAnnouncements] = useState<Announcement[]>(() => {
     const saved = localStorage.getItem('ahia_announcements');
-    return saved ? JSON.parse(saved) : INITIAL_ANNOUNCEMENTS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_ANNOUNCEMENTS;
   });
 
   const [liveUpdates, setLiveUpdates] = useState<LiveUpdate[]>(() => {
     const saved = localStorage.getItem('ahia_live_updates');
-    return saved ? JSON.parse(saved) : INITIAL_LIVE_UPDATES;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_LIVE_UPDATES;
   });
 
-  const [gallery, setGallery] = useState<GalleryItem[]>(INITIAL_GALLERY);
+  const [gallery, setGallery] = useState<GalleryItem[]>(() => {
+    const saved = localStorage.getItem('ahia_gallery');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_GALLERY;
+  });
 
   const toggleLikeGallery = useCallback((id: string) => {
-    setGallery((prev) =>
-      prev.map((item) =>
+    setGallery((prev) => {
+      const updated = prev.map((item) =>
         item.id === id ? { ...item, likes: item.likes + 1 } : item
-      )
-    );
+      );
+      try {
+        localStorage.setItem('ahia_gallery', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   }, []);
+
   const [documents, setDocuments] = useState<DocumentItem[]>(() => {
     const saved = localStorage.getItem('ahia_documents');
-    return saved ? JSON.parse(saved) : [];
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
   });
 
   const [festConfig, setFestConfig] = useState<FestConfig>(() => {
@@ -395,6 +430,14 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     localStorage.setItem('ahia_certificates', JSON.stringify(certificates));
   }, [certificates]);
+
+  useEffect(() => {
+    localStorage.setItem('ahia_gallery', JSON.stringify(gallery));
+  }, [gallery]);
+
+  useEffect(() => {
+    localStorage.setItem('ahia_live_updates', JSON.stringify(liveUpdates));
+  }, [liveUpdates]);
 
   useEffect(() => {
     localStorage.setItem('ahia_scoring_rules', JSON.stringify(scoringRules));
@@ -664,74 +707,16 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, [artsPrograms, sportsMatches, scoringRules]);
 
-  // Arts Result Actions
-  const publishArtsResult = useCallback((programId: string) => {
-    let progName = '';
-    let winnerName = '';
-    let winnerTeam = '';
-
-    setArtsPrograms((prev) =>
-      prev.map((p) => {
-        if (p.id === programId) {
-          progName = p.name;
-          const topResult = p.results.find((r) => r.rank === 1);
-          if (topResult) {
-            winnerName = topResult.participantName;
-            winnerTeam = topResult.teamId;
-          }
-          return {
-            ...p,
-            status: 'COMPLETED',
-            publishStatus: 'Published',
-            publishedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          };
-        }
-        return p;
-      })
-    );
-
-    // Push Announcement & Live Update
-    const newUpdate: LiveUpdate = {
-      id: 'upd-' + Date.now(),
-      icon: '🎭',
-      title: `${progName} Result Published`,
-      description: winnerName ? `${winnerName} secured 1st place with honors!` : 'Official score verified and posted.',
-      timestamp: 'Just now',
-      type: 'result',
-    };
-    setLiveUpdates((prev) => [newUpdate, ...prev]);
-
-    showToast('Result Published Live!', `${progName} results are now live and scores added to team leaderboard.`, 'success');
-    
-    // Automatically trigger recalculation
+  // Auto push helper for all mutations
+  const triggerAutoPush = useCallback((customOverrides?: any) => {
+    isRemoteSyncInProgressRef.current = true;
+    if (pushToGoogleSheetsRef.current) {
+      pushToGoogleSheetsRef.current({ ...customOverrides, silent: true });
+    }
     setTimeout(() => {
-      recalculateAllStandings();
-    }, 100);
-  }, [showToast, recalculateAllStandings]);
-
-  const verifyArtsResult = useCallback((programId: string) => {
-    setArtsPrograms((prev) =>
-      prev.map((p) => {
-        if (p.id === programId) {
-          return { ...p, publishStatus: 'Verified' };
-        }
-        return p;
-      })
-    );
-    showToast('Result Verified', 'Scores locked and ready for official publication.', 'info');
-  }, [showToast]);
-
-  const saveArtsResultDraft = useCallback((programId: string, results: ArtsProgram['results']) => {
-    setArtsPrograms((prev) =>
-      prev.map((p) => {
-        if (p.id === programId) {
-          return { ...p, results, publishStatus: 'Draft' };
-        }
-        return p;
-      })
-    );
-    showToast('Draft Saved', 'Program marks draft updated successfully.', 'info');
-  }, [showToast]);
+      isRemoteSyncInProgressRef.current = false;
+    }, 4000);
+  }, []);
 
   // Immediate remote delete dispatcher for individual items
   const dispatchRemoteDelete = useCallback((sheetName: string, id: string) => {
@@ -756,16 +741,85 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, [googleSheetsConfig.appsScriptUrl, recordDeletedId]);
 
-  // Auto push helper for all mutations
-  const triggerAutoPush = useCallback((customOverrides?: any) => {
-    isRemoteSyncInProgressRef.current = true;
-    if (pushToGoogleSheetsRef.current) {
-      pushToGoogleSheetsRef.current({ ...customOverrides, silent: true });
-    }
+  // Arts Result Actions
+  const publishArtsResult = useCallback((programId: string) => {
+    let progName = '';
+    let winnerName = '';
+
+    setArtsPrograms((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === programId) {
+          progName = p.name;
+          const topResult = (p.results || []).find((r) => r.rank === 1);
+          if (topResult) {
+            winnerName = topResult.participantName;
+          }
+          return {
+            ...p,
+            status: 'COMPLETED' as EventStatus,
+            publishStatus: 'Published' as const,
+            publishedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          };
+        }
+        return p;
+      });
+      localStorage.setItem('ahia_arts_programs', JSON.stringify(updated));
+      triggerAutoPush({ artsPrograms: updated });
+      return updated;
+    });
+
+    // Push Announcement & Live Update
+    const newUpdate: LiveUpdate = {
+      id: 'upd-' + Date.now(),
+      icon: '🎭',
+      title: `${progName} Result Published`,
+      description: winnerName ? `${winnerName} secured 1st place with honors!` : 'Official score verified and posted.',
+      timestamp: 'Just now',
+      type: 'result',
+    };
+    setLiveUpdates((prev) => {
+      const updated = [newUpdate, ...prev];
+      localStorage.setItem('ahia_live_updates', JSON.stringify(updated));
+      return updated;
+    });
+
+    showToast('Result Published Live!', `${progName} results are now live and scores added to team leaderboard.`, 'success');
+    
+    // Automatically trigger recalculation
     setTimeout(() => {
-      isRemoteSyncInProgressRef.current = false;
-    }, 4000);
-  }, []);
+      recalculateAllStandings();
+    }, 100);
+  }, [showToast, recalculateAllStandings, triggerAutoPush]);
+
+  const verifyArtsResult = useCallback((programId: string) => {
+    setArtsPrograms((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === programId) {
+          return { ...p, publishStatus: 'Verified' as const };
+        }
+        return p;
+      });
+      localStorage.setItem('ahia_arts_programs', JSON.stringify(updated));
+      triggerAutoPush({ artsPrograms: updated });
+      return updated;
+    });
+    showToast('Result Verified', 'Scores locked and ready for official publication.', 'info');
+  }, [showToast, triggerAutoPush]);
+
+  const saveArtsResultDraft = useCallback((programId: string, results: ArtsProgram['results']) => {
+    setArtsPrograms((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === programId) {
+          return { ...p, results, publishStatus: 'Draft' as const };
+        }
+        return p;
+      });
+      localStorage.setItem('ahia_arts_programs', JSON.stringify(updated));
+      triggerAutoPush({ artsPrograms: updated });
+      return updated;
+    });
+    showToast('Draft Saved', 'Program marks draft updated successfully.', 'info');
+  }, [showToast, triggerAutoPush]);
 
   const updateArtsProgramStatus = useCallback((programId: string, status: EventStatus) => {
     setArtsPrograms((prev) => {
@@ -1460,6 +1514,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (res.ok) {
           const data = await res.json();
           let recordsUpdated = 0;
+          let hasLocalAdditionsToSyncBack = false;
 
           // Double check if a push was triggered while fetch was in-flight
           if (isRemoteSyncInProgressRef.current) {
@@ -1468,7 +1523,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             return false;
           }
 
-          // 1. Sync Site Settings / festConfig
+          // 1. Safe Merge Site Settings / festConfig
           if (data.festConfig || data.siteSettings) {
             const cfg = data.festConfig || data.siteSettings;
             setFestConfig((prev) => {
@@ -1508,9 +1563,9 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             recordsUpdated++;
           }
 
-          // 2. Sync Teams (excluding tombstoned IDs)
-          if (Array.isArray(data.teams)) {
-            const sanitizedTeams = data.teams
+          // 2. Safe Merge Teams (Preserve all locally added teams not in sheets)
+          if (Array.isArray(data.teams) && data.teams.length > 0) {
+            const remoteSanitized = data.teams
               .filter((t: any) => t && (t.id || t.name) && !isDeleted(t.id) && !isDeleted(t.shortCode))
               .map((t: any, idx: number) => ({
                 ...t,
@@ -1535,14 +1590,63 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 rank: Number(t.rank) || idx + 1,
                 membersCount: Number(t.membersCount) || 0,
               }));
-            setTeams(sanitizedTeams);
-            localStorage.setItem('ahia_teams', JSON.stringify(sanitizedTeams));
+
+            setTeams((prevLocal) => {
+              const remoteMap = new Map<string, any>();
+              remoteSanitized.forEach((t: Team) => {
+                remoteMap.set(t.id, t);
+                if (t.shortCode) remoteMap.set(t.shortCode.toLowerCase(), t);
+                if (t.name) remoteMap.set(t.name.trim().toLowerCase(), t);
+              });
+
+              const merged: Team[] = [...remoteSanitized];
+              const mergedIdSet = new Set(remoteSanitized.map((t: Team) => t.id));
+
+              prevLocal.forEach((localTeam) => {
+                if (!localTeam || !localTeam.id) return;
+                if (isDeleted(localTeam.id) || (localTeam.shortCode && isDeleted(localTeam.shortCode))) return;
+
+                const matchByShort = localTeam.shortCode ? remoteMap.get(localTeam.shortCode.toLowerCase()) : null;
+                const matchByName = localTeam.name ? remoteMap.get(localTeam.name.trim().toLowerCase()) : null;
+                const existing = remoteMap.get(localTeam.id) || matchByShort || matchByName;
+
+                if (existing) {
+                  const targetIdx = merged.findIndex((m) => m.id === existing.id);
+                  if (targetIdx !== -1) {
+                    merged[targetIdx] = {
+                      ...localTeam,
+                      ...existing,
+                      logo: existing.logo && existing.logo !== '🏆' ? existing.logo : (localTeam.logo || existing.logo),
+                      color: existing.color || localTeam.color,
+                      accentColor: existing.accentColor || localTeam.accentColor,
+                      slogan: existing.slogan || localTeam.slogan,
+                      description: existing.description || localTeam.description,
+                      captain: existing.captain || localTeam.captain,
+                      viceCaptain: existing.viceCaptain || localTeam.viceCaptain,
+                      staffAdvisor: existing.staffAdvisor || localTeam.staffAdvisor,
+                    };
+                  }
+                } else {
+                  // Keep locally added team
+                  if (!mergedIdSet.has(localTeam.id)) {
+                    merged.push(localTeam);
+                    mergedIdSet.add(localTeam.id);
+                    hasLocalAdditionsToSyncBack = true;
+                  }
+                }
+              });
+
+              merged.sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+              const finalTeams = merged.map((t, i) => ({ ...t, rank: i + 1 }));
+              localStorage.setItem('ahia_teams', JSON.stringify(finalTeams));
+              return finalTeams;
+            });
             recordsUpdated++;
           }
 
-          // 3. Sync Participants (excluding tombstoned IDs)
-          if (Array.isArray(data.participants)) {
-            const sanitizedParticipants = data.participants
+          // 3. Safe Merge Participants (Preserve locally added students)
+          if (Array.isArray(data.participants) && data.participants.length > 0) {
+            const remoteSanitized = data.participants
               .filter((p: any) => p && (p.id || p.chestNo || p.name) && !isDeleted(p.id) && !isDeleted(p.chestNo))
               .map((p: any, idx: number) => {
                 let progs = p.participatedPrograms;
@@ -1559,15 +1663,64 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   bronzes: Number(p.bronzes) || 0,
                 };
               });
-            setParticipants(sanitizedParticipants);
-            localStorage.setItem('ahia_participants', JSON.stringify(sanitizedParticipants));
+
+            setParticipants((prevLocal) => {
+              const remoteMap = new Map<string, any>();
+              remoteSanitized.forEach((p: Participant) => {
+                remoteMap.set(p.id, p);
+                if (p.chestNo) remoteMap.set(String(p.chestNo).trim().toLowerCase(), p);
+                if (p.admissionNo) remoteMap.set(String(p.admissionNo).trim().toLowerCase(), p);
+              });
+
+              const merged: Participant[] = [...remoteSanitized];
+              const mergedIdSet = new Set(remoteSanitized.map((p: Participant) => p.id));
+              const mergedChestSet = new Set(remoteSanitized.map((p: Participant) => String(p.chestNo).trim().toLowerCase()));
+
+              prevLocal.forEach((localP) => {
+                if (!localP || !localP.id) return;
+                if (isDeleted(localP.id) || (localP.chestNo && isDeleted(localP.chestNo))) return;
+
+                const chestKey = localP.chestNo ? String(localP.chestNo).trim().toLowerCase() : '';
+                const admKey = localP.admissionNo ? String(localP.admissionNo).trim().toLowerCase() : '';
+                const existing = remoteMap.get(localP.id) || (chestKey ? remoteMap.get(chestKey) : null) || (admKey ? remoteMap.get(admKey) : null);
+
+                if (existing) {
+                  const targetIdx = merged.findIndex((m) => m.id === existing.id);
+                  if (targetIdx !== -1) {
+                    const combinedPrograms = Array.from(new Set([
+                      ...(Array.isArray(localP.participatedPrograms) ? localP.participatedPrograms : []),
+                      ...(Array.isArray(existing.participatedPrograms) ? existing.participatedPrograms : []),
+                    ]));
+                    merged[targetIdx] = {
+                      ...localP,
+                      ...existing,
+                      participatedPrograms: combinedPrograms,
+                      avatar: existing.avatar || localP.avatar,
+                      category: existing.category || localP.category,
+                      teamId: existing.teamId || localP.teamId,
+                    };
+                  }
+                } else {
+                  // Keep locally created participant
+                  if (!mergedIdSet.has(localP.id) && (!chestKey || !mergedChestSet.has(chestKey))) {
+                    merged.push(localP);
+                    mergedIdSet.add(localP.id);
+                    if (chestKey) mergedChestSet.add(chestKey);
+                    hasLocalAdditionsToSyncBack = true;
+                  }
+                }
+              });
+
+              localStorage.setItem('ahia_participants', JSON.stringify(merged));
+              return merged;
+            });
             recordsUpdated++;
           }
 
-          // 4. Sync Programs (Arts & Cultural) (excluding tombstoned IDs)
+          // 4. Safe Merge Programs & Results (Never drop locally registered marks or programs)
           const rawPrograms = data.artsPrograms || data.programs;
-          if (Array.isArray(rawPrograms)) {
-            const sanitizedPrograms = rawPrograms
+          if (Array.isArray(rawPrograms) && rawPrograms.length > 0) {
+            const remoteSanitized = rawPrograms
               .filter((pr: any) => pr && (pr.id || pr.code || pr.name) && !isDeleted(pr.id) && !isDeleted(pr.code))
               .map((pr: any, idx: number) => {
                 let results = pr.results;
@@ -1584,15 +1737,80 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   maxMarks: Number(pr.maxMarks) || 100,
                 };
               });
-            setArtsPrograms(sanitizedPrograms);
-            localStorage.setItem('ahia_arts_programs', JSON.stringify(sanitizedPrograms));
+
+            setArtsPrograms((prevLocal) => {
+              const remoteMap = new Map<string, any>();
+              remoteSanitized.forEach((pr: ArtsProgram) => {
+                remoteMap.set(pr.id, pr);
+                if (pr.code) remoteMap.set(String(pr.code).trim().toLowerCase(), pr);
+              });
+
+              const merged: ArtsProgram[] = remoteSanitized.map((remotePr: ArtsProgram) => {
+                const localMatch = prevLocal.find(
+                  (lp) => lp.id === remotePr.id || (lp.code && remotePr.code && lp.code.trim().toLowerCase() === remotePr.code.trim().toLowerCase())
+                );
+                if (localMatch) {
+                  // Merge results: keep both remote results and any freshly entered local marks
+                  const resultMap = new Map<string, any>();
+                  (remotePr.results || []).forEach((r: any) => {
+                    const key = r.participantId || r.chestNo;
+                    if (key && !isDeleted(`${remotePr.code || remotePr.id}_${key}`) && !isDeleted(key)) {
+                      resultMap.set(key, r);
+                    }
+                  });
+                  (localMatch.results || []).forEach((r: any) => {
+                    const key = r.participantId || r.chestNo;
+                    if (key && !isDeleted(`${remotePr.code || remotePr.id}_${key}`) && !isDeleted(key)) {
+                      const existingRes = resultMap.get(key);
+                      if (!existingRes) {
+                        resultMap.set(key, r); // Keep locally recorded result
+                        hasLocalAdditionsToSyncBack = true;
+                      } else {
+                        resultMap.set(key, { ...existingRes, ...r });
+                      }
+                    }
+                  });
+                  return {
+                    ...localMatch,
+                    ...remotePr,
+                    results: Array.from(resultMap.values()),
+                    publishStatus: remotePr.publishStatus || localMatch.publishStatus || 'Draft',
+                    status: remotePr.status || localMatch.status || 'UPCOMING',
+                  };
+                }
+                return remotePr;
+              });
+
+              const mergedIdSet = new Set(merged.map((p) => p.id));
+              const mergedCodeSet = new Set(merged.map((p) => (p.code ? p.code.trim().toLowerCase() : '')));
+
+              // Preserve any locally created programs not present in remote yet
+              prevLocal.forEach((localPr) => {
+                if (!localPr || !localPr.id) return;
+                if (isDeleted(localPr.id) || (localPr.code && isDeleted(localPr.code))) return;
+
+                const codeKey = localPr.code ? localPr.code.trim().toLowerCase() : '';
+                if (!mergedIdSet.has(localPr.id) && (!codeKey || !mergedCodeSet.has(codeKey))) {
+                  const validResults = (localPr.results || []).filter(
+                    (r) => !isDeleted(`${localPr.code || localPr.id}_${r.participantId}`) && !isDeleted(r.participantId)
+                  );
+                  merged.push({ ...localPr, results: validResults });
+                  mergedIdSet.add(localPr.id);
+                  if (codeKey) mergedCodeSet.add(codeKey);
+                  hasLocalAdditionsToSyncBack = true;
+                }
+              });
+
+              localStorage.setItem('ahia_arts_programs', JSON.stringify(merged));
+              return merged;
+            });
             recordsUpdated++;
           }
 
-          // 5. Sync Sports Matches (excluding tombstoned IDs)
+          // 5. Safe Merge Sports Matches (Preserve local live matches and events)
           const rawMatches = data.sportsMatches || data.matches;
-          if (Array.isArray(rawMatches)) {
-            const sanitizedMatches = rawMatches
+          if (Array.isArray(rawMatches) && rawMatches.length > 0) {
+            const remoteSanitized = rawMatches
               .filter((m: any) => m && (m.id || m.sport) && !isDeleted(m.id))
               .map((m: any, idx: number) => {
                 let events = m.events;
@@ -1607,46 +1825,133 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   scoreB: Number(m.scoreB) || 0,
                 };
               });
-            setSportsMatches(sanitizedMatches);
-            localStorage.setItem('ahia_sports_matches', JSON.stringify(sanitizedMatches));
+
+            setSportsMatches((prevLocal) => {
+              const merged: SportsMatch[] = remoteSanitized.map((remoteMatch: SportsMatch) => {
+                const localMatch = prevLocal.find((lm) => lm.id === remoteMatch.id);
+                if (localMatch) {
+                  const eventMap = new Map<string, any>();
+                  (remoteMatch.events || []).forEach((e: any) => eventMap.set(e.id || `${e.minute}-${e.playerName}`, e));
+                  (localMatch.events || []).forEach((e: any) => {
+                    const key = e.id || `${e.minute}-${e.playerName}`;
+                    if (!eventMap.has(key)) {
+                      eventMap.set(key, e);
+                      hasLocalAdditionsToSyncBack = true;
+                    }
+                  });
+                  return {
+                    ...localMatch,
+                    ...remoteMatch,
+                    events: Array.from(eventMap.values()),
+                    scoreA: remoteMatch.scoreA !== undefined ? remoteMatch.scoreA : localMatch.scoreA,
+                    scoreB: remoteMatch.scoreB !== undefined ? remoteMatch.scoreB : localMatch.scoreB,
+                    winnerTeamId: remoteMatch.winnerTeamId || localMatch.winnerTeamId,
+                    detailScore: remoteMatch.detailScore || localMatch.detailScore,
+                  };
+                }
+                return remoteMatch;
+              });
+
+              const mergedIdSet = new Set(merged.map((m) => m.id));
+              prevLocal.forEach((localM) => {
+                if (!localM || !localM.id) return;
+                if (isDeleted(localM.id)) return;
+                if (!mergedIdSet.has(localM.id)) {
+                  merged.push(localM);
+                  mergedIdSet.add(localM.id);
+                  hasLocalAdditionsToSyncBack = true;
+                }
+              });
+
+              localStorage.setItem('ahia_sports_matches', JSON.stringify(merged));
+              return merged;
+            });
             recordsUpdated++;
           }
 
-          // 6. Sync Schedule (excluding tombstoned IDs)
-          if (Array.isArray(data.schedule)) {
-            const sanitizedSchedule = data.schedule.filter((s: any) => s && s.id && !isDeleted(s.id));
-            setSchedule(sanitizedSchedule);
-            localStorage.setItem('ahia_schedule', JSON.stringify(sanitizedSchedule));
+          // 6. Safe Merge Schedule
+          if (Array.isArray(data.schedule) && data.schedule.length > 0) {
+            const remoteSanitized = data.schedule.filter((s: any) => s && s.id && !isDeleted(s.id));
+            setSchedule((prevLocal) => {
+              const remoteIds = new Set(remoteSanitized.map((s: any) => s.id));
+              const merged = [...remoteSanitized];
+              prevLocal.forEach((ls) => {
+                if (ls && ls.id && !isDeleted(ls.id) && !remoteIds.has(ls.id)) {
+                  merged.push(ls);
+                  remoteIds.add(ls.id);
+                  hasLocalAdditionsToSyncBack = true;
+                }
+              });
+              localStorage.setItem('ahia_schedule', JSON.stringify(merged));
+              return merged;
+            });
             recordsUpdated++;
           }
 
-          // 7. Sync Announcements (excluding tombstoned IDs)
-          if (Array.isArray(data.announcements)) {
-            const sanitizedAnnouncements = data.announcements.filter((a: any) => a && a.id && !isDeleted(a.id));
-            setAnnouncements(sanitizedAnnouncements);
-            localStorage.setItem('ahia_announcements', JSON.stringify(sanitizedAnnouncements));
+          // 7. Safe Merge Announcements
+          if (Array.isArray(data.announcements) && data.announcements.length > 0) {
+            const remoteSanitized = data.announcements.filter((a: any) => a && a.id && !isDeleted(a.id));
+            setAnnouncements((prevLocal) => {
+              const remoteIds = new Set(remoteSanitized.map((a: any) => a.id));
+              const merged = [...remoteSanitized];
+              prevLocal.forEach((la) => {
+                if (la && la.id && !isDeleted(la.id) && !remoteIds.has(la.id)) {
+                  merged.push(la);
+                  remoteIds.add(la.id);
+                  hasLocalAdditionsToSyncBack = true;
+                }
+              });
+              localStorage.setItem('ahia_announcements', JSON.stringify(merged));
+              return merged;
+            });
             recordsUpdated++;
           }
 
-          // 8. Sync Certificates (excluding tombstoned IDs)
-          if (Array.isArray(data.certificates)) {
-            const sanitizedCertificates = data.certificates.filter((c: any) => c && c.id && !isDeleted(c.id));
-            setCertificates(sanitizedCertificates);
-            localStorage.setItem('ahia_certificates', JSON.stringify(sanitizedCertificates));
+          // 8. Safe Merge Certificates
+          if (Array.isArray(data.certificates) && data.certificates.length > 0) {
+            const remoteSanitized = data.certificates.filter((c: any) => c && c.id && !isDeleted(c.id));
+            setCertificates((prevLocal) => {
+              const remoteIds = new Set(remoteSanitized.map((c: any) => c.id));
+              const merged = [...remoteSanitized];
+              prevLocal.forEach((lc) => {
+                if (lc && lc.id && !isDeleted(lc.id) && !remoteIds.has(lc.id)) {
+                  merged.push(lc);
+                  remoteIds.add(lc.id);
+                  hasLocalAdditionsToSyncBack = true;
+                }
+              });
+              localStorage.setItem('ahia_certificates', JSON.stringify(merged));
+              return merged;
+            });
             recordsUpdated++;
           }
 
-          // 9. Sync Documents (excluding tombstoned IDs)
-          if (Array.isArray(data.documents)) {
-            const sanitizedDocuments = data.documents.filter((d: any) => d && d.id && !isDeleted(d.id));
-            setDocuments(sanitizedDocuments);
-            localStorage.setItem('ahia_documents', JSON.stringify(sanitizedDocuments));
+          // 9. Safe Merge Documents
+          if (Array.isArray(data.documents) && data.documents.length > 0) {
+            const remoteSanitized = data.documents.filter((d: any) => d && d.id && !isDeleted(d.id));
+            setDocuments((prevLocal) => {
+              const remoteIds = new Set(remoteSanitized.map((d: any) => d.id));
+              const merged = [...remoteSanitized];
+              prevLocal.forEach((ld) => {
+                if (ld && ld.id && !isDeleted(ld.id) && !remoteIds.has(ld.id)) {
+                  merged.push(ld);
+                  remoteIds.add(ld.id);
+                  hasLocalAdditionsToSyncBack = true;
+                }
+              });
+              localStorage.setItem('ahia_documents', JSON.stringify(merged));
+              return merged;
+            });
             recordsUpdated++;
           }
 
-          // 9. Sync Scoring Rules
+          // 10. Sync Scoring Rules
           if (data.scoringRules && typeof data.scoringRules === 'object') {
-            setScoringRules(data.scoringRules);
+            setScoringRules((prev) => {
+              const updated = { ...prev, ...data.scoringRules };
+              localStorage.setItem('ahia_scoring_rules', JSON.stringify(updated));
+              return updated;
+            });
             recordsUpdated++;
           }
 
@@ -1658,12 +1963,22 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }));
 
           if (recordsUpdated > 0) {
-            showToast('Google Sheet Synchronized', `Synchronized ${recordsUpdated} dataset(s) and site branding from Google Sheets.`, 'success');
+            showToast('Google Sheet Synchronized', `Synchronized ${recordsUpdated} dataset(s) seamlessly without overwriting local data.`, 'success');
           } else {
-            showToast('Google Sheet Connected', 'Connected to Google Sheets. Current sheets are ready for live data push.', 'info');
+            showToast('Google Sheet Connected', 'Connected to Google Sheets. All records safely preserved.', 'info');
           }
 
           recalculateAllStandings();
+
+          // If local items were preserved that were missing from sheets, sync them up automatically
+          if (hasLocalAdditionsToSyncBack && pushToGoogleSheetsRef.current) {
+            setTimeout(() => {
+              if (pushToGoogleSheetsRef.current && !isRemoteSyncInProgressRef.current) {
+                pushToGoogleSheetsRef.current({ silent: true });
+              }
+            }, 2500);
+          }
+
           return true;
         } else {
           throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -1696,7 +2011,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isRemoteSyncInProgressRef.current = false;
       }, 1500);
     }
-  }, [googleSheetsConfig.appsScriptUrl, showToast, recalculateAllStandings]);
+  }, [googleSheetsConfig.appsScriptUrl, isDeleted, showToast, recalculateAllStandings]);
 
   const pushToGoogleSheets = useCallback(async (customOverrides?: {
     teams?: Team[];

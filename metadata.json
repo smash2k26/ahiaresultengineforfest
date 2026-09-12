@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix AHIA FEST 2026 - Arts \u0026 Sports Result Engine",
+  "description": "Live digital command center, real-time standings leaderboard, arts \u0026 sports results engine, schedules, and certificate verification platform for AHIA Fest 2026.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

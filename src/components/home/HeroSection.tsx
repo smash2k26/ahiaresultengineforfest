@@ -3,7 +3,7 @@ import { SparklesIcon as Sparkles, UserGroupIcon as Users, Award01Icon as Award,
 import { useFestival } from '../../context/FestivalContext';
 import { GlassCard, GlassBadge, GlassButton } from '../ui/GlassCard';
 import { ActiveTab } from '../layout/Sidebar';
-import { TeamLogo } from '../ui/TeamLogo';
+import { TeamLogo, formatImageUrl, isImageUrl } from '../ui/TeamLogo';
 
 interface HeroSectionProps {
   setActiveTab: (tab: ActiveTab) => void;
@@ -91,6 +91,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
     <div className="space-y-4 sm:space-y-6">
       {/* Hero Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200 p-6 sm:p-8 lg:p-10 shadow-xs">
+        {festConfig?.bannerUrl && isImageUrl(festConfig.bannerUrl) && (
+          <div className="absolute inset-0 z-0">
+            <img
+              src={formatImageUrl(festConfig.bannerUrl)}
+              alt="Festival Banner"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover opacity-15"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-white/70" />
+          </div>
+        )}
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="max-w-2xl space-y-3 sm:space-y-4">
             <div className="flex flex-wrap items-center gap-2.5">

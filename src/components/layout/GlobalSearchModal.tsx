@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search01Icon as Search, Award01Icon as Trophy, UserGroupIcon as Users, BrushIcon as Palette, Activity02Icon as Activity, File01Icon as FileText, ArrowRight01Icon as ArrowRight, Cancel01Icon as X, SparklesIcon as Sparkles } from 'hugeicons-react';
 import { useFestival } from '../../context/FestivalContext';
 import { ActiveTab } from './Sidebar';
+import { ParticipantAvatar } from '../ui/TeamLogo';
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
@@ -169,9 +170,9 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                       className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-colors text-left group cursor-pointer"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <img
-                          src={p.photo}
-                          alt={p.name}
+                        <ParticipantAvatar
+                          photo={p.photo}
+                          name={p.name}
                           className="w-8 h-8 rounded-lg object-cover border border-slate-200"
                         />
                         <div className="min-w-0">

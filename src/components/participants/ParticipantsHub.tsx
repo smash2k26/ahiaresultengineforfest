@@ -4,7 +4,7 @@ import confetti from 'canvas-confetti';
 import { useFestival } from '../../context/FestivalContext';
 import { Participant } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
-import { TeamLogo } from '../ui/TeamLogo';
+import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
 
 interface ParticipantsHubProps {
   setActiveTab: (tab: ActiveTab) => void;
@@ -271,9 +271,9 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                       </span>
                     </div>
 
-                    <img
-                      src={secondP.photo}
-                      alt={secondP.name}
+                    <ParticipantAvatar
+                      photo={secondP.photo}
+                      name={secondP.name}
                       className="w-16 h-16 rounded-full mx-auto object-cover border-2 border-slate-200 mt-2 group-hover:scale-105 transition-transform"
                     />
 
@@ -326,9 +326,9 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                       </span>
                     </div>
 
-                    <img
-                      src={firstP.photo}
-                      alt={firstP.name}
+                    <ParticipantAvatar
+                      photo={firstP.photo}
+                      name={firstP.name}
                       className="w-20 h-20 rounded-full mx-auto object-cover border-4 border-amber-300 mt-3 group-hover:scale-110 transition-transform duration-300"
                     />
 
@@ -377,9 +377,9 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                       </span>
                     </div>
 
-                    <img
-                      src={thirdP.photo}
-                      alt={thirdP.name}
+                    <ParticipantAvatar
+                      photo={thirdP.photo}
+                      name={thirdP.name}
                       className="w-16 h-16 rounded-full mx-auto object-cover border-2 border-slate-200 mt-2 group-hover:scale-105 transition-transform"
                     />
 
@@ -476,9 +476,9 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2.5">
-                          <img
-                            src={p.photo}
-                            alt={p.name}
+                          <ParticipantAvatar
+                            photo={p.photo}
+                            name={p.name}
                             className="w-7 h-7 rounded-full object-cover border border-slate-200"
                           />
                           <div>
@@ -545,9 +545,9 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                     <div>
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          <img
-                            src={p.photo}
-                            alt={p.name}
+                          <ParticipantAvatar
+                            photo={p.photo}
+                            name={p.name}
                             className="w-12 h-12 rounded-xl object-cover border border-slate-200 group-hover:scale-105 transition-transform"
                           />
                           <div className="min-w-0">
@@ -643,9 +643,9 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
-                            <img
-                              src={p.photo}
-                              alt={p.name}
+                            <ParticipantAvatar
+                              photo={p.photo}
+                              name={p.name}
                               className="w-6 h-6 rounded-md object-cover border border-slate-200"
                             />
                             <span className="font-bold text-slate-900">{p.name}</span>

@@ -18,7 +18,7 @@ import { AdminScheduleSection } from './AdminScheduleSection';
 import { AdminScoringSection } from './AdminScoringSection';
 import { AdminCertificatesSection } from './AdminCertificatesSection';
 import { AdminBulkDataModal } from './AdminBulkDataModal';
-import { TeamLogo } from '../ui/TeamLogo';
+import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
 
 interface AdminDashboardProps {
   onClose?: () => void;
@@ -2122,9 +2122,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                       return (
                         <tr key={pt.id ? `adm-pt-${pt.id}-${idx}` : `adm-pt-${pt.chestNo || idx}-${idx}`} className="hover:bg-slate-50/60 transition-colors">
                           <td className="px-4 py-3 font-semibold text-slate-900 flex items-center gap-2.5">
-                            <img
-                              src={pt.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                              alt=""
+                            <ParticipantAvatar
+                              photo={pt.photo}
+                              name={pt.name}
                               className="w-7 h-7 rounded-full object-cover border border-slate-200"
                             />
                             <span>{pt.name}</span>

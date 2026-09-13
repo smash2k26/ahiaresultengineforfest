@@ -24,7 +24,7 @@ export function isImageUrl(value?: string): boolean {
 }
 
 /**
- * Format and convert cloud image links (such as Google Drive sharing URLs)
+ * Format and convert cloud image links (such as Google Drive sharing URLs, Imgur, GitHub)
  * into direct embeddable image source URLs.
  */
 export function formatImageUrl(url?: string): string {
@@ -32,16 +32,20 @@ export function formatImageUrl(url?: string): string {
   const cleanUrl = url.trim();
 
   // Convert Google Drive share link to direct image link
-  // e.g., https://drive.google.com/file/d/FILE_ID/view?usp=sharing
   const driveFileMatch = cleanUrl.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i);
   if (driveFileMatch && driveFileMatch[1]) {
     return `https://lh3.googleusercontent.com/d/${driveFileMatch[1]}`;
   }
 
-  // Convert Google Drive open?id= or uc?id=
-  const driveIdMatch = cleanUrl.match(/drive\.google\.com\/(?:open|uc)\?.*id=([a-zA-Z0-9_-]+)/i);
+  // Convert Google Drive open?id= or uc?id= or any query parameter id=
+  const driveIdMatch = cleanUrl.match(/(?:drive|docs)\.google\.com\/(?:open|uc)\?.*id=([a-zA-Z0-9_-]+)/i) || cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
   if (driveIdMatch && driveIdMatch[1]) {
     return `https://lh3.googleusercontent.com/d/${driveIdMatch[1]}`;
+  }
+
+  // Convert GitHub blob links to raw
+  if (cleanUrl.includes('github.com') && cleanUrl.includes('/blob/')) {
+    return cleanUrl.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
   }
 
   // Convert Dropbox share links with dl=0 to raw=1
@@ -138,6 +142,51 @@ export const TeamLogo: React.FC<TeamLogoProps> = ({
   return (
     <span className={`inline-flex items-center justify-center select-none shrink-0 ${currentSize.text} ${className}`}>
       {fallbackEmoji}
+    </span>
+  );
+};
+
+export interface ParticipantAvatarProps {
+  photo?: string;
+  name?: string;
+  className?: string;
+}
+
+export const ParticipantAvatar: React.FC<ParticipantAvatarProps> = ({
+  photo,
+  name = 'Participant',
+  className = 'w-8 h-8 rounded-full object-cover border border-slate-200',
+}) => {
+  const [hasError, setHasError] = useState(false);
+  const rawPhoto = photo?.trim();
+  const formattedUrl = formatImageUrl(rawPhoto);
+
+  const isImg = Boolean(formattedUrl && isImageUrl(formattedUrl) && !hasError);
+
+  if (isImg) {
+    return (
+      <img
+        src={formattedUrl}
+        alt={name}
+        referrerPolicy="no-referrer"
+        onError={() => setHasError(true)}
+        className={className}
+      />
+    );
+  }
+
+  const initials = name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    <span
+      className={`inline-flex items-center justify-center font-bold font-mono text-indigo-700 bg-indigo-50 border border-indigo-200 select-none shrink-0 ${className}`}
+    >
+      {initials || '👤'}
     </span>
   );
 };

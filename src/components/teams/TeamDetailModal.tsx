@@ -6,7 +6,7 @@ import { GlassModal } from '../ui/GlassModal';
 import { Team } from '../../types/festival';
 import { useFestival } from '../../context/FestivalContext';
 import { ActiveTab } from '../layout/Sidebar';
-import { TeamLogo } from '../ui/TeamLogo';
+import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
 
 interface TeamDetailModalProps {
   team: Team | null;
@@ -141,9 +141,9 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
                     </td>
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-2">
-                        <img
-                          src={member.photo}
-                          alt={member.name}
+                        <ParticipantAvatar
+                          photo={member.photo}
+                          name={member.name}
                           className="w-6 h-6 rounded-md object-cover border border-slate-200"
                         />
                         <span className="font-bold text-slate-900">{member.name}</span>

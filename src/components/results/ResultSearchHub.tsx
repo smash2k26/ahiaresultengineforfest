@@ -4,7 +4,7 @@ import { useFestival } from '../../context/FestivalContext';
 import { GlassBadge, GlassButton } from '../ui/GlassCard';
 import { Participant, ArtsResultEntry, ArtsProgram } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
-import { TeamLogo } from '../ui/TeamLogo';
+import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
 
 interface ResultSearchHubProps {
   initialChestNo?: string;
@@ -316,9 +316,9 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
                     {/* Top Profile Header */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <img
-                          src={participant.photo}
-                          alt={participant.name}
+                        <ParticipantAvatar
+                          photo={participant.photo}
+                          name={participant.name}
                           className="w-14 h-14 rounded-2xl object-cover border-2 border-purple-200 shadow-xs"
                         />
                         <div className="min-w-0">

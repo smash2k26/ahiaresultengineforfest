@@ -2,7 +2,7 @@ import React from 'react';
 import { Home01Icon as Home, Award01Icon as Trophy, BrushIcon as Palette, Activity02Icon as Activity, Calendar01Icon as Calendar, Search01Icon as Search, UserGroupIcon as Users, Award01Icon as Award, Image01Icon as Image01Icon, File01Icon as FileText, Shield02Icon as ShieldCheck, FireIcon as Flame, ArrowRight01Icon as ChevronRight, ArrowLeft01Icon as ChevronLeft, PanelLeftCloseIcon as PanelLeftClose, PanelLeftOpenIcon as PanelLeftOpen, UserCheck01Icon as UserCheck } from 'hugeicons-react';
 import { useFestival } from '../../context/FestivalContext';
 import { GlassBadge } from '../ui/GlassCard';
-import { TeamLogo } from '../ui/TeamLogo';
+import { TeamLogo, formatImageUrl } from '../ui/TeamLogo';
 
 export type ActiveTab =
   | 'home'
@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm shadow-purple-900/10 flex items-center justify-center shrink-0 border border-slate-200 bg-white hover:border-purple-500/50 transition-colors">
               <img
-                src={festConfig?.logoUrl || '/assets/festival_logo.svg'}
+                src={formatImageUrl(festConfig?.logoUrl) || '/assets/festival_logo.svg'}
                 alt={festConfig?.name || 'AHIA Fest Logo'}
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-contain p-1"

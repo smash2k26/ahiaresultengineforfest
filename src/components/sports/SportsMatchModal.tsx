@@ -131,31 +131,31 @@ export const SportsMatchModal: React.FC<SportsMatchModalProps> = ({
           </div>
 
           {match.events.length > 0 ? (
-            <div className="p-4 rounded-2xl bg-black/30 border border-white/8 space-y-3">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
               {match.events.map((evt, idx) => {
                 const team = teams.find((t) => t.id === evt.teamId);
                 const isGoal = evt.type === 'goal' || evt.type === 'point';
                 return (
                   <div
                     key={evt.id || `match-evt-${match.id}-${idx}`}
-                    className="flex items-start gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-gray-300"
+                    className="flex items-start gap-3 p-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 shadow-sm"
                   >
-                    <span className="px-2 py-0.5 rounded-lg bg-sky-500/20 text-sky-300 font-mono font-bold text-[11px] shrink-0">
+                    <span className="px-2 py-0.5 rounded-lg bg-sky-50 text-sky-700 font-mono font-bold text-[11px] shrink-0 border border-sky-200">
                       {evt.minute}&apos;
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-white">{evt.playerName}</span>
-                        <span className="text-[10px] text-gray-400">
+                        <span className="font-bold text-slate-900">{evt.playerName}</span>
+                        <span className="text-[10px] text-slate-500">
                           ({team?.name || evt.teamId})
                         </span>
                         {isGoal && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300">
+                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
                             GOAL / POINT
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-gray-400 mt-0.5">{evt.description}</p>
+                      <p className="text-[11px] text-slate-600 mt-0.5">{evt.description}</p>
                     </div>
                   </div>
                 );

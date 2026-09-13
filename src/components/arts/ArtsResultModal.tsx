@@ -201,18 +201,18 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
         {isPublished && program.results.length > 0 ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-300">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
                 Official Marks Breakdown ({program.results.length} Ranked)
               </span>
-              <span className="text-[10px] font-mono text-gray-500">
+              <span className="text-[10px] font-mono text-slate-500">
                 Max Marks: {program.maxMarks}
               </span>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-white/8 bg-black/30">
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-white/8 text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-white/[0.02]">
+                  <tr className="border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50">
                     <th className="py-2.5 px-3 text-center w-12">Rank</th>
                     <th className="py-2.5 px-3 font-mono">Chest No</th>
                     <th className="py-2.5 px-3">Participant</th>
@@ -223,7 +223,7 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
                     <th className="py-2.5 px-3 text-right">House Pts</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-slate-100">
                   {program.results.map((res, idx) => {
                     const team = teams.find((t) => t.id === res.teamId);
                     const isWinner = res.rank === 1;
@@ -231,17 +231,17 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
                     return (
                       <tr
                         key={res.participantId || `${res.chestNo || 'res'}-${idx}`}
-                        className={`hover:bg-white/[0.04] transition-colors ${
-                          isWinner ? 'bg-amber-500/[0.04]' : ''
+                        className={`hover:bg-slate-50 transition-colors text-slate-800 ${
+                          isWinner ? 'bg-amber-50/60' : ''
                         }`}
                       >
                         <td className="py-3 px-3 text-center font-mono font-bold">
-                          {res.rank === 1 && <span className="text-amber-400">01</span>}
-                          {res.rank === 2 && <span className="text-slate-300">02</span>}
-                          {res.rank === 3 && <span className="text-amber-600">03</span>}
-                          {res.rank > 3 && <span className="text-gray-500">0{res.rank}</span>}
+                          {res.rank === 1 && <span className="text-amber-600">01</span>}
+                          {res.rank === 2 && <span className="text-slate-600">02</span>}
+                          {res.rank === 3 && <span className="text-amber-800">03</span>}
+                          {res.rank > 3 && <span className="text-slate-500">0{res.rank}</span>}
                         </td>
-                        <td className="py-3 px-3 font-mono font-bold text-purple-300">
+                        <td className="py-3 px-3 font-mono font-bold text-purple-700">
                           <button
                             onClick={() => handleChestClick(res.chestNo)}
                             className="hover:underline cursor-pointer"
@@ -249,33 +249,33 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
                             {res.chestNo}
                           </button>
                         </td>
-                        <td className="py-3 px-3 font-bold text-white">{res.participantName}</td>
+                        <td className="py-3 px-3 font-bold text-slate-900">{res.participantName}</td>
                         <td className="py-3 px-3">
-                          <div className="flex items-center gap-1.5 text-gray-300">
+                          <div className="flex items-center gap-1.5 text-slate-700">
                             <TeamLogo logo={team?.logo} name={team?.name} color={team?.color} size="xs" fallbackEmoji="🛡️" />
                             <span className="truncate">{team?.name || res.teamId}</span>
                           </div>
                         </td>
-                        <td className="py-3 px-3 text-right font-mono font-bold text-white">
+                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
                           {res.marks}
                         </td>
                         <td className="py-3 px-3 text-center">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${
                               res.grade === 'A+'
-                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 : res.grade === 'A'
-                                ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
-                                : 'bg-white/10 text-gray-300'
+                                ? 'bg-sky-50 text-sky-700 border-sky-200'
+                                : 'bg-slate-100 text-slate-700 border-slate-200'
                             }`}
                           >
                             {res.grade}
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-center font-semibold text-gray-300">
+                        <td className="py-3 px-3 text-center font-semibold text-amber-800">
                           {res.position}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono font-bold text-amber-400">
+                        <td className="py-3 px-3 text-right font-mono font-bold text-amber-700">
                           +{res.pointsAwarded}
                         </td>
                       </tr>
@@ -286,10 +286,10 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
             </div>
           </div>
         ) : (
-          <div className="py-12 text-center text-gray-400 bg-white/[0.02] rounded-2xl border border-white/5 space-y-2">
-            <FileCheck className="w-10 h-10 text-purple-400/40 mx-auto" />
-            <h4 className="text-sm font-bold text-white">Results Pending Official Publication</h4>
-            <p className="text-xs text-gray-500 max-w-sm mx-auto">
+          <div className="py-12 text-center text-slate-500 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+            <FileCheck className="w-10 h-10 text-purple-600/40 mx-auto" />
+            <h4 className="text-sm font-bold text-slate-900">Results Pending Official Publication</h4>
+            <p className="text-xs text-slate-600 max-w-sm mx-auto">
               Jury scoring sheets are being compiled and verified by the technical desk. Once published, official marks, grades and standings will appear here.
             </p>
           </div>

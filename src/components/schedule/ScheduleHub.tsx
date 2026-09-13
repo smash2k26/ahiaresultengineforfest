@@ -318,7 +318,7 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
               <span>{d === 'All' ? 'All Days' : d}</span>
               <span
                 className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                  isActive ? 'bg-black/20 text-slate-950' : 'bg-slate-100 text-slate-600'
+                  isActive ? 'bg-amber-600/20 text-amber-950' : 'bg-slate-100 text-slate-600'
                 }`}
               >
                 {countForDay}

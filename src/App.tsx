@@ -191,6 +191,8 @@ const MainFestivalApp: React.FC = () => {
                 setActiveTab={setActiveTab}
                 onOpenArtsTab={() => setActiveTab('arts')}
                 onOpenSportsTab={() => setActiveTab('sports')}
+                onOpenArtsDetail={(prog) => setSelectedArtsProgram(prog)}
+                onOpenSportsDetail={(match) => setSelectedSportsMatch(match)}
               />
             </div>
           )}

@@ -35,6 +35,7 @@ import {
   INITIAL_GOOGLE_SHEETS_CONFIG,
   INITIAL_ADMIN_USER
 } from '../data/initialData';
+import { isSportsProgram } from '../utils/programHelpers';
 
 export interface ToastMessage {
   id: string;
@@ -604,7 +605,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       artsPrograms.forEach((prog) => {
         if (prog.publishStatus === 'Published' && prog.results) {
-          const isSports = prog.disciplineType === 'Sports';
+          const isSports = isSportsProgram(prog);
 
           prog.results.forEach((res) => {
             const stat = partStats[res.participantId];
@@ -1422,7 +1423,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             if (!existingKeys.has(key)) {
               const part = participants.find((p) => p.id === res.participantId || p.chestNo === res.chestNo);
               const team = teams.find((t) => t.id === res.teamId);
-              const isSports = prog.disciplineType === 'Sports';
+              const isSports = isSportsProgram(prog);
 
               let rankType: Certificate['rank'] = 'Participation';
               let certType: Certificate['certificateType'] = 'Participation';
@@ -1730,9 +1731,14 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const filteredResults = Array.isArray(results)
                   ? results.filter((r: any) => !isDeleted(`${pr.code || pr.id}_${r.participantId}`) && !isDeleted(r.participantId))
                   : [];
+                const isSport = isSportsProgram(pr);
+                const disciplineType = pr.disciplineType
+                  ? (String(pr.disciplineType).trim().toLowerCase() === 'sports' || String(pr.disciplineType).trim().toLowerCase() === 'sport' ? 'Sports' : 'Arts')
+                  : (isSport ? 'Sports' : 'Arts');
                 return {
                   ...pr,
                   id: String(pr.id || pr.code || `prog-${idx + 1}`),
+                  disciplineType,
                   results: filteredResults,
                   maxMarks: Number(pr.maxMarks) || 100,
                 };
@@ -2339,20 +2345,31 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Compute summary stats
   const stats = useMemo<FestivalStats>(() => {
-    const liveArts = artsPrograms.filter((a) => a.status === 'LIVE').length;
-    const liveSports = sportsMatches.filter((s) => s.status === 'LIVE').length;
-    const publishedArts = artsPrograms.filter((a) => a.publishStatus === 'Published').length;
-    const publishedSports = sportsMatches.filter((s) => s.publishStatus === 'Published').length;
-    const pendingArts = artsPrograms.filter((a) => a.status === 'COMPLETED' && a.publishStatus !== 'Published').length;
+    const artsProgs = artsPrograms.filter((a) => !isSportsProgram(a));
+    const sportsProgs = artsPrograms.filter((s) => isSportsProgram(s));
+
+    const liveArts = artsProgs.filter((a) => a.status === 'LIVE').length;
+    const liveSports =
+      sportsProgs.filter((s) => s.status === 'LIVE').length +
+      sportsMatches.filter((s) => s.status === 'LIVE').length;
+    const publishedArts = artsProgs.filter((a) => a.publishStatus === 'Published').length;
+    const publishedSports =
+      sportsProgs.filter((s) => s.publishStatus === 'Published').length +
+      sportsMatches.filter((s) => s.publishStatus === 'Published').length;
+    const pendingArts = artsProgs.filter((a) => a.status === 'COMPLETED' && a.publishStatus !== 'Published').length;
+    const pendingSports = sportsProgs.filter((s) => s.status === 'COMPLETED' && s.publishStatus !== 'Published').length;
+
+    const totalArts = artsProgs.length;
+    const totalSports = sportsProgs.length + sportsMatches.length;
 
     return {
       totalParticipants: participants.length,
-      totalPrograms: artsPrograms.length + sportsMatches.length,
-      artsPrograms: artsPrograms.length,
-      sportsEvents: sportsMatches.length,
+      totalPrograms: totalArts + totalSports,
+      artsPrograms: totalArts,
+      sportsEvents: totalSports,
       resultsPublished: publishedArts + publishedSports,
       liveEventsCount: liveArts + liveSports,
-      pendingResultsCount: pendingArts,
+      pendingResultsCount: pendingArts + pendingSports,
     };
   }, [participants.length, artsPrograms, sportsMatches]);
 

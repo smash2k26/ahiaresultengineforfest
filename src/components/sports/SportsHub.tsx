@@ -5,6 +5,7 @@ import { GlassCard, GlassBadge, GlassButton } from '../ui/GlassCard';
 import { SportsMatch, ArtsProgram } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
 import { TeamLogo } from '../ui/TeamLogo';
+import { isSportsProgram } from '../../utils/programHelpers';
 
 interface SportsHubProps {
   onOpenSportsDetail: (match: SportsMatch) => void;
@@ -23,7 +24,7 @@ export const SportsHub: React.FC<SportsHubProps> = ({
   const [search, setSearch] = useState('');
 
   // Sports programs (e.g. Athletics, 100m, Relay, Shot Put scored by points/places)
-  const sportsEvents = artsPrograms.filter((p) => p.disciplineType === 'Sports');
+  const sportsEvents = artsPrograms.filter((p) => isSportsProgram(p));
 
   const filteredMatches = sportsMatches.filter((m) => {
     const q = (search || '').toLowerCase();

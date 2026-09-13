@@ -11,6 +11,7 @@ import {
   FestConfig,
 } from '../../types/festival';
 import { GOOGLE_APPS_SCRIPT_CODE } from '../../data/googleAppsScriptCode';
+import { isSportsProgram } from '../../utils/programHelpers';
 import { AdminSportsSection } from './AdminSportsSection';
 import { AdminAnnouncementsSection } from './AdminAnnouncementsSection';
 import { AdminScheduleSection } from './AdminScheduleSection';
@@ -255,10 +256,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         (p.stage || '').toLowerCase().includes(q) ||
         (p.scheduledTime || '').toLowerCase().includes(q);
 
+      const isSport = isSportsProgram(p);
       const matchType =
         progTypeFilter === 'All' ||
-        (progTypeFilter === 'Arts' && (!p.disciplineType || p.disciplineType === 'Arts')) ||
-        (progTypeFilter === 'Sports' && p.disciplineType === 'Sports');
+        (progTypeFilter === 'Arts' && !isSport) ||
+        (progTypeFilter === 'Sports' && isSport);
 
       const matchCategory =
         progCategoryFilter === 'All' || p.category === progCategoryFilter;
@@ -291,7 +293,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     setEditingProgram(prog);
     setNewProgCode(prog.code || '');
     setNewProgName(prog.name || '');
-    setNewProgType(prog.disciplineType === 'Sports' ? 'Sports' : 'Arts');
+    setNewProgType(isSportsProgram(prog) ? 'Sports' : 'Arts');
     setNewProgCategory((prog.category as any) || 'Senior');
     setNewProgScheduleDay(prog.scheduledTime || prog.date || 'Day 1');
     setNewProgVenue(prog.stage || prog.venue || 'Main Stage');
@@ -1785,8 +1787,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         <td className="px-4 py-3 font-mono font-bold text-indigo-700">{p.code || 'EV-100'}</td>
                         <td className="px-4 py-3 font-semibold text-slate-900">{p.name}</td>
                         <td className="px-4 py-3">
-                          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
-                            {p.disciplineType || 'Arts'}
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${
+                            isSportsProgram(p)
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-purple-50 text-purple-700 border-purple-100'
+                          }`}>
+                            {isSportsProgram(p) ? 'Sports' : 'Arts'}
                           </span>
                         </td>
                         <td className="px-4 py-3">{p.category}</td>

@@ -18,6 +18,7 @@ import { useFestival } from '../../context/FestivalContext';
 import { GlassCard, GlassBadge, GlassButton } from '../ui/GlassCard';
 import { ActiveTab } from '../layout/Sidebar';
 import { ArtsProgram, SportsMatch, ScheduleItem } from '../../types/festival';
+import { isSportsProgram } from '../../utils/programHelpers';
 
 interface ScheduleHubProps {
   setActiveTab: (tab: ActiveTab) => void;
@@ -114,7 +115,7 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
     (artsPrograms || []).forEach((p) => {
       if (seenIds.has(p.id)) return;
 
-      const isSportsDiscipline = p.disciplineType === 'Sports';
+      const isSportsDiscipline = isSportsProgram(p);
       const dayLabel = normalizeDay(p.date, p.date);
       const stageVenue = p.stage || p.venue || (isSportsDiscipline ? 'Sports Arena' : 'Main Stage');
       const timeSlot = p.time || '10:00 AM';
@@ -247,75 +248,77 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Schedule Banner */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-amber-950/40 via-[#111318] to-[#0A0C10] border border-amber-500/20 backdrop-blur-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Schedule Banner (White Card) */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200 shadow-md shadow-slate-200/50 relative overflow-hidden text-slate-900">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-2xl space-y-2">
             <div className="flex items-center gap-2">
-              <GlassBadge variant="warning" size="sm">
-                <Calendar className="w-3.5 h-3.5 text-amber-400" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                <Calendar className="w-3.5 h-3.5 text-amber-600" />
                 TIMELINE & STAGES
-              </GlassBadge>
-              <span className="text-xs text-amber-300 font-mono">
+              </span>
+              <span className="text-xs text-amber-700 font-mono font-semibold">
                 {festConfig.dates || 'Official Program Schedule'}
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black font-display text-white">
+            <h1 className="text-2xl sm:text-3xl font-black font-display text-slate-900 tracking-tight">
               Festival Timeline & Program Schedule
             </h1>
-            <p className="text-xs sm:text-sm text-gray-300">
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               Live schedule of all cultural items, athletic events, ceremonies, and venue allocations.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="px-4 py-2.5 rounded-2xl bg-white/[0.04] border border-white/8 text-center min-w-[80px]">
-              <div className="text-xl font-bold font-mono text-amber-400">{unifiedEntries.length}</div>
-              <div className="text-[10px] text-gray-400 uppercase font-semibold">Total Slots</div>
+            <div className="px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-center min-w-[80px]">
+              <div className="text-xl font-bold font-mono text-amber-600">{unifiedEntries.length}</div>
+              <div className="text-[10px] text-slate-500 uppercase font-semibold">Total Slots</div>
             </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-white/[0.04] border border-white/8 text-center min-w-[80px]">
-              <div className="text-xl font-bold font-mono text-purple-400">{artsCount}</div>
-              <div className="text-[10px] text-gray-400 uppercase font-semibold">Arts Items</div>
+            <div className="px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-center min-w-[80px]">
+              <div className="text-xl font-bold font-mono text-purple-600">{artsCount}</div>
+              <div className="text-[10px] text-slate-500 uppercase font-semibold">Arts Items</div>
             </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-white/[0.04] border border-white/8 text-center min-w-[80px]">
-              <div className="text-xl font-bold font-mono text-sky-400">{sportsCount}</div>
-              <div className="text-[10px] text-gray-400 uppercase font-semibold">Sports Items</div>
+            <div className="px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-center min-w-[80px]">
+              <div className="text-xl font-bold font-mono text-sky-600">{sportsCount}</div>
+              <div className="text-[10px] text-slate-500 uppercase font-semibold">Sports Items</div>
             </div>
             {liveCount > 0 && (
-              <div className="px-4 py-2.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-center min-w-[80px] animate-pulse">
-                <div className="text-xl font-bold font-mono text-red-400">{liveCount}</div>
-                <div className="text-[10px] text-red-300 uppercase font-semibold">Live Now</div>
+              <div className="px-4 py-2.5 rounded-2xl bg-red-50 border border-red-200 text-center min-w-[80px] animate-pulse">
+                <div className="text-xl font-bold font-mono text-red-600">{liveCount}</div>
+                <div className="text-[10px] text-red-700 uppercase font-bold">Live Now</div>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Day Selector Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      {/* Day Selector Tabs Container */}
+      <div className="flex items-center gap-2 overflow-x-auto p-2 rounded-2xl bg-white border border-slate-200 shadow-sm">
         {availableDays.map((d) => {
           const countForDay =
             d === 'All'
               ? unifiedEntries.length
               : unifiedEntries.filter((i) => i.dayLabel.toLowerCase() === d.toLowerCase()).length;
 
+          const isActive = selectedDay === d;
+
           return (
             <button
               key={`day-tab-${d}`}
               onClick={() => setSelectedDay(d)}
-              className={`px-4 py-2.5 rounded-2xl border text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-2 ${
-                selectedDay === d
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-gray-950 border-amber-400 shadow-lg shadow-amber-500/20 font-black'
-                  : 'bg-[#111318]/80 border-white/8 hover:border-white/20 text-gray-300 hover:text-white'
+              className={`px-4 py-2.5 rounded-2xl border text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-2 shadow-sm ${
+                isActive
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20 font-black'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300'
               }`}
             >
               <span>{d === 'All' ? 'All Days' : d}</span>
               <span
-                className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold ${
-                  selectedDay === d ? 'bg-black/20 text-gray-950' : 'bg-white/10 text-gray-400'
+                className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                  isActive ? 'bg-black/20 text-slate-950' : 'bg-slate-100 text-slate-600'
                 }`}
               >
                 {countForDay}
@@ -325,23 +328,23 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
         })}
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="p-4 rounded-2xl bg-[#111318]/90 border border-white/8 backdrop-blur-xl space-y-3">
+      {/* Filter and Search Bar (White Card) */}
+      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3 text-slate-900">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Search Bar */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search event code, program name, stage, venue, or time slot..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-xs sm:text-sm focus:outline-none focus:border-amber-500/50"
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-700"
               >
                 Clear
               </button>
@@ -349,15 +352,15 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
           </div>
 
           {/* Discipline Filters */}
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-black/40 border border-white/8 text-xs overflow-x-auto">
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs overflow-x-auto">
             {(['All', 'Arts', 'Sports', 'Ceremony'] as const).map((t) => (
               <button
                 key={`type-${t}`}
                 onClick={() => setTypeFilter(t)}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   typeFilter === t
-                    ? 'bg-amber-500 text-gray-950 font-bold shadow-sm'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-white text-slate-900 font-bold shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {t === 'Ceremony' ? 'Ceremonies' : t}
@@ -367,19 +370,19 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
         </div>
 
         {/* Sub-Filters: Stage/Venue and Status */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/5 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-gray-400 flex items-center gap-1 font-medium">
-              <MapPin className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-slate-500 flex items-center gap-1 font-medium">
+              <MapPin className="w-3.5 h-3.5 text-amber-500" />
               Venue / Stage:
             </span>
             <select
               value={stageFilter}
               onChange={(e) => setStageFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs focus:outline-none focus:border-amber-500/50 cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-amber-500 cursor-pointer"
             >
               {availableStages.map((st) => (
-                <option key={st} value={st} className="bg-gray-900 text-white">
+                <option key={st} value={st} className="bg-white text-slate-900">
                   {st === 'All' ? 'All Stages & Venues' : st}
                 </option>
               ))}
@@ -393,8 +396,8 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
                 onClick={() => setStatusFilter(st)}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                   statusFilter === st
-                    ? 'bg-white/20 text-white border border-white/20'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
                 }`}
               >
                 {st === 'All' ? 'All Status' : st}
@@ -404,7 +407,7 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
         </div>
       </div>
 
-      {/* Schedule Timeline Items */}
+      {/* Schedule Timeline Items (White Cards) */}
       <div className="space-y-3">
         {filtered.map((item, idx) => {
           const isLive = item.status === 'LIVE';
@@ -414,20 +417,20 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
             <div
               key={item.id || `sch-item-${idx}`}
               onClick={() => handleItemClick(item)}
-              className={`p-4 sm:p-5 rounded-2xl bg-[#111318]/90 border backdrop-blur-2xl transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl hover:border-amber-500/40 cursor-pointer group ${
+              className={`p-4 sm:p-5 rounded-2xl bg-white border transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md cursor-pointer group ${
                 isLive
-                  ? 'border-amber-500/50 bg-amber-950/20 shadow-amber-950/30'
-                  : 'border-white/8 hover:bg-[#151820]'
+                  ? 'border-amber-500/60 bg-amber-50/40 shadow-amber-500/10'
+                  : 'border-slate-200/90 hover:border-slate-300'
               }`}
             >
               <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
                 {/* Time Badge */}
-                <div className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white/5 border border-white/10 w-24 text-center shrink-0">
-                  <Clock className="w-4 h-4 text-amber-400 mb-1" />
-                  <span className="text-xs font-mono font-bold text-white leading-tight">
+                <div className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-slate-50 border border-slate-200 w-24 text-center shrink-0">
+                  <Clock className="w-4 h-4 text-amber-500 mb-1" />
+                  <span className="text-xs font-mono font-bold text-slate-900 leading-tight">
                     {item.timeSlot}
                   </span>
-                  <span className="text-[10px] text-gray-400 font-mono mt-0.5">
+                  <span className="text-[10px] text-slate-500 font-mono mt-0.5">
                     {item.dayLabel}
                   </span>
                 </div>
@@ -436,15 +439,14 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
                 <div className="space-y-1.5 flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Discipline Badge */}
-                    <GlassBadge
-                      variant={
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                         item.type === 'Arts'
-                          ? 'arts'
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
                           : item.type === 'Sports'
-                          ? 'sports'
-                          : 'warning'
-                      }
-                      size="xs"
+                          ? 'bg-sky-50 text-sky-700 border-sky-200'
+                          : 'bg-amber-50 text-amber-800 border-amber-200'
+                      }`}
                     >
                       {item.type === 'Arts' ? (
                         <Palette className="w-3 h-3" />
@@ -454,52 +456,55 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
                         <Sparkles className="w-3 h-3" />
                       )}
                       {item.type}
-                    </GlassBadge>
+                    </span>
 
                     {item.code && (
-                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-amber-300">
+                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-800">
                         {item.code}
                       </span>
                     )}
 
                     {item.category && (
-                      <span className="text-[11px] font-semibold text-gray-400">
+                      <span className="text-[11px] font-semibold text-slate-500">
                         {item.category}
                       </span>
                     )}
 
                     {item.section && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-400 font-mono">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
                         {item.section}
                       </span>
                     )}
 
                     {isLive && (
-                      <GlassBadge variant="live" size="xs" pulse>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 animate-pulse">
                         LIVE ON STAGE
-                      </GlassBadge>
+                      </span>
                     )}
                     {isCompleted && (
-                      <GlassBadge
-                        variant={item.publishStatus === 'Published' ? 'success' : 'neutral'}
-                        size="xs"
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                          item.publishStatus === 'Published'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
                       >
                         {item.publishStatus === 'Published' ? 'Result Published' : 'Completed'}
-                      </GlassBadge>
+                      </span>
                     )}
                   </div>
 
-                  <h3 className="text-base sm:text-lg font-bold font-display text-white group-hover:text-amber-300 transition-colors truncate">
+                  <h3 className="text-base sm:text-lg font-bold font-display text-slate-900 group-hover:text-amber-600 transition-colors truncate">
                     {item.title}
                   </h3>
 
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                    <span className="flex items-center gap-1 text-gray-300">
-                      <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                    <span className="flex items-center gap-1 text-slate-700">
+                      <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                       <span className="font-semibold">{item.stageVenue}</span>
                     </span>
                     <span>•</span>
-                    <span className="font-mono text-gray-400">{item.dateStr}</span>
+                    <span className="font-mono text-slate-500">{item.dateStr}</span>
                   </div>
                 </div>
               </div>
@@ -507,40 +512,37 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
               {/* Action Button */}
               <div className="flex items-center gap-2 self-end md:self-center shrink-0">
                 {item.type === 'Arts' ? (
-                  <GlassButton
-                    variant="arts"
-                    size="sm"
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleItemClick(item);
                     }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-colors cursor-pointer"
                   >
                     <span>View Program</span>
                     <ArrowRight className="w-3.5 h-3.5" />
-                  </GlassButton>
+                  </button>
                 ) : item.type === 'Sports' ? (
-                  <GlassButton
-                    variant="sports"
-                    size="sm"
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleItemClick(item);
                     }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-sm transition-colors cursor-pointer"
                   >
                     <span>Match Center</span>
                     <ArrowRight className="w-3.5 h-3.5" />
-                  </GlassButton>
+                  </button>
                 ) : (
-                  <GlassButton
-                    variant="secondary"
-                    size="sm"
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleItemClick(item);
                     }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
                   >
                     <span>Slot Details</span>
-                  </GlassButton>
+                  </button>
                 )}
               </div>
             </div>
@@ -548,11 +550,11 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
         })}
 
         {filtered.length === 0 && (
-          <div className="py-16 text-center text-gray-400 bg-white/[0.01] rounded-3xl border border-white/5 space-y-3">
-            <Calendar className="w-12 h-12 text-amber-400/40 mx-auto" />
+          <div className="py-16 text-center text-slate-500 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-3">
+            <Calendar className="w-12 h-12 text-slate-400 mx-auto" />
             <div>
-              <h3 className="text-base font-bold text-white">No Scheduled Programs Found</h3>
-              <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+              <h3 className="text-base font-bold text-slate-900">No Scheduled Programs Found</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
                 No events matched your selected day or search filters.
               </p>
             </div>
@@ -565,7 +567,7 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
                   setStageFilter('All');
                   setSearch('');
                 }}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-all cursor-pointer"
               >
                 Reset All Filters
               </button>

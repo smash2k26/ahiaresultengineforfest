@@ -4,6 +4,7 @@ import { useFestival } from '../../context/FestivalContext';
 import { GlassCard, GlassBadge, GlassButton } from '../ui/GlassCard';
 import { ArtsProgram } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
+import { isSportsProgram } from '../../utils/programHelpers';
 
 interface ArtsHubProps {
   onOpenArtsDetail: (program: ArtsProgram) => void;
@@ -23,9 +24,7 @@ export const ArtsHub: React.FC<ArtsHubProps> = ({
   const [statusFilter, setStatusFilter] = useState<'All' | 'LIVE' | 'COMPLETED' | 'UPCOMING'>('All');
 
   // Only include Arts discipline programs (exclude Sports events)
-  const artsOnlyPrograms = artsPrograms.filter(
-    (p) => !p.disciplineType || p.disciplineType === 'Arts'
-  );
+  const artsOnlyPrograms = artsPrograms.filter((p) => !isSportsProgram(p));
 
   const filtered = artsOnlyPrograms.filter((p) => {
     const q = (search || '').toLowerCase();

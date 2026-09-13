@@ -244,6 +244,10 @@ function doGet(e) {
         try { p.results = JSON.parse(p.results); } catch (err) { p.results = []; }
       }
       p.maxMarks = Number(p.maxMarks) || 100;
+      if (p.disciplineType) {
+        var dt = String(p.disciplineType).trim();
+        p.disciplineType = /^sport/i.test(dt) ? "Sports" : "Arts";
+      }
       return p;
     });
 

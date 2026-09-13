@@ -93,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <div className="min-w-0">
-            <h2 className="text-sm sm:text-base font-bold font-display text-slate-900 truncate tracking-wide">
+            <h2 className="text-sm sm:text-base font-bold font-display text-slate-900 truncate tracking-wide hidden sm:block">
               {pageInfo.title}
             </h2>
           </div>
@@ -104,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Global Search Trigger */}
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs text-slate-600 hover:text-slate-900 transition-all cursor-pointer group"
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs text-slate-600 hover:text-slate-900 transition-all cursor-pointer group"
           >
             <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-600 transition-colors" />
             <span className="hidden sm:inline">Search chest, team, event...</span>

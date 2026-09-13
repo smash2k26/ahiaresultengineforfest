@@ -307,6 +307,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const pushToGoogleSheetsRef = useRef<((customOverrides?: any) => Promise<boolean>) | null>(null);
+  const syncWithGoogleSheetsRef = useRef<(() => Promise<boolean>) | null>(null);
   const isRemoteSyncInProgressRef = useRef(false);
   const isInitialMountRef = useRef(true);
 
@@ -2121,6 +2122,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [festConfig, googleSheetsConfig.appsScriptUrl, googleSheetsConfig.deploymentId, teams, participants, artsPrograms, sportsMatches, schedule, announcements, certificates, documents, scoringRules, showToast]);
 
   pushToGoogleSheetsRef.current = pushToGoogleSheets;
+  syncWithGoogleSheetsRef.current = syncWithGoogleSheets;
 
   // Real-time Debounced Auto-Sync: Automatically syncs local changes (add/edit) to Google Sheets
   useEffect(() => {
@@ -2162,19 +2164,23 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Run initial sync on mount
     const timeoutId = setTimeout(() => {
-      syncWithGoogleSheets();
+      if (syncWithGoogleSheetsRef.current) {
+        syncWithGoogleSheetsRef.current();
+      }
     }, 1200);
 
     const intervalMinutes = Math.max(1, googleSheetsConfig.syncIntervalMinutes || 1);
     const intervalId = setInterval(() => {
-      syncWithGoogleSheets();
+      if (syncWithGoogleSheetsRef.current) {
+        syncWithGoogleSheetsRef.current();
+      }
     }, intervalMinutes * 60 * 1000);
 
     return () => {
       clearTimeout(timeoutId);
       clearInterval(intervalId);
     };
-  }, [googleSheetsConfig.autoSync, googleSheetsConfig.appsScriptUrl, googleSheetsConfig.syncIntervalMinutes, syncWithGoogleSheets]);
+  }, [googleSheetsConfig.autoSync, googleSheetsConfig.appsScriptUrl, googleSheetsConfig.syncIntervalMinutes]);
 
   // JSON Export & Import
   const exportDataAsJson = useCallback(() => {

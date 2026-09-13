@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { FestivalProvider, useFestival } from './context/FestivalContext';
 import { Sidebar, ActiveTab } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
-import { MobileNav } from './components/layout/MobileNav';
 import { GlobalSearchModal } from './components/layout/GlobalSearchModal';
 import { ToastContainer } from './components/ui/ToastContainer';
 import { CelebrationFireworks } from './components/ui/CelebrationFireworks';
@@ -99,7 +98,7 @@ const MainFestivalApp: React.FC = () => {
         />
 
         {/* Dynamic Page Views */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-12 bg-white">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-12 bg-white">
           {/* HOME DASHBOARD */}
           {activeTab === 'home' && (
             <div className="space-y-8 animate-in fade-in duration-200">
@@ -243,12 +242,7 @@ const MainFestivalApp: React.FC = () => {
         </footer>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileNav
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onOpenAdminAuth={() => setIsAdminAuthOpen(true)}
-      />
+
 
       {/* Global Modals */}
       <ArtsResultModal

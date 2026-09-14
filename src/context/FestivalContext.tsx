@@ -183,7 +183,16 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.map((p, idx) => ({
+            ...p,
+            id: String(p?.id || p?.chestNo || `p-${idx + 1}`),
+            name: String(p?.name || ''),
+            chestNo: p?.chestNo != null ? String(p.chestNo) : '',
+            admissionNo: p?.admissionNo != null ? String(p.admissionNo) : '',
+            yearClass: p?.yearClass != null ? String(p.yearClass) : '',
+          }));
+        }
       } catch (e) {}
     }
     return INITIAL_PARTICIPANTS;
@@ -1016,6 +1025,10 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const newPart: Participant = {
       ...partData,
       id: 'part-' + (Date.now() % 100000),
+      name: String(partData.name || ''),
+      chestNo: partData.chestNo != null ? String(partData.chestNo) : '',
+      admissionNo: partData.admissionNo != null ? String(partData.admissionNo) : '',
+      yearClass: partData.yearClass != null ? String(partData.yearClass) : '',
       totalPoints: 0,
       golds: 0,
       silvers: 0,
@@ -1036,7 +1049,17 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const editParticipant = useCallback((id: string, data: Partial<Participant>) => {
     setParticipants((prev) => {
-      const updated = prev.map((p) => (p.id === id ? { ...p, ...data } : p));
+      const updated = prev.map((p) => {
+        if (p.id !== id) return p;
+        const merged = { ...p, ...data };
+        return {
+          ...merged,
+          name: String(merged.name || ''),
+          chestNo: merged.chestNo != null ? String(merged.chestNo) : '',
+          admissionNo: merged.admissionNo != null ? String(merged.admissionNo) : '',
+          yearClass: merged.yearClass != null ? String(merged.yearClass) : '',
+        };
+      });
       localStorage.setItem('ahia_participants', JSON.stringify(updated));
       triggerAutoPush({ participants: updated });
       return updated;
@@ -1067,7 +1090,15 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const key = p.chestNo || p.id;
         partMap.set(key, p);
       });
-      newParts.forEach((p) => {
+      newParts.forEach((rawP) => {
+        const p: Participant = {
+          ...rawP,
+          id: String(rawP.id || rawP.chestNo || `p-${Date.now()}`),
+          name: String(rawP.name || ''),
+          chestNo: rawP.chestNo != null ? String(rawP.chestNo) : '',
+          admissionNo: rawP.admissionNo != null ? String(rawP.admissionNo) : '',
+          yearClass: rawP.yearClass != null ? String(rawP.yearClass) : '',
+        };
         const key = p.chestNo || p.id;
         const existing = partMap.get(key);
         if (existing) {
@@ -1658,6 +1689,10 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 return {
                   ...p,
                   id: String(p.id || p.chestNo || `p-${idx + 1}`),
+                  name: String(p.name || ''),
+                  chestNo: p.chestNo != null ? String(p.chestNo) : '',
+                  admissionNo: p.admissionNo != null ? String(p.admissionNo) : '',
+                  yearClass: p.yearClass != null ? String(p.yearClass) : '',
                   participatedPrograms: Array.isArray(progs) ? progs : [],
                   totalPoints: Number(p.totalPoints) || 0,
                   golds: Number(p.golds) || 0,

@@ -220,11 +220,11 @@ export const ScheduleHub: React.FC<ScheduleHubProps> = ({
       const q = (search || '').toLowerCase().trim();
       const matchesSearch =
         !q ||
-        (item.title || '').toLowerCase().includes(q) ||
-        (item.code || '').toLowerCase().includes(q) ||
-        (item.stageVenue || '').toLowerCase().includes(q) ||
-        (item.category || '').toLowerCase().includes(q) ||
-        (item.timeSlot || '').toLowerCase().includes(q);
+        String(item.title || '').toLowerCase().includes(q) ||
+        String(item.code || '').toLowerCase().includes(q) ||
+        String(item.stageVenue || '').toLowerCase().includes(q) ||
+        String(item.category || '').toLowerCase().includes(q) ||
+        String(item.timeSlot || '').toLowerCase().includes(q);
 
       return matchesDay && matchesType && matchesStatus && matchesStage && matchesSearch;
     });

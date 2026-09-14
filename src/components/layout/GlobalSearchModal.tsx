@@ -39,40 +39,40 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   const matchedParticipants = q
     ? participants.filter(
         (p) =>
-          (p.name || '').toLowerCase().includes(q) ||
-          (p.chestNo || '').toLowerCase().includes(q) ||
-          (p.admissionNo || '').toLowerCase().includes(q)
+          String(p.name || '').toLowerCase().includes(q) ||
+          String(p.chestNo || '').toLowerCase().includes(q) ||
+          String(p.admissionNo || '').toLowerCase().includes(q)
       )
     : [];
 
   const matchedTeams = q
-    ? teams.filter((t) => (t.name || '').toLowerCase().includes(q) || (t.shortCode || '').toLowerCase().includes(q))
+    ? teams.filter((t) => String(t.name || '').toLowerCase().includes(q) || String(t.shortCode || '').toLowerCase().includes(q))
     : [];
 
   const matchedArts = q
     ? artsPrograms.filter(
         (a) =>
-          (a.name || '').toLowerCase().includes(q) ||
-          (a.category || '').toLowerCase().includes(q) ||
-          (a.venue || '').toLowerCase().includes(q)
+          String(a.name || '').toLowerCase().includes(q) ||
+          String(a.category || '').toLowerCase().includes(q) ||
+          String(a.venue || '').toLowerCase().includes(q)
       )
     : [];
 
   const matchedSports = q
     ? sportsMatches.filter(
         (s) =>
-          (s.title || '').toLowerCase().includes(q) ||
-          (s.sport || '').toLowerCase().includes(q) ||
-          (s.venue || '').toLowerCase().includes(q)
+          String(s.title || '').toLowerCase().includes(q) ||
+          String(s.sport || '').toLowerCase().includes(q) ||
+          String(s.venue || '').toLowerCase().includes(q)
       )
     : [];
 
   const matchedDocs = q
     ? documents.filter(
         (d) =>
-          (d.title || '').toLowerCase().includes(q) ||
-          (d.category || '').toLowerCase().includes(q) ||
-          (d.description || '').toLowerCase().includes(q)
+          String(d.title || '').toLowerCase().includes(q) ||
+          String(d.category || '').toLowerCase().includes(q) ||
+          String(d.description || '').toLowerCase().includes(q)
       )
     : [];
 

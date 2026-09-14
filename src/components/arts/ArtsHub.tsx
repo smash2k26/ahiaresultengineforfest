@@ -41,10 +41,10 @@ export const ArtsHub: React.FC<ArtsHubProps> = ({
     const q = (search || '').toLowerCase();
     const matchesSearch =
       !q ||
-      p.name.toLowerCase().includes(q) ||
-      p.stage.toLowerCase().includes(q) ||
-      p.venue.toLowerCase().includes(q) ||
-      p.code.toLowerCase().includes(q);
+      String(p.name || '').toLowerCase().includes(q) ||
+      String(p.stage || '').toLowerCase().includes(q) ||
+      String(p.venue || '').toLowerCase().includes(q) ||
+      String(p.code || '').toLowerCase().includes(q);
 
     const matchesCategory = categoryFilter === 'All' || p.category === categoryFilter;
     const matchesSection = sectionFilter === 'All' || p.section === sectionFilter;

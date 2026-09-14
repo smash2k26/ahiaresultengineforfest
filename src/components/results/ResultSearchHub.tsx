@@ -71,9 +71,9 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
     return participants.filter((p) => {
       const matchesQuery =
         !q ||
-        (p.chestNo || '').toLowerCase().includes(q) ||
-        (p.admissionNo || '').toLowerCase().includes(q) ||
-        (p.name || '').toLowerCase().includes(q);
+        String(p.chestNo || '').toLowerCase().includes(q) ||
+        String(p.admissionNo || '').toLowerCase().includes(q) ||
+        String(p.name || '').toLowerCase().includes(q);
 
       const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
       const matchesTeam = selectedTeam === 'All' || p.teamId === selectedTeam;
@@ -87,13 +87,13 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
     return artsPrograms.filter((prog) => {
       const matchesQuery =
         !q ||
-        (prog.name || '').toLowerCase().includes(q) ||
-        (prog.code || '').toLowerCase().includes(q) ||
-        (prog.stage || '').toLowerCase().includes(q) ||
+        String(prog.name || '').toLowerCase().includes(q) ||
+        String(prog.code || '').toLowerCase().includes(q) ||
+        String(prog.stage || '').toLowerCase().includes(q) ||
         (prog.results || []).some(
           (r) =>
-            (r.participantName || '').toLowerCase().includes(q) ||
-            (r.chestNo || '').toLowerCase().includes(q)
+            String(r.participantName || '').toLowerCase().includes(q) ||
+            String(r.chestNo || '').toLowerCase().includes(q)
         );
 
       const matchesCat = selectedCategory === 'All' || prog.category === selectedCategory;

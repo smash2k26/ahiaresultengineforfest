@@ -43,9 +43,9 @@ export const SportsHub: React.FC<SportsHubProps> = ({
     const q = (search || '').toLowerCase();
     const matchesSearch =
       !q ||
-      (m.title || '').toLowerCase().includes(q) ||
-      (m.sport || '').toLowerCase().includes(q) ||
-      (m.venue || '').toLowerCase().includes(q);
+      String(m.title || '').toLowerCase().includes(q) ||
+      String(m.sport || '').toLowerCase().includes(q) ||
+      String(m.venue || '').toLowerCase().includes(q);
     const matchesStatus = statusFilter === 'All' || m.status === statusFilter;
 
     return matchesSearch && matchesStatus;
@@ -55,11 +55,11 @@ export const SportsHub: React.FC<SportsHubProps> = ({
     const q = (search || '').toLowerCase();
     const matchesSearch =
       !q ||
-      (p.name || '').toLowerCase().includes(q) ||
-      (p.stage || '').toLowerCase().includes(q) ||
-      (p.venue || '').toLowerCase().includes(q) ||
-      (p.code || '').toLowerCase().includes(q) ||
-      (p.category || '').toLowerCase().includes(q);
+      String(p.name || '').toLowerCase().includes(q) ||
+      String(p.stage || '').toLowerCase().includes(q) ||
+      String(p.venue || '').toLowerCase().includes(q) ||
+      String(p.code || '').toLowerCase().includes(q) ||
+      String(p.category || '').toLowerCase().includes(q);
     const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
 
     return matchesSearch && matchesStatus;

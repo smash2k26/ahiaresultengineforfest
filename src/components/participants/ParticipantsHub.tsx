@@ -43,9 +43,9 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
     return participants.filter((p) => {
       const q = (search || '').toLowerCase();
       const matchesSearch =
-        (p.name || '').toLowerCase().includes(q) ||
-        (p.chestNo || '').toLowerCase().includes(q) ||
-        (p.admissionNo || '').toLowerCase().includes(q);
+        String(p.name || '').toLowerCase().includes(q) ||
+        String(p.chestNo || '').toLowerCase().includes(q) ||
+        String(p.admissionNo || '').toLowerCase().includes(q);
       const matchesCategory = categoryFilter === 'All' || p.category === categoryFilter;
       const matchesTeam = teamFilter === 'All' || p.teamId === teamFilter;
 

@@ -19,9 +19,9 @@ export const DocumentsHub: React.FC = () => {
     const q = (search || '').toLowerCase();
     const matchesSearch =
       !q ||
-      (doc.title || '').toLowerCase().includes(q) ||
-      (doc.description || '').toLowerCase().includes(q) ||
-      (doc.category || '').toLowerCase().includes(q);
+      String(doc.title || '').toLowerCase().includes(q) ||
+      String(doc.description || '').toLowerCase().includes(q) ||
+      String(doc.category || '').toLowerCase().includes(q);
     const matchesCat = categoryFilter === 'All' || doc.category === categoryFilter;
 
     return matchesSearch && matchesCat;

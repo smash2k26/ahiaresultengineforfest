@@ -126,13 +126,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     return allResultRecords.filter((r) => {
       const matchQuery =
         !q ||
-        (r.participantName || '').toLowerCase().includes(q) ||
-        (r.admissionNo || '').toLowerCase().includes(q) ||
-        (r.chestNo || '').toLowerCase().includes(q) ||
-        (r.programTitle || '').toLowerCase().includes(q) ||
-        (r.programCode || '').toLowerCase().includes(q) ||
-        (r.grade || '').toLowerCase().includes(q) ||
-        (r.position || '').toLowerCase().includes(q);
+        String(r.participantName || '').toLowerCase().includes(q) ||
+        String(r.admissionNo || '').toLowerCase().includes(q) ||
+        String(r.chestNo || '').toLowerCase().includes(q) ||
+        String(r.programTitle || '').toLowerCase().includes(q) ||
+        String(r.programCode || '').toLowerCase().includes(q) ||
+        String(r.grade || '').toLowerCase().includes(q) ||
+        String(r.position || '').toLowerCase().includes(q);
 
       const matchProgram =
         resultsProgramFilter === 'All' ||
@@ -250,11 +250,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     return artsPrograms.filter((p) => {
       const matchSearch =
         !q ||
-        (p.code || '').toLowerCase().includes(q) ||
-        (p.name || '').toLowerCase().includes(q) ||
-        (p.venue || '').toLowerCase().includes(q) ||
-        (p.stage || '').toLowerCase().includes(q) ||
-        (p.scheduledTime || '').toLowerCase().includes(q);
+        String(p.code || '').toLowerCase().includes(q) ||
+        String(p.name || '').toLowerCase().includes(q) ||
+        String(p.venue || '').toLowerCase().includes(q) ||
+        String(p.stage || '').toLowerCase().includes(q) ||
+        String(p.scheduledTime || '').toLowerCase().includes(q);
 
       const isSport = isSportsProgram(p);
       const matchType =
@@ -369,10 +369,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     return participants.filter((p) => {
       const matchSearch =
         !q ||
-        (p.name || '').toLowerCase().includes(q) ||
-        (p.admissionNo || '').toLowerCase().includes(q) ||
-        (p.chestNo || '').toLowerCase().includes(q) ||
-        (p.yearClass || '').toLowerCase().includes(q);
+        String(p.name || '').toLowerCase().includes(q) ||
+        String(p.admissionNo || '').toLowerCase().includes(q) ||
+        String(p.chestNo || '').toLowerCase().includes(q) ||
+        String(p.yearClass || '').toLowerCase().includes(q);
 
       const matchHouse =
         partHouseFilter === 'All' || p.teamId === partHouseFilter;
@@ -466,8 +466,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     const q = (houseSearch || '').toLowerCase();
     return teams.filter((t) =>
       !q ||
-      (t.name || '').toLowerCase().includes(q) ||
-      (t.slogan || '').toLowerCase().includes(q)
+      String(t.name || '').toLowerCase().includes(q) ||
+      String(t.slogan || '').toLowerCase().includes(q)
     );
   }, [teams, houseSearch]);
 
@@ -526,13 +526,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     return documents.filter((d) => {
       const matchSearch =
         !q ||
-        (d.title || '').toLowerCase().includes(q) ||
-        (d.description || '').toLowerCase().includes(q) ||
-        (d.category || '').toLowerCase().includes(q);
+        String(d.title || '').toLowerCase().includes(q) ||
+        String(d.description || '').toLowerCase().includes(q) ||
+        String(d.category || '').toLowerCase().includes(q);
 
       const matchCategory =
         docCategoryFilter === 'All' ||
-        (d.category || '').toLowerCase().includes(catQ);
+        String(d.category || '').toLowerCase().includes(catQ);
 
       return matchSearch && matchCategory;
     });

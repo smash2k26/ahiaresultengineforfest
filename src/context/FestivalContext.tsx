@@ -143,12 +143,22 @@ interface FestivalContextType {
   addResultMark: (mark: {
     programId: string;
     participantId: string;
-    marks: number;
+    marks?: number;
     grade: string;
     position: string;
     pointsAwarded: number;
     publishNow?: boolean;
   }) => void;
+  savePodiumResults: (
+    programId: string,
+    podiumSlots: Array<{
+      rank: 1 | 2 | 3;
+      participantId: string;
+      grade?: string;
+      pointsAwarded: number;
+    }>,
+    publishNow?: boolean
+  ) => void;
   deleteResultMark: (programId: string, participantId: string) => void;
 
   // Google Sheets Integration
@@ -529,6 +539,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (prog.publishStatus === 'Published' && prog.results && prog.results.length > 0) {
           const isGroup = prog.section === 'Group';
           const multiplier = isGroup ? scoringRules.groupEventMultiplier : 1;
+          const isSports = isSportsProgram(prog);
 
           prog.results.forEach((res) => {
             if (teamStats[res.teamId]) {
@@ -553,7 +564,11 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               else if (res.grade === 'B+') pts += scoringRules.gradePointsB_Plus;
               else if (res.grade === 'B') pts += scoringRules.gradePointsB;
 
-              teamStats[res.teamId].arts += Math.round(pts * multiplier);
+              if (isSports) {
+                teamStats[res.teamId].sports += Math.round(pts * multiplier);
+              } else {
+                teamStats[res.teamId].arts += Math.round(pts * multiplier);
+              }
             }
           });
         }
@@ -1379,7 +1394,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addResultMark = useCallback((mark: {
     programId: string;
     participantId: string;
-    marks: number;
+    marks?: number;
     grade: string;
     position: string;
     pointsAwarded: number;
@@ -1405,7 +1420,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       chestNo: participant.chestNo || '',
       admissionNo: participant.admissionNo || '',
       teamId: participant.teamId,
-      marks: mark.marks,
+      marks: mark.marks ?? 0,
       grade: mark.grade,
       rank: rankNum,
       position: mark.position,
@@ -1456,6 +1471,67 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showToast('Mark Recorded', `Result for ${participant.name} saved and synced.`, 'success');
     setTimeout(recalculateAllStandings, 100);
   }, [artsPrograms, participants, showToast, recalculateAllStandings]);
+
+  const savePodiumResults = useCallback((
+    programId: string,
+    podiumSlots: Array<{
+      rank: 1 | 2 | 3;
+      participantId: string;
+      grade?: string;
+      pointsAwarded: number;
+    }>,
+    publishNow: boolean = true
+  ) => {
+    const prog = artsPrograms.find((p) => p.id === programId || p.code === programId);
+    if (!prog) return;
+
+    const validEntries: ArtsResultEntry[] = [];
+    podiumSlots.forEach((slot) => {
+      if (!slot.participantId) return;
+      const pt = participants.find((p) => p.id === slot.participantId);
+      if (!pt) return;
+
+      const posLabel = slot.rank === 1 ? '1st Place' : slot.rank === 2 ? '2nd Place' : '3rd Place';
+      validEntries.push({
+        id: `res-${prog.id}-${slot.rank}-${Date.now()}`,
+        programId: prog.id,
+        programName: prog.name,
+        programCode: prog.code || '',
+        participantId: pt.id,
+        participantName: pt.name,
+        chestNo: pt.chestNo || '',
+        admissionNo: pt.admissionNo || '',
+        teamId: pt.teamId,
+        marks: 0,
+        grade: slot.grade || 'Grade A (Distinction)',
+        rank: slot.rank,
+        position: posLabel,
+        pointsAwarded: slot.pointsAwarded,
+        status: publishNow ? 'Published' : 'Draft',
+        publishedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      });
+    });
+
+    setArtsPrograms((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === prog.id) {
+          return {
+            ...p,
+            results: validEntries,
+            publishStatus: publishNow ? 'Published' : p.publishStatus,
+            status: publishNow ? 'COMPLETED' : p.status,
+          };
+        }
+        return p;
+      });
+      localStorage.setItem('ahia_arts_programs', JSON.stringify(updated));
+      triggerAutoPush({ artsPrograms: updated });
+      return updated;
+    });
+
+    showToast('Podium Results Published', `Top 3 results for "${prog.name}" saved & synced.`, 'success');
+    setTimeout(recalculateAllStandings, 100);
+  }, [artsPrograms, participants, showToast, recalculateAllStandings, triggerAutoPush]);
 
   const deleteResultMark = useCallback((programId: string, participantId: string) => {
     const compositeKey = `${programId}_${participantId}`;
@@ -1649,7 +1725,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 bannerUrl: cfg.bannerUrl !== undefined ? cfg.bannerUrl : prev.bannerUrl,
                 adminUsername: cfg.adminUsername || prev.adminUsername || 'smash2k26',
                 adminPassword: cfg.adminPassword || prev.adminPassword,
-                podiumCategory: (cfg.podiumCategory as any) || prev.podiumCategory || 'arts',
+                podiumCategory: prev.podiumCategory === 'sports' ? 'sports' : ((cfg.podiumCategory as any) || prev.podiumCategory || 'arts'),
                 isCelebrationMode: prev.isCelebrationMode,
               };
               localStorage.setItem('ahia_fest_config', JSON.stringify(updated));
@@ -2507,6 +2583,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         editDocument,
         deleteDocument,
         addResultMark,
+        savePodiumResults,
         deleteResultMark,
         adminUser,
         isAdminLoggedIn: !!adminUser,

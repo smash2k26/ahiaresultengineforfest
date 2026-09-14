@@ -111,7 +111,7 @@ export interface ArtsResultEntry {
   chestNo: string;
   admissionNo?: string;
   teamId: string;
-  marks: number;
+  marks?: number;
   grade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'Participated' | string;
   rank: number; // 1, 2, 3, 4, etc.
   position: '1st' | '2nd' | '3rd' | '4th' | 'Consolation' | '-' | string;

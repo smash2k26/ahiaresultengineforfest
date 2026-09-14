@@ -18,6 +18,7 @@ import { AdminScheduleSection } from './AdminScheduleSection';
 import { AdminScoringSection } from './AdminScoringSection';
 import { AdminCertificatesSection } from './AdminCertificatesSection';
 import { AdminBulkDataModal } from './AdminBulkDataModal';
+import { ResultPodiumModal } from './ResultPodiumModal';
 import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
 
 interface AdminDashboardProps {
@@ -93,17 +94,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [resultsSearch, setResultsSearch] = useState('');
   const [resultsProgramFilter, setResultsProgramFilter] = useState('All');
   const [resultsHouseFilter, setResultsHouseFilter] = useState('All');
-  const [isNewMarkModalOpen, setIsNewMarkModalOpen] = useState(false);
-  const [editingResultMark, setEditingResultMark] = useState<{ programObjId: string; participantId: string } | null>(null);
-
-  // New Mark Form State
-  const [markProgramId, setMarkProgramId] = useState('');
-  const [markParticipantId, setMarkParticipantId] = useState('');
-  const [markRawScore, setMarkRawScore] = useState<number | string>(95);
-  const [markGrade, setMarkGrade] = useState('Grade A (Distinction)');
-  const [markPosition, setMarkPosition] = useState('1st Place (First Prize - 10 pts)');
-  const [markPoints, setMarkPoints] = useState<number | string>(10);
-  const [markPublishImmediate, setMarkPublishImmediate] = useState(true);
+  const [isPodiumModalOpen, setIsPodiumModalOpen] = useState(false);
+  const [podiumModalProgramId, setPodiumModalProgramId] = useState('');
 
   // Aggregate all result entries across programs
   const allResultRecords = useMemo(() => {
@@ -131,6 +123,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         cleanAdm.includes(cleanQ) ||
         String(r.programTitle || '').toLowerCase().includes(q) ||
         String(r.programCode || '').toLowerCase().includes(q) ||
+        String(r.participantName || '').toLowerCase().includes(q) ||
         String(r.grade || '').toLowerCase().includes(q) ||
         String(r.position || '').toLowerCase().includes(q);
 
@@ -153,77 +146,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       setActiveTab('programs');
       return;
     }
-    if (participants.length === 0) {
-      showToast('No Participants Found', 'Please register a Participant first.', 'warning');
-      setActiveTab('participants');
-      return;
-    }
-    setEditingResultMark(null);
-    setMarkProgramId(artsPrograms[0]?.id || '');
-    setMarkParticipantId(participants[0]?.id || '');
-    setMarkRawScore(95);
-    setMarkGrade('Grade A (Distinction)');
-    setMarkPosition('1st Place (First Prize - 10 pts)');
-    setMarkPoints(10);
-    setMarkPublishImmediate(true);
-    setIsNewMarkModalOpen(true);
+    setPodiumModalProgramId(artsPrograms[0]?.id || '');
+    setIsPodiumModalOpen(true);
   };
 
   const handleOpenEditMarkModal = (markRecord: any) => {
-    setEditingResultMark({ programObjId: markRecord.programObjId, participantId: markRecord.participantId });
-    setMarkProgramId(markRecord.programObjId);
-    setMarkParticipantId(markRecord.participantId);
-    setMarkRawScore(markRecord.marks || 0);
-    setMarkGrade(markRecord.grade || 'Grade A (Distinction)');
-    setMarkPosition(markRecord.position || '1st Place (First Prize - 10 pts)');
-    setMarkPoints(markRecord.pointsAwarded || 10);
-    setMarkPublishImmediate(true);
-    setIsNewMarkModalOpen(true);
-  };
-
-  const handlePositionChange = (pos: string) => {
-    setMarkPosition(pos);
-    if (pos.includes('1st') || pos.includes('First')) {
-      setMarkPoints(10);
-      setMarkGrade('Grade A+ (Outstanding)');
-    } else if (pos.includes('2nd') || pos.includes('Second')) {
-      setMarkPoints(7);
-      setMarkGrade('Grade A (Distinction)');
-    } else if (pos.includes('3rd') || pos.includes('Third')) {
-      setMarkPoints(5);
-      setMarkGrade('Grade B+ (Merit)');
-    } else if (pos.includes('Consolation')) {
-      setMarkPoints(2);
-      setMarkGrade('Grade B (Standard)');
-    } else {
-      setMarkPoints(1);
-      setMarkGrade('Grade C (Pass)');
-    }
-  };
-
-  const handleSaveResultMark = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!markProgramId || !markParticipantId) {
-      showToast('Error', 'Please select a program and a participant.', 'error');
-      return;
-    }
-
-    if (editingResultMark) {
-      deleteResultMark(editingResultMark.programObjId, editingResultMark.participantId);
-    }
-
-    addResultMark({
-      programId: markProgramId,
-      participantId: markParticipantId,
-      marks: Number(markRawScore) || 0,
-      grade: markGrade,
-      position: markPosition,
-      pointsAwarded: Number(markPoints) || 0,
-      publishNow: markPublishImmediate,
-    });
-
-    setEditingResultMark(null);
-    setIsNewMarkModalOpen(false);
+    setPodiumModalProgramId(markRecord.programObjId);
+    setIsPodiumModalOpen(true);
   };
 
   // -------------------------------------------------------------
@@ -1287,175 +1216,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                Result Entry & Marks Evaluation
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-amber-500" />
+                <span>Result Entry &amp; Marks Evaluation</span>
               </h2>
               <p className="text-sm text-slate-600 mt-0.5">
-                Assign marks, grades, and positions. Instant updates sync to the live scoreboards.
+                Assign 1st, 2nd &amp; 3rd place podium winners. Automatic points calculation syncs instantly to live leaderboards.
               </p>
             </div>
             <button
               onClick={handleOpenNewMarkModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              <span>Enter New Mark</span>
+              <Trophy className="w-4 h-4 text-amber-300" />
+              <span>Enter Podium Results (1st, 2nd, 3rd)</span>
             </button>
           </div>
 
-          {/* New Mark Modal / Drawer */}
-          {isNewMarkModalOpen && (
-            <div className="bg-slate-50 border border-indigo-100 rounded-2xl p-6 shadow-sm relative">
-              <button
-                onClick={() => setIsNewMarkModalOpen(false)}
-                className="absolute right-4 top-4 text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="flex items-center gap-2 text-indigo-700 font-bold text-base mb-4">
-                <BookOpen className="w-5 h-5 text-indigo-600" />
-                <span>Record New Mark & Assign Position</span>
-              </div>
-
-              <form onSubmit={handleSaveResultMark} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                      Select Program / Event
-                    </label>
-                    <select
-                      value={markProgramId}
-                      onChange={(e) => setMarkProgramId(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    >
-                      <option value="">-- Select Program --</option>
-                      {artsPrograms.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.code ? `${p.code} - ` : ''} {p.name} ({p.category})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                      Select Student Participant
-                    </label>
-                    <select
-                      value={markParticipantId}
-                      onChange={(e) => setMarkParticipantId(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    >
-                      <option value="">-- Select Participant --</option>
-                      {participants.map((pt) => {
-                        const house = teams.find((t) => t.id === pt.teamId);
-                        return (
-                          <option key={pt.id} value={pt.id}>
-                            {pt.name} ({pt.admissionNo} • {house?.name || 'House'} • {pt.yearClass})
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                      Raw Mark Scored (0-100)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={markRawScore}
-                      onChange={(e) => setMarkRawScore(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                      Grade Awarded
-                    </label>
-                    <select
-                      value={markGrade}
-                      onChange={(e) => setMarkGrade(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    >
-                      <option value="Grade A+ (Outstanding)">Grade A+ (Outstanding)</option>
-                      <option value="Grade A (Distinction)">Grade A (Distinction)</option>
-                      <option value="Grade B+ (Merit)">Grade B+ (Merit)</option>
-                      <option value="Grade B (Standard)">Grade B (Standard)</option>
-                      <option value="Grade C (Pass)">Grade C (Pass)</option>
-                      <option value="Participated">Participated</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                      Podium Position
-                    </label>
-                    <select
-                      value={markPosition}
-                      onChange={(e) => handlePositionChange(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    >
-                      <option value="1st Place (First Prize - 10 pts)">1st Place (First Prize - 10 pts)</option>
-                      <option value="2nd Place (Second Prize - 7 pts)">2nd Place (Second Prize - 7 pts)</option>
-                      <option value="3rd Place (Third Prize - 5 pts)">3rd Place (Third Prize - 5 pts)</option>
-                      <option value="Consolation Prize (2 pts)">Consolation Prize (2 pts)</option>
-                      <option value="No Position / Grade Only (-)">No Position / Grade Only (-)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                      Championship Points
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={markPoints}
-                      onChange={(e) => setMarkPoints(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="mark-pub-check"
-                    checked={markPublishImmediate}
-                    onChange={(e) => setMarkPublishImmediate(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
-                  />
-                  <label htmlFor="mark-pub-check" className="text-sm font-medium text-slate-700">
-                    Publish result immediately to live leaderboard &amp; student mark cards
-                  </label>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsNewMarkModalOpen(false)}
-                    className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Save &amp; Sync Result</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
+          {/* 3-Slot Podium Results Modal */}
+          <ResultPodiumModal
+            isOpen={isPodiumModalOpen}
+            onClose={() => setIsPodiumModalOpen(false)}
+            initialProgramId={podiumModalProgramId}
+          />
 
           {/* Search and Filters */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-white p-3 border border-slate-200 rounded-xl shadow-xs">
@@ -1465,7 +1248,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 type="text"
                 value={resultsSearch}
                 onChange={(e) => setResultsSearch(e.target.value)}
-                placeholder="Search results by Admission No (Ad No), program code, team, grade..."
+                placeholder="Search results by student name, Admission No, program code, house..."
                 className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               />
             </div>
@@ -1530,6 +1313,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   ) : (
                     filteredResults.map((r, i) => {
                       const house = teams.find((t) => t.id === r.teamId);
+                      const isFirst = r.position?.includes('1st') || r.rank === 1;
+                      const isSecond = r.position?.includes('2nd') || r.rank === 2;
+                      const isThird = r.position?.includes('3rd') || r.rank === 3;
+
                       return (
                         <tr key={`adm-res-${r.programObjId}-${r.participantId || r.chestNo || i}-${i}`} className="hover:bg-slate-50/60 transition-colors">
                           <td className="px-4 py-3 font-medium text-slate-900">
@@ -1548,8 +1335,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                               {house?.name || 'House'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 font-semibold text-indigo-600">{r.grade}</td>
-                          <td className="px-4 py-3 font-medium">{r.position}</td>
+                          <td className="px-4 py-3 font-semibold text-indigo-600">{r.grade || '-'}</td>
+                          <td className="px-4 py-3">
+                            {isFirst ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                🥇 1st Place
+                              </span>
+                            ) : isSecond ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300">
+                                🥈 2nd Place
+                              </span>
+                            ) : isThird ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-900 border border-orange-300">
+                                🥉 3rd Place
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-slate-600 bg-slate-100">
+                                {r.position}
+                              </span>
+                            )}
+                          </td>
                           <td className="px-4 py-3 font-bold text-slate-900">{r.pointsAwarded} pts</td>
                           <td className="px-4 py-3">
                             <span
@@ -1567,7 +1372,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                               <button
                                 onClick={() => handleOpenEditMarkModal(r)}
                                 className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95 rounded-lg transition-all cursor-pointer"
-                                title="Edit Result Record"
+                                title="Edit Podium Results for Event"
                               >
                                 <Edit2 className="w-4 h-4" />
                               </button>
@@ -1862,6 +1667,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => {
+                                setPodiumModalProgramId(p.id);
+                                setIsPodiumModalOpen(true);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 active:scale-95 rounded-lg transition-all cursor-pointer"
+                              title="Enter / Edit Podium Results"
+                            >
+                              <Trophy className="w-4 h-4" />
+                            </button>
                             <button
                               onClick={() => handleOpenEditProgModal(p)}
                               className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95 rounded-lg transition-all cursor-pointer"

@@ -45,6 +45,27 @@ export const AdminScoringSection: React.FC = () => {
     showToast('Reset to Defaults', 'Standard scoring rules formula restored.', 'info');
   };
 
+  const handleSetPodiumOnlyPreset = () => {
+    const podiumOnlyRules: ScoringRules = {
+      goldPoints: 10,
+      silverPoints: 7,
+      bronzePoints: 5,
+      gradePointsA_Plus: 0,
+      gradePointsA: 0,
+      gradePointsB_Plus: 0,
+      gradePointsB: 0,
+      participationPoints: 0,
+      groupEventMultiplier: 0,
+      sportsWinnerPoints: 0,
+      sportsRunnerUpPoints: 0,
+      sportsThirdPlacePoints: 0,
+    };
+    setRules(podiumOnlyRules);
+    updateScoringRules(podiumOnlyRules);
+    recalculateAllStandings();
+    showToast('Podium Only Mode Applied', 'Grade points, sports points & group multiplier set to 0. Only 1st, 2nd, and 3rd get points.', 'success');
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -54,11 +75,19 @@ export const AdminScoringSection: React.FC = () => {
             Scoring Rules Matrix &amp; Point Formula Engine
           </h2>
           <p className="text-sm text-slate-600 mt-0.5">
-            Configure placement points, grade bonuses, and group multipliers. Changes recalculate the entire leaderboard automatically.
+            Configure placement points, grade bonuses, and group multipliers. Grade points and group multipliers can be set to 0 so only 1st, 2nd, and 3rd places receive points.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSetPodiumOnlyPreset}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-600" />
+            <span>1st, 2nd &amp; 3rd Only (Zero Grade/Multiplier)</span>
+          </button>
           <button
             type="button"
             onClick={handleResetDefaults}
@@ -67,6 +96,15 @@ export const AdminScoringSection: React.FC = () => {
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset Defaults</span>
           </button>
+        </div>
+      </div>
+
+      {/* Info Banner */}
+      <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-start gap-2.5 text-blue-900 text-xs sm:text-sm">
+        <Sparkles className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+        <div>
+          <span className="font-bold">Zero Points Allowed: </span>
+          You can set Grade points (A+, A, B+, B, Participation), Sports points, and Group Multipliers to <code className="bg-blue-100 px-1 py-0.5 rounded font-mono font-bold text-blue-950">0</code>. When set to 0, championship points are awarded exclusively to the 1st, 2nd, and 3rd podium finishers.
         </div>
       </div>
 
@@ -240,7 +278,7 @@ export const AdminScoringSection: React.FC = () => {
               <input
                 type="number"
                 step="0.1"
-                min="1"
+                min="0"
                 value={rules.groupEventMultiplier}
                 onChange={(e) => setRules({ ...rules, groupEventMultiplier: Number(e.target.value) })}
                 className="w-full text-center text-lg font-mono font-bold py-1.5 rounded-lg border border-indigo-300 bg-white focus:ring-2 focus:ring-indigo-500"

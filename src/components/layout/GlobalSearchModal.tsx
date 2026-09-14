@@ -38,10 +38,12 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
 
   const cleanQ = q.replace(/[\s-_]/g, '');
 
-  const matchedParticipants = cleanQ
+  const matchedParticipants = q
     ? participants.filter((p) => {
         const cleanAdm = String(p.admissionNo || '').toLowerCase().replace(/[\s-_]/g, '');
-        return cleanAdm.includes(cleanQ);
+        const cleanName = String(p.name || '').toLowerCase();
+        const cleanChest = String(p.chestNo || '').toLowerCase().replace(/[\s-_]/g, '');
+        return cleanName.includes(q) || (cleanQ && cleanAdm.includes(cleanQ)) || (cleanQ && cleanChest.includes(cleanQ));
       })
     : [];
 
@@ -105,7 +107,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           <Search className="w-5 h-5 text-purple-600 shrink-0" />
           <input
             type="text"
-            placeholder="Search by Admission No (Ad No, e.g. AD-101), house, event..."
+            placeholder="Search students by name or Ad No, teams, events, circulars..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
@@ -130,11 +132,12 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             <div className="py-8 text-center text-slate-500 space-y-3">
               <Sparkles className="w-8 h-8 text-purple-500 mx-auto" />
               <p className="text-xs sm:text-sm">
-                Type an Admission No (Ad No) like <span className="text-purple-600 font-mono font-bold">AD-101</span>,
-                house name like <span className="text-amber-600 font-bold">Ruby Royals</span>, or program name.
+                Search student by name like <span className="text-purple-600 font-bold">Ameen</span>,
+                Admission No like <span className="text-purple-600 font-mono font-bold">AD-101</span>,
+                house name like <span className="text-amber-600 font-bold">Emerald Dragons</span>, or program name.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                {['AD-101', 'Mappilappattu', 'Football', 'Ruby Royals', 'Senior', 'Rules'].map((s, idx) => (
+                {['Ameen', 'AD-101', 'Mappilappattu', 'Football', 'Emerald Dragons', 'Senior', 'Rules'].map((s, idx) => (
                   <button
                     key={`search-sug-${s}-${idx}`}
                     onClick={() => setQuery(s)}

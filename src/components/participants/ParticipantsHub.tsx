@@ -44,7 +44,13 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
     const cleanQ = q.replace(/[\s-_]/g, '');
     return participants.filter((p) => {
       const cleanAdm = String(p.admissionNo || '').toLowerCase().replace(/[\s-_]/g, '');
-      const matchesSearch = !cleanQ || cleanAdm.includes(cleanQ);
+      const cleanName = String(p.name || '').toLowerCase();
+      const cleanChest = String(p.chestNo || '').toLowerCase().replace(/[\s-_]/g, '');
+      const matchesSearch =
+        !q ||
+        cleanName.includes(q) ||
+        (cleanQ && cleanAdm.includes(cleanQ)) ||
+        (cleanQ && cleanChest.includes(cleanQ));
       const matchesCategory = categoryFilter === 'All' || p.category === categoryFilter;
       const matchesTeam = teamFilter === 'All' || p.teamId === teamFilter;
 
@@ -185,7 +191,7 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search participant by Admission No (Ad No, e.g. AD-101)..."
+            placeholder="Search students by name, Admission No (Ad No), or Chest No..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"

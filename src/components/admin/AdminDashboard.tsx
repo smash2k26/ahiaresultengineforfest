@@ -369,9 +369,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     const cleanQ = q.replace(/[\s-_]/g, '');
     return participants.filter((p) => {
       const cleanAdm = String(p.admissionNo || '').toLowerCase().replace(/[\s-_]/g, '');
+      const cleanName = String(p.name || '').toLowerCase();
+      const cleanChest = String(p.chestNo || '').toLowerCase().replace(/[\s-_]/g, '');
       const matchSearch =
-        !cleanQ ||
-        cleanAdm.includes(cleanQ);
+        !q ||
+        cleanName.includes(q) ||
+        (cleanQ && cleanAdm.includes(cleanQ)) ||
+        (cleanQ && cleanChest.includes(cleanQ));
 
       const matchHouse =
         partHouseFilter === 'All' || p.teamId === partHouseFilter;
@@ -2103,7 +2107,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 type="text"
                 value={partSearch}
                 onChange={(e) => setPartSearch(e.target.value)}
-                placeholder="Search participants by Admission No (Ad No, e.g. AD-101)..."
+                placeholder="Search students by name, Admission No (Ad No, e.g. AD-101), or Chest No..."
                 className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               />
             </div>

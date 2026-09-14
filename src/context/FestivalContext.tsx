@@ -1650,9 +1650,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 adminUsername: cfg.adminUsername || prev.adminUsername || 'smash2k26',
                 adminPassword: cfg.adminPassword || prev.adminPassword,
                 podiumCategory: (cfg.podiumCategory as any) || prev.podiumCategory || 'arts',
-                isCelebrationMode: cfg.isCelebrationMode !== undefined
-                  ? (String(cfg.isCelebrationMode).trim().toLowerCase() === 'true' || cfg.isCelebrationMode === true)
-                  : prev.isCelebrationMode,
+                isCelebrationMode: prev.isCelebrationMode,
               };
               localStorage.setItem('ahia_fest_config', JSON.stringify(updated));
               return updated;
@@ -1660,14 +1658,14 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             recordsUpdated++;
           }
 
-          // 2. Safe Merge Teams (Preserve all locally added teams not in sheets)
+          // 2. Safe Merge Teams (Preserve all locally updated team names and attributes)
           if (Array.isArray(data.teams) && data.teams.length > 0) {
             const remoteSanitized = data.teams
               .filter((t: any) => t && (t.id || t.name) && !isDeleted(t.id) && !isDeleted(t.shortCode))
               .map((t: any, idx: number) => ({
                 ...t,
                 id: String(t.id || `team-${idx + 1}`),
-                name: t.name || `Team ${idx + 1}`,
+                name: String(t.name || `Team ${idx + 1}`),
                 shortCode: t.shortCode || (t.name ? t.name.slice(0, 3).toUpperCase() : `T${idx + 1}`),
                 color: t.color || '#4f46e5',
                 accentColor: t.accentColor || t.color || '#6366f1',
@@ -1689,47 +1687,55 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               }));
 
             setTeams((prevLocal) => {
-              const remoteMap = new Map<string, any>();
-              remoteSanitized.forEach((t: Team) => {
-                remoteMap.set(t.id, t);
-                if (t.shortCode) remoteMap.set(t.shortCode.toLowerCase(), t);
-                if (t.name) remoteMap.set(t.name.trim().toLowerCase(), t);
+              const localMap = new Map<string, Team>();
+              prevLocal.forEach((lt) => {
+                if (lt && lt.id) {
+                  localMap.set(lt.id, lt);
+                  if (lt.shortCode) localMap.set(lt.shortCode.toLowerCase(), lt);
+                }
               });
 
-              const merged: Team[] = [...remoteSanitized];
-              const mergedIdSet = new Set(remoteSanitized.map((t: Team) => t.id));
+              const merged: Team[] = [];
+              const processedIds = new Set<string>();
 
-              prevLocal.forEach((localTeam) => {
-                if (!localTeam || !localTeam.id) return;
-                if (isDeleted(localTeam.id) || (localTeam.shortCode && isDeleted(localTeam.shortCode))) return;
+              // Process remote teams and merge with local customizations
+              remoteSanitized.forEach((rTeam: Team) => {
+                if (processedIds.has(rTeam.id)) return;
+                const localMatch = localMap.get(rTeam.id) || (rTeam.shortCode ? localMap.get(rTeam.shortCode.toLowerCase()) : undefined);
 
-                const matchByShort = localTeam.shortCode ? remoteMap.get(localTeam.shortCode.toLowerCase()) : null;
-                const matchByName = localTeam.name ? remoteMap.get(localTeam.name.trim().toLowerCase()) : null;
-                const existing = remoteMap.get(localTeam.id) || matchByShort || matchByName;
+                if (localMatch) {
+                  // If local has customized name and remote has default placeholder or matching ID, preserve customized local branding
+                  const isRemoteDefault = !rTeam.name || rTeam.name.startsWith('Team ');
+                  const finalName = isRemoteDefault ? localMatch.name : (rTeam.name || localMatch.name);
 
-                if (existing) {
-                  const targetIdx = merged.findIndex((m) => m.id === existing.id);
-                  if (targetIdx !== -1) {
-                    merged[targetIdx] = {
-                      ...localTeam,
-                      ...existing,
-                      logo: existing.logo && existing.logo !== '🏆' ? existing.logo : (localTeam.logo || existing.logo),
-                      color: existing.color || localTeam.color,
-                      accentColor: existing.accentColor || localTeam.accentColor,
-                      slogan: existing.slogan || localTeam.slogan,
-                      description: existing.description || localTeam.description,
-                      captain: existing.captain || localTeam.captain,
-                      viceCaptain: existing.viceCaptain || localTeam.viceCaptain,
-                      staffAdvisor: existing.staffAdvisor || localTeam.staffAdvisor,
-                    };
-                  }
+                  const combined: Team = {
+                    ...localMatch,
+                    ...rTeam,
+                    name: finalName,
+                    shortCode: rTeam.shortCode || localMatch.shortCode,
+                    color: rTeam.color || localMatch.color,
+                    accentColor: rTeam.accentColor || localMatch.accentColor,
+                    logo: rTeam.logo && rTeam.logo !== '🏆' ? rTeam.logo : (localMatch.logo || rTeam.logo),
+                    slogan: rTeam.slogan || localMatch.slogan,
+                    description: rTeam.description || localMatch.description,
+                    captain: rTeam.captain || localMatch.captain,
+                    viceCaptain: rTeam.viceCaptain || localMatch.viceCaptain,
+                    staffAdvisor: rTeam.staffAdvisor || localMatch.staffAdvisor,
+                  };
+                  merged.push(combined);
+                  processedIds.add(combined.id);
                 } else {
-                  // Keep locally added team
-                  if (!mergedIdSet.has(localTeam.id)) {
-                    merged.push(localTeam);
-                    mergedIdSet.add(localTeam.id);
-                    hasLocalAdditionsToSyncBack = true;
-                  }
+                  merged.push(rTeam);
+                  processedIds.add(rTeam.id);
+                }
+              });
+
+              // Keep any local teams not present in remote
+              prevLocal.forEach((localTeam) => {
+                if (localTeam && localTeam.id && !processedIds.has(localTeam.id) && !isDeleted(localTeam.id)) {
+                  merged.push(localTeam);
+                  processedIds.add(localTeam.id);
+                  hasLocalAdditionsToSyncBack = true;
                 }
               });
 

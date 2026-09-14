@@ -42,12 +42,17 @@ export const CertificateVerificationHub: React.FC<CertificateVerificationHubProp
       );
     });
 
-    // Match admissionNo or exact certificate string in participants (NOT chestNo)
+    // Match student name, admissionNo, or exact certificate string in participants
     const found = participants.find((p) => {
       const pAdm = String(p.admissionNo || '').toUpperCase();
+      const pName = String(p.name || '').toUpperCase();
+      const pChest = String(p.chestNo || '').toUpperCase();
       return (
         pAdm === val ||
+        pName === val ||
+        (pName && pName.includes(val)) ||
         (pAdm && val.includes(pAdm)) ||
+        (pChest && pChest === val) ||
         (matchedCert && (p.id === matchedCert.participantId || (p.admissionNo && p.admissionNo === matchedCert.admissionNo)))
       );
     });
@@ -84,14 +89,14 @@ export const CertificateVerificationHub: React.FC<CertificateVerificationHubProp
       <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-md space-y-4 max-w-2xl mx-auto">
         <form onSubmit={handleVerify} className="space-y-3">
           <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-            Enter Certificate ID, Verification Code, or Admission Number (Ad No)
+            Enter Student Name, Certificate ID, Verification Code, or Admission Number (Ad No)
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <QrCode className="w-5 h-5 text-amber-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="e.g. AHIA-2026-0101, VREF-0101, or AD-101"
+                placeholder="e.g. Ameen, AD-101, AHIA-2026-0101, or VREF-0101"
                 value={certInput}
                 onChange={(e) => setCertInput(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"

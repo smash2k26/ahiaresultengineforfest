@@ -38,13 +38,19 @@ export const ArtsHub: React.FC<ArtsHubProps> = ({
   const artsOnlyPrograms = artsPrograms.filter((p) => !isSportsProgram(p));
 
   const filtered = artsOnlyPrograms.filter((p) => {
-    const q = (search || '').toLowerCase();
+    const q = (search || '').toLowerCase().trim();
     const matchesSearch =
       !q ||
       String(p.name || '').toLowerCase().includes(q) ||
       String(p.stage || '').toLowerCase().includes(q) ||
       String(p.venue || '').toLowerCase().includes(q) ||
-      String(p.code || '').toLowerCase().includes(q);
+      String(p.code || '').toLowerCase().includes(q) ||
+      (p.results || []).some(
+        (r) =>
+          String(r.participantName || '').toLowerCase().includes(q) ||
+          String(r.admissionNo || '').toLowerCase().includes(q) ||
+          String(r.chestNo || '').toLowerCase().includes(q)
+      );
 
     const matchesCategory = categoryFilter === 'All' || p.category === categoryFilter;
     const matchesSection = sectionFilter === 'All' || p.section === sectionFilter;
@@ -103,7 +109,7 @@ export const ArtsHub: React.FC<ArtsHubProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search arts program name, stage, venue..."
+            placeholder="Search arts program name, student name, Ad No, stage, or venue..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-colors"

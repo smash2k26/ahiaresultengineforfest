@@ -321,33 +321,32 @@ function doPost(e) {
       var settingsSheet = ss.getSheetByName("SiteSettings") || ss.insertSheet("SiteSettings", 0);
       var currentCfg = readSiteSettings(settingsSheet) || {};
       var mergedCfg = {
-        festivalName: (siteConfig && (siteConfig.festivalName || siteConfig.name)) || payload.festival || currentCfg.festivalName || "AHIA FEST 2026",
-        year: (siteConfig && siteConfig.year) || currentCfg.year || "2026",
-        edition: (siteConfig && siteConfig.edition) || currentCfg.edition || "Annual Championship Edition",
-        statusBanner: (siteConfig && siteConfig.statusBanner) || currentCfg.statusBanner || "LIVE",
-        tagline: (siteConfig && siteConfig.tagline) || currentCfg.tagline || "Annual Inter-House Arts & Athletics Fest",
-        theme: (siteConfig && siteConfig.theme) || currentCfg.theme || "Where talent meets competition.",
-        motto: (siteConfig && siteConfig.motto) || currentCfg.motto || "Ignite the Spirit of Excellence",
-        dates: (siteConfig && siteConfig.dates) || currentCfg.dates || "March 15 - 18, 2026",
-        currentDay: (siteConfig && siteConfig.currentDay) || currentCfg.currentDay || "Day 1 of 3",
-        venue: (siteConfig && siteConfig.venue) || currentCfg.venue || "Grand Central Stage & Main Athletic Arena",
-        organizedBy: (siteConfig && siteConfig.organizedBy) || currentCfg.organizedBy || "Hidaya Union Devoted Activities (HUDA)",
-        chiefGuest: (siteConfig && siteConfig.chiefGuest) || currentCfg.chiefGuest || "Prof. Dr. K. M. Andrews",
-        announcementTicker: (siteConfig && siteConfig.announcementTicker) || currentCfg.announcementTicker || "Official Live Results posting in real-time!",
+        festivalName: (siteConfig && (siteConfig.festivalName !== undefined && siteConfig.festivalName !== "" ? siteConfig.festivalName : (siteConfig.name !== undefined ? siteConfig.name : undefined))) || payload.festival || currentCfg.festivalName || "smash 2026",
+        year: (siteConfig && siteConfig.year !== undefined && siteConfig.year !== "") ? siteConfig.year : (currentCfg.year || "2026"),
+        edition: (siteConfig && siteConfig.edition !== undefined) ? siteConfig.edition : (currentCfg.edition || "Annual Championship Edition"),
+        statusBanner: (siteConfig && siteConfig.statusBanner !== undefined) ? siteConfig.statusBanner : (currentCfg.statusBanner || "LIVE"),
+        tagline: (siteConfig && siteConfig.tagline !== undefined) ? siteConfig.tagline : (currentCfg.tagline || "Annual Inter-House Arts & Athletics Fest"),
+        theme: (siteConfig && siteConfig.theme !== undefined) ? siteConfig.theme : (currentCfg.theme || "Where talent meets competition."),
+        motto: (siteConfig && siteConfig.motto !== undefined) ? siteConfig.motto : (currentCfg.motto || "Ignite the Spirit of Excellence"),
+        dates: (siteConfig && siteConfig.dates !== undefined) ? siteConfig.dates : (currentCfg.dates || "March 15 - 18, 2026"),
+        currentDay: (siteConfig && siteConfig.currentDay !== undefined) ? siteConfig.currentDay : (currentCfg.currentDay || "Day 1 of 3"),
+        venue: (siteConfig && siteConfig.venue !== undefined) ? siteConfig.venue : (currentCfg.venue || "Grand Central Stage & Main Athletic Arena"),
+        organizedBy: (siteConfig && siteConfig.organizedBy !== undefined) ? siteConfig.organizedBy : (currentCfg.organizedBy || "Hidaya Union Devoted Activities (HUDA)"),
+        chiefGuest: (siteConfig && siteConfig.chiefGuest !== undefined) ? siteConfig.chiefGuest : (currentCfg.chiefGuest || "Prof. Dr. K. M. Andrews"),
+        announcementTicker: (siteConfig && siteConfig.announcementTicker !== undefined) ? siteConfig.announcementTicker : (currentCfg.announcementTicker || "Official Live Results posting in real-time!"),
         enableLiveTicker: (siteConfig && siteConfig.enableLiveTicker !== undefined) ? String(siteConfig.enableLiveTicker) : (currentCfg.enableLiveTicker || "TRUE"),
-        announcementTickerSpeed: (siteConfig && siteConfig.announcementTickerSpeed) || currentCfg.announcementTickerSpeed || "normal",
-        liveStreamUrl: (siteConfig && siteConfig.liveStreamUrl) || currentCfg.liveStreamUrl || "",
-        contactEmail: (siteConfig && siteConfig.contactEmail) || currentCfg.contactEmail || "festival@ahiaedu.org",
-        contactPhone: (siteConfig && siteConfig.contactPhone) || currentCfg.contactPhone || "+91 98470 12345",
-        logoUrl: (siteConfig && siteConfig.logoUrl) || currentCfg.logoUrl || "https://images.unsplash.com/photo-1511525258028-df0c67b3ff2d?w=350&auto=format&fit=crop&q=80",
-        bannerUrl: (siteConfig && siteConfig.bannerUrl) || currentCfg.bannerUrl || "",
-        adminPassword: (siteConfig && siteConfig.adminPassword) || currentCfg.adminPassword || "hudaahiasmash20262027",
-        adminUsername: (siteConfig && siteConfig.adminUsername) || currentCfg.adminUsername || "smash2k26",
-        podiumCategory: (siteConfig && siteConfig.podiumCategory) || currentCfg.podiumCategory || "arts",
-        isCelebrationMode: (siteConfig && siteConfig.isCelebrationMode !== undefined) ? String(siteConfig.isCelebrationMode) : (currentCfg.isCelebrationMode || "FALSE"),
-        accentColor: (siteConfig && siteConfig.accentColor) || currentCfg.accentColor || "#4F46E5",
-        accentPreset: (siteConfig && siteConfig.accentPreset) || currentCfg.accentPreset || "indigo",
-        copyrightText: (siteConfig && siteConfig.copyrightText) || currentCfg.copyrightText || "© 2026 AHIA FEST • Hidaya Union Devoted Activities (HUDA). All Rights Reserved.",
+        announcementTickerSpeed: (siteConfig && siteConfig.announcementTickerSpeed !== undefined) ? siteConfig.announcementTickerSpeed : (currentCfg.announcementTickerSpeed || "normal"),
+        liveStreamUrl: (siteConfig && siteConfig.liveStreamUrl !== undefined) ? siteConfig.liveStreamUrl : (currentCfg.liveStreamUrl || ""),
+        contactEmail: (siteConfig && siteConfig.contactEmail !== undefined) ? siteConfig.contactEmail : (currentCfg.contactEmail || "festival@ahiaedu.org"),
+        contactPhone: (siteConfig && siteConfig.contactPhone !== undefined) ? siteConfig.contactPhone : (currentCfg.contactPhone || "+91 98470 12345"),
+        logoUrl: (siteConfig && siteConfig.logoUrl !== undefined) ? siteConfig.logoUrl : (currentCfg.logoUrl || ""),
+        bannerUrl: (siteConfig && siteConfig.bannerUrl !== undefined) ? siteConfig.bannerUrl : (currentCfg.bannerUrl || ""),
+        adminPassword: (siteConfig && siteConfig.adminPassword !== undefined) ? siteConfig.adminPassword : (currentCfg.adminPassword || "hudaahiasmash20262027"),
+        adminUsername: (siteConfig && siteConfig.adminUsername !== undefined) ? siteConfig.adminUsername : (currentCfg.adminUsername || "smash2k26"),
+        podiumCategory: (siteConfig && siteConfig.podiumCategory !== undefined) ? siteConfig.podiumCategory : (currentCfg.podiumCategory || "arts"),
+        accentColor: (siteConfig && siteConfig.accentColor !== undefined) ? siteConfig.accentColor : (currentCfg.accentColor || "#4F46E5"),
+        accentPreset: (siteConfig && siteConfig.accentPreset !== undefined) ? siteConfig.accentPreset : (currentCfg.accentPreset || "indigo"),
+        copyrightText: (siteConfig && siteConfig.copyrightText !== undefined) ? siteConfig.copyrightText : (currentCfg.copyrightText || "© 2026 AHIA FEST • Hidaya Union Devoted Activities (HUDA). All Rights Reserved."),
         lastSyncedAt: new Date().toISOString()
       };
       initSiteSettingsSheet(settingsSheet, mergedCfg);
@@ -647,33 +646,32 @@ function initSiteSettingsSheet(sheet, config) {
 
   // Rows 5+: Settings Key-Value Rows
   var rows = [
-    ["festivalName", "Festival Name / Title", config.festivalName || "AHIA FEST 2026", "Main brand name displayed across the website, navigation, hero and banners."],
-    ["year", "Operational Year", config.year || "2026", "Festival edition year (e.g., 2026)."],
-    ["edition", "Festival Edition / Subtitle", config.edition || "Annual Championship Edition", "Subtitle edition descriptor."],
+    ["festivalName", "Festival Name / Title", config.festivalName !== undefined ? config.festivalName : "smash 2026", "Main brand name displayed across the website, navigation, hero and banners."],
+    ["year", "Operational Year", config.year !== undefined ? config.year : "2026", "Festival edition year (e.g., 2026)."],
+    ["edition", "Festival Edition / Subtitle", config.edition !== undefined ? config.edition : "Annual Championship Edition", "Subtitle edition descriptor."],
     ["statusBanner", "Live Status Banner", config.statusBanner || "LIVE", "Live indicator badge: LIVE | UPCOMING | CONCLUDED | PAUSED."],
-    ["tagline", "Official Tagline / Slogan", config.tagline || "Annual Inter-House Arts & Athletics Fest", "Subtitle phrase displayed beneath festival title."],
-    ["theme", "Festival Theme / Motto", config.theme || "Where talent meets competition.", "Central artistic & sporting theme."],
-    ["motto", "Secondary Motto", config.motto || "Ignite the Spirit of Excellence", "Motivational slogan."],
-    ["dates", "Festival Dates", config.dates || "March 15 - 18, 2026", "Event duration and schedule dates."],
-    ["currentDay", "Current Active Day", config.currentDay || "Day 1 of 3", "Today's highlight status for the hero banner."],
-    ["venue", "Central Venue / Location", config.venue || "Grand Central Stage & Main Athletic Arena", "Primary campus grounds or venue."],
-    ["organizedBy", "Organized By Committee", config.organizedBy || "Hidaya Union Devoted Activities (HUDA)", "Official hosting body."],
-    ["chiefGuest", "Chief Guest / Dignitary", config.chiefGuest || "Prof. Dr. K. M. Andrews", "Distinguished guest of honor."],
-    ["announcementTicker", "Breaking News Ticker", config.announcementTicker || "Official Live Results posting in real-time!", "Top marquee announcement text."],
+    ["tagline", "Official Tagline / Slogan", config.tagline !== undefined ? config.tagline : "Annual Inter-House Arts & Athletics Fest", "Subtitle phrase displayed beneath festival title."],
+    ["theme", "Festival Theme / Motto", config.theme !== undefined ? config.theme : "Where talent meets competition.", "Central artistic & sporting theme."],
+    ["motto", "Secondary Motto", config.motto !== undefined ? config.motto : "Ignite the Spirit of Excellence", "Motivational slogan."],
+    ["dates", "Festival Dates", config.dates !== undefined ? config.dates : "March 15 - 18, 2026", "Event duration and schedule dates."],
+    ["currentDay", "Current Active Day", config.currentDay !== undefined ? config.currentDay : "Day 1 of 3", "Today's highlight status for the hero banner."],
+    ["venue", "Central Venue / Location", config.venue !== undefined ? config.venue : "Grand Central Stage & Main Athletic Arena", "Primary campus grounds or venue."],
+    ["organizedBy", "Organized By Committee", config.organizedBy !== undefined ? config.organizedBy : "Hidaya Union Devoted Activities (HUDA)", "Official hosting body."],
+    ["chiefGuest", "Chief Guest / Dignitary", config.chiefGuest !== undefined ? config.chiefGuest : "Prof. Dr. K. M. Andrews", "Distinguished guest of honor."],
+    ["announcementTicker", "Breaking News Ticker", config.announcementTicker !== undefined ? config.announcementTicker : "Official Live Results posting in real-time!", "Top marquee announcement text."],
     ["enableLiveTicker", "Enable Live Ticker", config.enableLiveTicker !== undefined ? String(config.enableLiveTicker) : "TRUE", "Toggle header live news marquee banner: TRUE | FALSE."],
     ["announcementTickerSpeed", "Ticker Scroll Speed", config.announcementTickerSpeed || "normal", "Marquee movement velocity: normal | slow | fast."],
-    ["liveStreamUrl", "Live Webcast Stream URL", config.liveStreamUrl || "", "Direct YouTube/Vimeo live broadcast URL."],
-    ["contactEmail", "Official Support Email", config.contactEmail || "festival@ahiaedu.org", "Helpdesk contact email."],
-    ["contactPhone", "Official Hotline", config.contactPhone || "+91 98470 12345", "Emergency coordinator hotline number."],
-    ["logoUrl", "Logo Image URL", config.logoUrl || "https://images.unsplash.com/photo-1511525258028-df0c67b3ff2d?w=350&auto=format&fit=crop&q=80", "High-res web URL to logo / crest displayed in sidebar, header, and certificates."],
-    ["bannerUrl", "Hero Banner Image URL", config.bannerUrl || "", "Background visual for the festival hero header."],
-    ["adminUsername", "Portal Admin Username", config.adminUsername || "smash2k26", "Master administrator username for portal access."],
-    ["adminPassword", "Portal Admin Password", config.adminPassword || "hudaahiasmash20262027", "Master security passkey for Chief Festival Controller."],
+    ["liveStreamUrl", "Live Webcast Stream URL", config.liveStreamUrl !== undefined ? config.liveStreamUrl : "", "Direct YouTube/Vimeo live broadcast URL."],
+    ["contactEmail", "Official Support Email", config.contactEmail !== undefined ? config.contactEmail : "festival@ahiaedu.org", "Helpdesk contact email."],
+    ["contactPhone", "Official Hotline", config.contactPhone !== undefined ? config.contactPhone : "+91 98470 12345", "Emergency coordinator hotline number."],
+    ["logoUrl", "Logo Image URL", config.logoUrl !== undefined ? config.logoUrl : "", "High-res web URL to logo / crest displayed in sidebar, header, and certificates."],
+    ["bannerUrl", "Hero Banner Image URL", config.bannerUrl !== undefined ? config.bannerUrl : "", "Background visual for the festival hero header."],
+    ["adminUsername", "Portal Admin Username", config.adminUsername !== undefined ? config.adminUsername : "smash2k26", "Master administrator username for portal access."],
+    ["adminPassword", "Portal Admin Password", config.adminPassword !== undefined ? config.adminPassword : "hudaahiasmash20262027", "Master security passkey for Chief Festival Controller."],
     ["podiumCategory", "Championship Podium Display Mode", config.podiumCategory || "arts", "Championship Podium Display Mode: arts (Arts Only) | sports (Sports Only) | overall (Combined)."],
-    ["isCelebrationMode", "Celebration Fireworks Mode", config.isCelebrationMode !== undefined ? String(config.isCelebrationMode) : "FALSE", "Celebration fireworks toggle: TRUE (Fireworks active) | FALSE."],
-    ["accentColor", "Web Accent Color", config.accentColor || "#4F46E5", "Primary brand accent hex code used for buttons, active badges, and highlights."],
+    ["accentColor", "Web Accent Color", config.accentColor !== undefined ? config.accentColor : "#4F46E5", "Primary brand accent hex code used for buttons, active badges, and highlights."],
     ["accentPreset", "Color Palette Preset", config.accentPreset || "indigo", "Color theme preset name: indigo | purple | emerald | sky | rose | amber | cyan | pink | custom."],
-    ["copyrightText", "Footer Copyright Notice", config.copyrightText || "© 2026 AHIA FEST • Hidaya Union Devoted Activities (HUDA). All Rights Reserved.", "Official footer copyright line displayed on public pages."],
+    ["copyrightText", "Footer Copyright Notice", config.copyrightText !== undefined ? config.copyrightText : "© 2026 AHIA FEST • Hidaya Union Devoted Activities (HUDA). All Rights Reserved.", "Official footer copyright line displayed on public pages."],
     ["lastSyncedAt", "Last Synced Timestamp", config.lastSyncedAt || new Date().toISOString(), "Automatic timestamp updated by webhook on every synchronization."]
   ];
 
@@ -712,8 +710,8 @@ function readSiteSettings(sheet) {
     if (rawKey.indexOf("🏆") !== -1 || lowerKey === "setting key" || lowerKey.indexOf("synchronized") !== -1) {
       continue;
     }
-    var val = data[i][2] !== undefined && data[i][2] !== "" ? data[i][2] : data[i][1];
-    cfg[rawKey] = String(val !== undefined && val !== null ? val : "");
+    var val = data[i][2];
+    cfg[rawKey] = (val !== undefined && val !== null) ? String(val) : "";
   }
   return cfg;
 }

@@ -75,12 +75,18 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
 
   const q = (query || '').toLowerCase().trim();
 
-  // Filter participants: ONLY search Ad No (admissionNo), NOT chestNo
+  // Filter participants: search by Student Name, Admission No (Ad No), or Chest No
   const filteredParticipants = useMemo(() => {
     const cleanQ = q.replace(/[\s-_]/g, '');
     return participants.filter((p) => {
       const cleanAdm = String(p.admissionNo || '').toLowerCase().replace(/[\s-_]/g, '');
-      const matchesQuery = !cleanQ || cleanAdm.includes(cleanQ);
+      const cleanName = String(p.name || '').toLowerCase();
+      const cleanChest = String(p.chestNo || '').toLowerCase().replace(/[\s-_]/g, '');
+      const matchesQuery =
+        !q ||
+        cleanName.includes(q) ||
+        (cleanQ && cleanAdm.includes(cleanQ)) ||
+        (cleanQ && cleanChest.includes(cleanQ));
 
       const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
       const matchesTeam = selectedTeam === 'All' || p.teamId === selectedTeam;
@@ -89,7 +95,7 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
     });
   }, [participants, q, selectedCategory, selectedTeam]);
 
-  // Filter programs with published or drafted results (matches by program info or result admission no)
+  // Filter programs with published or drafted results (matches by program info, student name, or result admission no)
   const filteredPrograms = useMemo(() => {
     return artsPrograms.filter((prog) => {
       const matchesQuery =
@@ -99,7 +105,9 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
         String(prog.stage || '').toLowerCase().includes(q) ||
         (prog.results || []).some(
           (r) =>
-            String(r.admissionNo || '').toLowerCase().includes(q)
+            String(r.admissionNo || '').toLowerCase().includes(q) ||
+            String(r.participantName || '').toLowerCase().includes(q) ||
+            String(r.chestNo || '').toLowerCase().includes(q)
         );
 
       const matchesCat = selectedCategory === 'All' || prog.category === selectedCategory;
@@ -211,9 +219,9 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
             type="text"
             placeholder={
               viewTab === 'participants'
-                ? "Type Admission No (Ad No, e.g. AD-101 or ADM202601)..."
+                ? "Search student name, Admission No (Ad No, e.g. AD-101), or chest no..."
                 : viewTab === 'programs'
-                ? "Search Program Name, Code, Venue, or Winner Ad No..."
+                ? "Search Program Name, Code, Venue, Winner name or Ad No..."
                 : "Search House Name or Captain..."
             }
             value={query}
@@ -434,7 +442,7 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
               <User className="w-10 h-10 text-purple-400 mx-auto mb-2" />
               <h3 className="text-base font-bold text-slate-900">No Participant Found</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Check the admission number (Ad No) and try searching again.
+                Try searching by student name, admission number (Ad No), or chest number.
               </p>
             </div>
           )}

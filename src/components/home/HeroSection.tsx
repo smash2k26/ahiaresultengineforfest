@@ -111,14 +111,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
             <div>
               <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black font-display tracking-tight text-slate-900 leading-tight">
                 {festConfig?.festivalName || 'AHIA FEST'}{' '}
-                <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent">
+                <span style={{ color: 'var(--fest-accent)' }}>
                   {festConfig?.year || '2026'}
                 </span>
               </h1>
               <p className="text-xs sm:text-base text-slate-700 font-medium tracking-wide mt-1">
                 {festConfig?.tagline || 'Annual Inter-House Arts & Athletics Fest'}
                 {festConfig?.theme && (
-                  <span className="italic text-purple-700 ml-1.5">— &ldquo;{festConfig.theme}&rdquo;</span>
+                  <span className="italic ml-1.5" style={{ color: 'var(--fest-accent)' }}>— &ldquo;{festConfig.theme}&rdquo;</span>
                 )}
               </p>
             </div>
@@ -164,7 +164,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 Top Contenders
               </span>
-              <span className="text-[10px] font-mono font-semibold text-purple-600">Live Points</span>
+              <span className="text-[10px] font-mono font-semibold" style={{ color: 'var(--fest-accent)' }}>Live Points</span>
             </div>
 
             <div className="space-y-2">
@@ -172,7 +172,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
                 <div
                   key={team.id || `hero-team-${idx}`}
                   onClick={() => setActiveTab('leaderboard')}
-                  className="flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-purple-50/60 border border-slate-100 hover:border-purple-200 transition-colors cursor-pointer"
+                  className="flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-100 hover:border-slate-300 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-xs font-mono font-bold text-slate-400 w-4">
@@ -206,7 +206,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
           <div
             key={`stat-card-${stat.label}-${idx}`}
             onClick={() => setActiveTab(stat.tab)}
-            className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:shadow-md hover:border-purple-300 transition-all duration-200 cursor-pointer group"
+            className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer group"
           >
             <div className="flex items-center justify-between">
               <span className="p-2 rounded-xl bg-slate-50 border border-slate-100 group-hover:scale-105 transition-transform">
@@ -216,7 +216,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
             </div>
 
             <div className="mt-3">
-              <div className="text-xl sm:text-2xl font-black font-display text-slate-900 tracking-tight group-hover:text-purple-600 transition-colors">
+              <div className="text-xl sm:text-2xl font-black font-display text-slate-900 tracking-tight transition-colors">
                 {stat.value}
               </div>
               <div className="text-xs font-semibold text-slate-700 mt-0.5">{stat.label}</div>

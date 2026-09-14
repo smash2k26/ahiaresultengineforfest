@@ -116,14 +116,13 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Quick Check Result Button */}
           {activeTab !== 'results' && (
-            <GlassButton
-              variant="arts"
-              size="sm"
+            <button
               onClick={() => setActiveTab('results')}
-              className="hidden lg:flex"
+              style={{ backgroundColor: 'var(--fest-accent)' }}
+              className="hidden lg:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer"
             >
-              Check Result
-            </GlassButton>
+              <span>Check Result</span>
+            </button>
           )}
 
           {/* Notification Dropdown */}
@@ -196,13 +195,23 @@ export const Header: React.FC<HeaderProps> = ({
           {isAdminLoggedIn ? (
             <button
               onClick={() => setActiveTab('admin')}
-              className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 hover:bg-purple-100 transition-all cursor-pointer"
+              style={{
+                backgroundColor: 'var(--fest-accent-light)',
+                borderColor: 'var(--fest-accent-border)',
+              }}
+              className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border hover:opacity-90 transition-all cursor-pointer"
               title={`Logged in as ${adminUser?.fullName} (${adminUser?.role})`}
             >
-              <div className="w-6 h-6 rounded-lg bg-purple-600 flex items-center justify-center text-white text-xs font-bold">
+              <div
+                style={{ backgroundColor: 'var(--fest-accent)' }}
+                className="w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-2xs"
+              >
                 {adminUser?.username.charAt(0).toUpperCase()}
               </div>
-              <span className="hidden sm:inline text-xs font-semibold text-purple-800 truncate max-w-[90px]">
+              <span
+                style={{ color: 'var(--fest-accent)' }}
+                className="hidden sm:inline text-xs font-bold truncate max-w-[90px]"
+              >
                 {adminUser?.username}
               </span>
             </button>
@@ -212,7 +221,9 @@ export const Header: React.FC<HeaderProps> = ({
               className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-700 hover:text-slate-900 transition-colors cursor-pointer"
               title="Admin Login"
             >
-              <Shield className="w-4 h-4 text-purple-600" />
+              <span style={{ color: 'var(--fest-accent)' }} className="flex items-center justify-center">
+                <Shield className="w-4 h-4" />
+              </span>
             </button>
           )}
         </div>

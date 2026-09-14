@@ -98,7 +98,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <h1 className="font-display font-extrabold text-sm tracking-wider text-slate-900 truncate">
-                    {festConfig?.name || 'AHIA FEST'} <span className="text-purple-600 text-xs font-bold">2026</span>
+                    {festConfig?.name || 'AHIA FEST'}{' '}
+                    <span className="text-xs font-bold" style={{ color: 'var(--fest-accent)' }}>
+                      {festConfig?.year || '2026'}
+                    </span>
                   </h1>
                 </div>
                 <p className="text-[10px] uppercase font-semibold tracking-widest text-slate-500 truncate">
@@ -124,18 +127,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={item.id}
                 onClick={() => handleSelectTab(item.id)}
                 title={isCollapsed ? item.label : undefined}
+                style={
+                  isActive
+                    ? {
+                        backgroundColor: 'var(--fest-accent-light)',
+                        color: 'var(--fest-accent)',
+                        borderColor: 'var(--fest-accent-border)',
+                      }
+                    : undefined
+                }
                 className={`w-full flex items-center ${
                   isCollapsed ? 'justify-center px-2 py-3' : 'justify-between px-3 py-2.5'
-                } rounded-xl text-xs font-semibold transition-all duration-150 group cursor-pointer ${
+                } rounded-xl text-xs font-semibold transition-all duration-150 group cursor-pointer border ${
                   isActive
-                    ? 'bg-purple-50 text-purple-700 border border-purple-200/80 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    ? 'shadow-xs font-bold'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
                 }`}
               >
                 <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5'} min-w-0`}>
                   <span
+                    style={isActive ? { color: 'var(--fest-accent)' } : undefined}
                     className={`transition-colors ${
-                      isActive ? 'text-purple-600' : 'text-slate-400 group-hover:text-slate-700'
+                      isActive ? '' : 'text-slate-400 group-hover:text-slate-700'
                     }`}
                   >
                     {item.icon}
@@ -209,27 +222,55 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               onClick={() => handleSelectTab('admin')}
               title={isCollapsed ? `Admin: ${adminUser?.fullName}` : undefined}
+              style={
+                activeTab === 'admin'
+                  ? { backgroundColor: 'var(--fest-accent)' }
+                  : {
+                      backgroundColor: 'var(--fest-accent-light)',
+                      color: 'var(--fest-accent)',
+                      borderColor: 'var(--fest-accent-border)',
+                    }
+              }
               className={`w-full flex items-center ${
                 isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2.5'
-              } rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              } rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
                 activeTab === 'admin'
-                  ? 'bg-purple-600 text-white shadow-sm'
-                  : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'
+                  ? 'text-white shadow-sm'
+                  : 'hover:opacity-90'
               }`}
             >
               <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'} min-w-0`}>
-                <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0" />
+                <span
+                  style={{ color: activeTab === 'admin' ? '#ffffff' : 'var(--fest-accent)' }}
+                  className="flex items-center justify-center shrink-0"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                </span>
                 {!isCollapsed && (
                   <div className="text-left truncate">
-                    <div className="truncate text-slate-900">{adminUser?.fullName}</div>
-                    <div className="text-[10px] text-purple-600 font-normal">Admin Command</div>
+                    <div className={activeTab === 'admin' ? 'truncate text-white' : 'truncate text-slate-900'}>
+                      {adminUser?.fullName}
+                    </div>
+                    <div
+                      style={{ color: activeTab === 'admin' ? 'rgba(255,255,255,0.85)' : 'var(--fest-accent)' }}
+                      className="text-[10px] font-medium"
+                    >
+                      Admin Command
+                    </div>
                   </div>
                 )}
               </div>
               {!isCollapsed && (
-                <GlassBadge variant="arts" size="xs">
+                <span
+                  style={{
+                    backgroundColor: activeTab === 'admin' ? 'rgba(255,255,255,0.2)' : 'var(--fest-accent-light)',
+                    color: activeTab === 'admin' ? '#ffffff' : 'var(--fest-accent)',
+                    borderColor: activeTab === 'admin' ? 'rgba(255,255,255,0.3)' : 'var(--fest-accent-border)',
+                  }}
+                  className="text-[10px] px-2 py-0.5 rounded-full font-bold border"
+                >
                   Active
-                </GlassBadge>
+                </span>
               )}
             </button>
           ) : (

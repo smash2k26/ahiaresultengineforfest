@@ -129,7 +129,9 @@ interface FestivalContextType {
   recalculateAllStandings: () => void;
 
   festConfig: FestConfig;
-  updateFestConfig: (config: Partial<FestConfig>) => void;
+  updateFestConfig: (config: Partial<FestConfig>, silent?: boolean) => void;
+  toggleCelebrationMode: (enabled?: boolean) => void;
+  triggerCelebrationBlast: () => void;
 
   // Documents & Circulars
   addDocument: (doc: Omit<DocumentItem, 'id' | 'updatedAt'>) => void;
@@ -358,7 +360,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Sync Accent Color dynamically to root CSS variables for instant live theme customization
   useEffect(() => {
-    const accent = festConfig?.accentColor || '#4f46e5';
+    const accent = festConfig?.accentColor || '#4F46E5';
     document.documentElement.style.setProperty('--fest-accent', accent);
     const hex = accent.replace('#', '');
     if (hex.length === 6) {
@@ -366,8 +368,13 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const g = parseInt(hex.substring(2, 4), 16);
       const b = parseInt(hex.substring(4, 6), 16);
       document.documentElement.style.setProperty('--fest-accent-rgb', `${r}, ${g}, ${b}`);
-      document.documentElement.style.setProperty('--fest-accent-light', `rgba(${r}, ${g}, ${b}, 0.08)`);
-      document.documentElement.style.setProperty('--fest-accent-border', `rgba(${r}, ${g}, ${b}, 0.25)`);
+      document.documentElement.style.setProperty('--fest-accent-light', `rgba(${r}, ${g}, ${b}, 0.1)`);
+      document.documentElement.style.setProperty('--fest-accent-subtle', `rgba(${r}, ${g}, ${b}, 0.05)`);
+      document.documentElement.style.setProperty('--fest-accent-border', `rgba(${r}, ${g}, ${b}, 0.3)`);
+      const rDark = Math.max(0, Math.floor(r * 0.85));
+      const gDark = Math.max(0, Math.floor(g * 0.85));
+      const bDark = Math.max(0, Math.floor(b * 0.85));
+      document.documentElement.style.setProperty('--fest-accent-hover', `rgb(${rDark}, ${gDark}, ${bDark})`);
     }
   }, [festConfig?.accentColor]);
 
@@ -1265,15 +1272,38 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showToast('Announcement Removed', 'Bulletin deleted.', 'info');
   }, [showToast, triggerAutoPush, dispatchRemoteDelete]);
 
-  const updateFestConfig = useCallback((config: Partial<FestConfig>) => {
+  const updateFestConfig = useCallback((config: Partial<FestConfig>, silent = false) => {
     setFestConfig((prev) => {
       const updated = { ...prev, ...config };
       localStorage.setItem('ahia_fest_config', JSON.stringify(updated));
       triggerAutoPush({ festConfig: updated });
       return updated;
     });
-    showToast('Festival Configuration Saved', 'Festival branding and settings updated.', 'success');
+    if (!silent) {
+      showToast('Festival Configuration Saved', 'Festival branding and settings updated.', 'success');
+    }
   }, [showToast, triggerAutoPush]);
+
+  const toggleCelebrationMode = useCallback((enabled?: boolean) => {
+    setFestConfig((prev) => {
+      const nextVal = enabled !== undefined ? enabled : !prev.isCelebrationMode;
+      const updated = { ...prev, isCelebrationMode: nextVal };
+      localStorage.setItem('ahia_fest_config', JSON.stringify(updated));
+      triggerAutoPush({ festConfig: updated });
+      if (nextVal) {
+        showToast('Celebration Mode ON 🎉', 'Fireworks celebration active for site visitors!', 'success');
+        window.dispatchEvent(new CustomEvent('fest-trigger-fireworks'));
+      } else {
+        showToast('Celebration Mode OFF', 'Celebration fireworks turned OFF.', 'info');
+      }
+      return updated;
+    });
+  }, [showToast, triggerAutoPush]);
+
+  const triggerCelebrationBlast = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('fest-trigger-fireworks'));
+    showToast('🎉 Fireworks Launched!', 'Celebration confetti in full blast.', 'success');
+  }, [showToast]);
 
   // Documents & Official Circulars
   const addDocument = useCallback((doc: Omit<DocumentItem, 'id' | 'updatedAt'>) => {
@@ -1589,6 +1619,9 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 adminUsername: cfg.adminUsername || prev.adminUsername || 'smash2k26',
                 adminPassword: cfg.adminPassword || prev.adminPassword,
                 podiumCategory: (cfg.podiumCategory as any) || prev.podiumCategory || 'arts',
+                isCelebrationMode: cfg.isCelebrationMode !== undefined
+                  ? (String(cfg.isCelebrationMode).trim().toLowerCase() === 'true' || cfg.isCelebrationMode === true)
+                  : prev.isCelebrationMode,
               };
               localStorage.setItem('ahia_fest_config', JSON.stringify(updated));
               return updated;
@@ -2431,6 +2464,8 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         googleSheetsConfig,
         festConfig,
         updateFestConfig,
+        toggleCelebrationMode,
+        triggerCelebrationBlast,
         addDocument,
         editDocument,
         deleteDocument,

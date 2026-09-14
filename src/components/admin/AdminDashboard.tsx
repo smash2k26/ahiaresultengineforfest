@@ -667,16 +667,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     }
   }, [festConfig]);
 
-  const handleSelectAccentPreset = (presetKey: string, hexColor: string) => {
+  const handleSelectAccentPreset = async (presetKey: string, hexColor: string) => {
     setFestAccentPreset(presetKey);
     setFestAccentColor(hexColor);
     document.documentElement.style.setProperty('--fest-accent', hexColor);
+    const updated = {
+      ...festConfig,
+      accentPreset: presetKey as any,
+      accentColor: hexColor,
+    };
+    updateFestConfig(updated, true);
+    showToast('Accent Theme Applied', `Switched theme to ${presetKey.toUpperCase()} (${hexColor}).`, 'success');
+    if (googleSheetsConfig.appsScriptUrl) {
+      await pushToGoogleSheets({ festConfig: updated, silent: true });
+    }
   };
 
   const handleCustomAccentColorChange = (hex: string) => {
     setFestAccentColor(hex);
     setFestAccentPreset('custom');
     document.documentElement.style.setProperty('--fest-accent', hex);
+  };
+
+  const handleApplyCustomAccentColor = async () => {
+    const hex = festAccentColor.trim();
+    if (!/^#([0-9A-F]{3}){1,2}$/i.test(hex)) {
+      showToast('Invalid Hex Color', 'Please enter a valid hex color code (e.g. #4F46E5).', 'error');
+      return;
+    }
+    const updated = {
+      ...festConfig,
+      accentPreset: 'custom' as any,
+      accentColor: hex,
+    };
+    updateFestConfig(updated, true);
+    showToast('Accent Color Saved', `Custom color ${hex} saved and synced to Google Sheets.`, 'success');
+    if (googleSheetsConfig.appsScriptUrl) {
+      await pushToGoogleSheets({ festConfig: updated, silent: true });
+    }
   };
 
   const handleQuickTogglePodiumCategory = async (mode: 'arts' | 'sports') => {
@@ -701,17 +729,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       ...festConfig,
       isCelebrationMode: nextVal,
     };
-    updateFestConfig(updated);
+    updateFestConfig(updated, true);
     if (nextVal) {
-      showToast('Celebration Mode ON 🎉', 'Fireworks celebration active for 7 seconds for site visitors!', 'success');
+      showToast('Celebration Mode ON 🎉', 'Fireworks celebration active for site visitors!', 'success');
+      window.dispatchEvent(new CustomEvent('fest-trigger-fireworks'));
     } else {
-      showToast('Celebration Mode OFF', 'Celebration fireworks turned OFF for visitors.', 'info');
+      showToast('Celebration Mode OFF', 'Celebration fireworks turned OFF.', 'info');
     }
     if (googleSheetsConfig.appsScriptUrl) {
       await pushToGoogleSheets({
         festConfig: updated,
+        silent: true,
       });
     }
+  };
+
+  const handleTestFireworks = () => {
+    window.dispatchEvent(new CustomEvent('fest-trigger-fireworks'));
+    showToast('🎉 Test Fireworks Launched!', 'Celebration sequence active on screen.', 'success');
   };
 
   const handleSaveFestSettings = async (e: React.FormEvent) => {
@@ -1069,17 +1104,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleQuickToggleCelebration}
-            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-xs shrink-0 ${
-              festCelebrationMode
-                ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white hover:brightness-110 shadow-amber-200'
-                : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            <span>🎉 Celebration Button: {festCelebrationMode ? 'ON' : 'OFF'}</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleTestFireworks}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-white border border-amber-300 text-amber-800 hover:bg-amber-100/60 transition-all cursor-pointer shadow-xs"
+              title="Trigger a test celebration firework blast on screen right now"
+            >
+              <span>💥 Test Fireworks</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleQuickToggleCelebration}
+              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-xs ${
+                festCelebrationMode
+                  ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white hover:brightness-110 shadow-amber-200'
+                  : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <span>🎉 Celebration: {festCelebrationMode ? 'ON' : 'OFF'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2879,9 +2925,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         onChange={(e) => handleCustomAccentColorChange(e.target.value)}
                         placeholder="#4F46E5"
                         maxLength={7}
-                        className="w-36 px-3.5 py-2.5 text-sm font-mono uppercase rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-32 px-3 py-2 text-sm font-mono uppercase rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                       />
-                      <span className="text-xs text-slate-500">Click swatch or type hex</span>
+                      <button
+                        type="button"
+                        onClick={handleApplyCustomAccentColor}
+                        className="px-3 py-2 rounded-lg text-xs font-bold text-white shadow-xs hover:opacity-90 transition-all cursor-pointer whitespace-nowrap"
+                        style={{ backgroundColor: festAccentColor }}
+                      >
+                        Save &amp; Apply
+                      </button>
                     </div>
                   </div>
 
@@ -2924,17 +2977,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">Celebration Mode 🎉</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">When ON, visitors will see a 7-second fireworks celebration upon loading the site.</p>
+                    <p className="text-xs text-slate-500 mt-0.5">When ON, visitors see fireworks upon opening the site. Applies immediately.</p>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={festCelebrationMode}
-                      onChange={(e) => setFestCelebrationMode(e.target.checked)}
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                  </label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleTestFireworks}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-amber-300 text-amber-800 hover:bg-amber-100/60 shadow-xs cursor-pointer"
+                      title="Trigger test celebration fireworks right now"
+                    >
+                      💥 Test Blast
+                    </button>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={festCelebrationMode}
+                        onChange={handleQuickToggleCelebration}
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">

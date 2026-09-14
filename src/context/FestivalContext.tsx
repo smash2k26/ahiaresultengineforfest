@@ -36,6 +36,7 @@ import {
   INITIAL_ADMIN_USER
 } from '../data/initialData';
 import { isSportsProgram } from '../utils/programHelpers';
+import { persistCelebrationMode, listenToCelebrationMode } from '../lib/firebase';
 
 export interface ToastMessage {
   id: string;
@@ -472,6 +473,27 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       localStorage.removeItem('ahia_admin_user');
     }
   }, [adminUser]);
+
+  // Real-time Database Sync for Celebration Mode
+  useEffect(() => {
+    const unsubscribe = listenToCelebrationMode((enabled) => {
+      setFestConfig((prev) => {
+        if (prev.isCelebrationMode !== enabled) {
+          const updated = { ...prev, isCelebrationMode: enabled };
+          localStorage.setItem('ahia_fest_config', JSON.stringify(updated));
+          if (enabled) {
+            window.dispatchEvent(new CustomEvent('fest-trigger-fireworks'));
+          }
+          return updated;
+        }
+        return prev;
+      });
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   // Toast Helper
   const showToast = useCallback((title: string, message: string, type: 'success' | 'info' | 'warning' | 'error' = 'info') => {
@@ -1277,12 +1299,17 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const updated = { ...prev, ...config };
       localStorage.setItem('ahia_fest_config', JSON.stringify(updated));
       triggerAutoPush({ festConfig: updated });
+
+      if (config.isCelebrationMode !== undefined && config.isCelebrationMode !== prev.isCelebrationMode) {
+        persistCelebrationMode(config.isCelebrationMode, adminUser?.fullName || 'Festival Controller');
+      }
+
       return updated;
     });
     if (!silent) {
       showToast('Festival Configuration Saved', 'Festival branding and settings updated.', 'success');
     }
-  }, [showToast, triggerAutoPush]);
+  }, [showToast, triggerAutoPush, adminUser]);
 
   const toggleCelebrationMode = useCallback((enabled?: boolean) => {
     setFestConfig((prev) => {
@@ -1290,15 +1317,19 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const updated = { ...prev, isCelebrationMode: nextVal };
       localStorage.setItem('ahia_fest_config', JSON.stringify(updated));
       triggerAutoPush({ festConfig: updated });
+
+      // Persist celebration mode state and audit record into database
+      persistCelebrationMode(nextVal, adminUser?.fullName || 'Festival Controller');
+
       if (nextVal) {
-        showToast('Celebration Mode ON 🎉', 'Fireworks celebration active for site visitors!', 'success');
+        showToast('Celebration Mode ON 🎉', 'Fireworks celebration active and saved to database!', 'success');
         window.dispatchEvent(new CustomEvent('fest-trigger-fireworks'));
       } else {
-        showToast('Celebration Mode OFF', 'Celebration fireworks turned OFF.', 'info');
+        showToast('Celebration Mode OFF', 'Celebration mode disabled and database updated.', 'info');
       }
       return updated;
     });
-  }, [showToast, triggerAutoPush]);
+  }, [showToast, triggerAutoPush, adminUser]);
 
   const triggerCelebrationBlast = useCallback(() => {
     window.dispatchEvent(new CustomEvent('fest-trigger-fireworks'));

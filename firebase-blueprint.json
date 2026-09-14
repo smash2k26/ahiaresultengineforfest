@@ -1,0 +1,34 @@
+{
+  "entities": {
+    "CelebrationSetting": {
+      "title": "CelebrationSetting",
+      "description": "Festival celebration mode state and configuration",
+      "type": "object",
+      "properties": {
+        "celebrationMode": {
+          "type": "boolean",
+          "description": "Flag indicating if celebration fireworks and banners are active"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of the update"
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User or administrator who changed the mode"
+        }
+      },
+      "required": ["celebrationMode", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/settings/{settingId}": {
+      "schema": "CelebrationSetting",
+      "description": "Global festival settings documents, including celebration configuration"
+    },
+    "/celebration_history/{eventId}": {
+      "schema": "CelebrationSetting",
+      "description": "Historical audit log of celebration mode activations and events"
+    }
+  }
+}

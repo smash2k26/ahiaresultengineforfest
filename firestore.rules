@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if request.resource.data.celebrationMode is bool;
+    }
+    match /celebration_history/{eventId} {
+      allow read: if true;
+      allow create: if request.resource.data.celebrationMode is bool;
+    }
+  }
+}

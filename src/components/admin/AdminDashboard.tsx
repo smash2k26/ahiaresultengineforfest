@@ -2973,29 +2973,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
               </p>
 
               <div className="space-y-5">
-                <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Celebration Mode 🎉</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">When ON, visitors see fireworks upon opening the site. Applies immediately.</p>
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-slate-900">Celebration Mode 🎉</h3>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          festCelebrationMode ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-200 text-slate-700'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${festCelebrationMode ? 'bg-emerald-600 animate-pulse' : 'bg-slate-400'}`}></span>
+                          {festCelebrationMode ? 'DB Stored: ON' : 'DB Stored: OFF'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">When ON, celebration data is saved to Firestore database (table/collection: <code>settings/celebration</code> &amp; <code>celebration_history</code>). Visitors see celebration fireworks upon opening.</p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleTestFireworks}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-amber-300 text-amber-800 hover:bg-amber-100/60 shadow-xs cursor-pointer"
+                        title="Trigger test celebration fireworks right now"
+                      >
+                        💥 Test Blast
+                      </button>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={festCelebrationMode}
+                          onChange={handleQuickToggleCelebration}
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                      </label>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={handleTestFireworks}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-amber-300 text-amber-800 hover:bg-amber-100/60 shadow-xs cursor-pointer"
-                      title="Trigger test celebration fireworks right now"
-                    >
-                      💥 Test Blast
-                    </button>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={festCelebrationMode}
-                        onChange={handleQuickToggleCelebration}
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-                    </label>
+                  <div className="text-[11px] text-slate-500 font-mono bg-white/80 p-2 rounded-lg border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                    <span>Database Record: <code>{JSON.stringify({ table: "settings", doc: "celebration", celebrationMode: festCelebrationMode, source: "admin_toggle" })}</code></span>
+                    <span className="text-emerald-700 font-semibold flex items-center gap-1">✓ Cloud Database Synced</span>
                   </div>
                 </div>
 

@@ -53,11 +53,15 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
 
   const triggerConfetti = () => {
     confetti({
-      particleCount: 70,
-      spread: 60,
-      origin: { y: 0.7 },
-      colors: ['#F59E0B', '#A855F7', '#38BDF8', '#10B981'],
+      particleCount: 90,
+      spread: 80,
+      origin: { y: 0.6 },
+      colors: ['#F59E0B', '#A855F7', '#38BDF8', '#10B981', '#EC4899', '#EF4444'],
+      zIndex: 99999,
     });
+    if (festConfig?.isCelebrationMode) {
+      window.dispatchEvent(new CustomEvent('fest-trigger-fireworks'));
+    }
   };
 
   const firstPts = getPoints(first);
@@ -91,10 +95,14 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
         </div>
         <button
           onClick={triggerConfetti}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-300 transition-all cursor-pointer shadow-xs"
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-xs ${
+            festConfig?.isCelebrationMode
+              ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white font-bold animate-pulse hover:brightness-110'
+              : 'bg-amber-50 hover:bg-amber-100 text-amber-800 font-semibold border border-amber-300'
+          }`}
         >
-          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-          <span>Celebrate #1</span>
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>{festConfig?.isCelebrationMode ? '🎉 Blast Fireworks' : 'Celebrate #1'}</span>
         </button>
       </div>
 

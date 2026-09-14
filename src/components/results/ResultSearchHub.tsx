@@ -8,28 +8,31 @@ import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
 
 interface ResultSearchHubProps {
   initialChestNo?: string;
+  initialAdmissionNo?: string;
   setActiveTab: (tab: ActiveTab) => void;
   onOpenCertificateModal: (participant: Participant) => void;
 }
 
 export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
   initialChestNo,
+  initialAdmissionNo,
   setActiveTab,
   onOpenCertificateModal,
 }) => {
   const { participants, teams, artsPrograms, sportsMatches, festConfig } = useFestival();
   const [viewTab, setViewTab] = useState<'participants' | 'programs' | 'houses'>('participants');
-  const [query, setQuery] = useState(initialChestNo || '');
+  const [query, setQuery] = useState(initialAdmissionNo || initialChestNo || '');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedTeam, setSelectedTeam] = useState<string>('All');
   const [selectedProgramFilter, setSelectedProgramFilter] = useState<string>('All');
 
   useEffect(() => {
-    if (initialChestNo) {
-      setQuery(initialChestNo);
+    const initVal = initialAdmissionNo || initialChestNo;
+    if (initVal) {
+      setQuery(initVal);
       setViewTab('participants');
     }
-  }, [initialChestNo]);
+  }, [initialAdmissionNo, initialChestNo]);
 
   // Aggregate and map results per participant from artsPrograms
   const participantResultsMap = useMemo(() => {
@@ -38,6 +41,7 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
     artsPrograms.forEach((prog) => {
       (prog.results || []).forEach((res) => {
         const keyById = res.participantId;
+        const keyByAdm = res.admissionNo ? String(res.admissionNo).toLowerCase().trim() : undefined;
         const keyByChest = res.chestNo ? String(res.chestNo).toLowerCase().trim() : undefined;
 
         const enrichedResult = {
@@ -53,6 +57,11 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
           list.push(enrichedResult);
           map.set(keyById, list);
         }
+        if (keyByAdm && keyByAdm !== keyById) {
+          const list = map.get(keyByAdm) || [];
+          list.push(enrichedResult);
+          map.set(keyByAdm, list);
+        }
         if (keyByChest && keyByChest !== keyById) {
           const list = map.get(keyByChest) || [];
           list.push(enrichedResult);
@@ -66,14 +75,12 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
 
   const q = (query || '').toLowerCase().trim();
 
-  // Filter participants
+  // Filter participants: ONLY search Ad No (admissionNo), NOT chestNo
   const filteredParticipants = useMemo(() => {
+    const cleanQ = q.replace(/[\s-_]/g, '');
     return participants.filter((p) => {
-      const matchesQuery =
-        !q ||
-        String(p.chestNo || '').toLowerCase().includes(q) ||
-        String(p.admissionNo || '').toLowerCase().includes(q) ||
-        String(p.name || '').toLowerCase().includes(q);
+      const cleanAdm = String(p.admissionNo || '').toLowerCase().replace(/[\s-_]/g, '');
+      const matchesQuery = !cleanQ || cleanAdm.includes(cleanQ);
 
       const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
       const matchesTeam = selectedTeam === 'All' || p.teamId === selectedTeam;
@@ -82,7 +89,7 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
     });
   }, [participants, q, selectedCategory, selectedTeam]);
 
-  // Filter programs with published or drafted results
+  // Filter programs with published or drafted results (matches by program info or result admission no)
   const filteredPrograms = useMemo(() => {
     return artsPrograms.filter((prog) => {
       const matchesQuery =
@@ -92,8 +99,7 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
         String(prog.stage || '').toLowerCase().includes(q) ||
         (prog.results || []).some(
           (r) =>
-            String(r.participantName || '').toLowerCase().includes(q) ||
-            String(r.chestNo || '').toLowerCase().includes(q)
+            String(r.admissionNo || '').toLowerCase().includes(q)
         );
 
       const matchesCat = selectedCategory === 'All' || prog.category === selectedCategory;
@@ -107,12 +113,15 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
     });
   }, [artsPrograms, q, selectedCategory, selectedProgramFilter]);
 
-  // Quick sample chest numbers
-  const quickChestNumbers = useMemo(() => {
-    if (participants.length > 0) {
-      return participants.slice(0, 8).map((p) => p.chestNo);
+  // Quick sample admission numbers
+  const quickAdmissionNumbers = useMemo(() => {
+    const adms = participants
+      .map((p) => p.admissionNo)
+      .filter((adm): adm is string => Boolean(adm && adm.trim()));
+    if (adms.length > 0) {
+      return Array.from(new Set(adms)).slice(0, 8);
     }
-    return ['A101', 'A102', 'A103', 'A104', 'A105', 'A106'];
+    return ['AD-101', 'AD-102', 'AD-103', 'AD-104', 'AD-105'];
   }, [participants]);
 
   return (
@@ -166,7 +175,7 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
           }`}
         >
           <User className="w-4 h-4" />
-          By Participant (Chest No)
+          By Participant (Ad No)
         </button>
 
         <button
@@ -202,9 +211,9 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
             type="text"
             placeholder={
               viewTab === 'participants'
-                ? "Type Chest No (e.g. A101), Admission No (e.g. ADM202601), or Student Name..."
+                ? "Type Admission No (Ad No, e.g. AD-101 or ADM202601)..."
                 : viewTab === 'programs'
-                ? "Search Program Name, Code, Venue, or Winner Name..."
+                ? "Search Program Name, Code, Venue, or Winner Ad No..."
                 : "Search House Name or Captain..."
             }
             value={query}
@@ -213,17 +222,17 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
           />
         </div>
 
-        {/* Quick Chest Number Pills */}
+        {/* Quick Admission Number Pills */}
         {viewTab === 'participants' && (
           <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-            <span className="text-slate-500 font-medium">Quick Test Chests:</span>
-            {quickChestNumbers.map((ch, idx) => (
+            <span className="text-slate-500 font-medium">Quick Test Ad Nos:</span>
+            {quickAdmissionNumbers.map((adm, idx) => (
               <button
-                key={`qch-${ch || 'none'}-${idx}`}
-                onClick={() => setQuery(ch)}
+                key={`qadm-${adm || 'none'}-${idx}`}
+                onClick={() => setQuery(adm)}
                 className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-purple-50 text-purple-700 border border-slate-200 hover:border-purple-300 font-mono font-semibold transition-colors cursor-pointer"
               >
-                {ch}
+                {adm}
               </button>
             ))}
             {query && (
@@ -425,7 +434,7 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
               <User className="w-10 h-10 text-purple-400 mx-auto mb-2" />
               <h3 className="text-base font-bold text-slate-900">No Participant Found</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Check the chest number or admission number and try searching again.
+                Check the admission number (Ad No) and try searching again.
               </p>
             </div>
           )}

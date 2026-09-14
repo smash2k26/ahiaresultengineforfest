@@ -61,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
       case 'schedule':
         return { title: 'Festival Schedule & Timeline', subtitle: 'Day-wise Stages, Venues & Time Slots' };
       case 'results':
-        return { title: 'Check Individual Results', subtitle: 'Instant Search by Admission No, Chest No & Name' };
+        return { title: 'Check Individual Results', subtitle: 'Instant Search by Admission No (Ad No)' };
       case 'teams':
         return { title: 'Houses & Teams Profiles', subtitle: 'House Captains, Rosters & Points Analytics' };
       case 'participants':
@@ -107,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs text-slate-600 hover:text-slate-900 transition-all cursor-pointer group"
           >
             <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-600 transition-colors" />
-            <span className="hidden sm:inline">Search chest, team, event...</span>
+            <span className="hidden sm:inline">Search Ad No, team, event...</span>
             <span className="inline sm:hidden">Search</span>
             <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white rounded border border-slate-200 text-slate-500 shadow-2xs">
               ⌘K

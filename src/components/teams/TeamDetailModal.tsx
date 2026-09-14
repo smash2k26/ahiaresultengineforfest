@@ -27,9 +27,9 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
 
   const houseMembers = participants.filter((p) => p.teamId === team.id);
 
-  const handleParticipantClick = (chestNo: string) => {
+  const handleParticipantClick = (identifier: string) => {
     if (onSelectParticipant) {
-      onSelectParticipant(chestNo);
+      onSelectParticipant(identifier);
     } else {
       setActiveTab('results');
     }
@@ -133,7 +133,7 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
                 {houseMembers.map((member, idx) => (
                   <tr
                     key={member.id ? `tdm-${member.id}-${idx}` : `tdm-${member.chestNo || idx}-${idx}`}
-                    onClick={() => handleParticipantClick(member.chestNo)}
+                    onClick={() => handleParticipantClick(member.admissionNo || member.chestNo)}
                     className="hover:bg-slate-50 transition-colors cursor-pointer text-slate-800"
                   >
                     <td className="py-3 px-3 font-mono font-bold text-purple-700">

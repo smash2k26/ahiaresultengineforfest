@@ -40,12 +40,11 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
   }, [artsPrograms]);
 
   const filtered = useMemo(() => {
+    const q = (search || '').toLowerCase().trim();
+    const cleanQ = q.replace(/[\s-_]/g, '');
     return participants.filter((p) => {
-      const q = (search || '').toLowerCase();
-      const matchesSearch =
-        String(p.name || '').toLowerCase().includes(q) ||
-        String(p.chestNo || '').toLowerCase().includes(q) ||
-        String(p.admissionNo || '').toLowerCase().includes(q);
+      const cleanAdm = String(p.admissionNo || '').toLowerCase().replace(/[\s-_]/g, '');
+      const matchesSearch = !cleanQ || cleanAdm.includes(cleanQ);
       const matchesCategory = categoryFilter === 'All' || p.category === categoryFilter;
       const matchesTeam = teamFilter === 'All' || p.teamId === teamFilter;
 
@@ -186,7 +185,7 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search chest no (e.g. A101), student name, admission no..."
+            placeholder="Search participant by Admission No (Ad No, e.g. AD-101)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
@@ -262,7 +261,7 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
 
                 return (
                   <div
-                    onClick={() => onSelectParticipant(secondP.chestNo)}
+                    onClick={() => onSelectParticipant(secondP.admissionNo || secondP.chestNo)}
                     className="order-2 md:order-1 relative rounded-2xl bg-white border border-slate-200 hover:border-slate-300 p-5 shadow-xs transition-all cursor-pointer group text-center space-y-2"
                   >
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
@@ -315,7 +314,7 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                   <div
                     onClick={() => {
                       triggerConfetti();
-                      onSelectParticipant(firstP.chestNo);
+                      onSelectParticipant(firstP.admissionNo || firstP.chestNo);
                     }}
                     className="order-1 md:order-2 relative rounded-3xl bg-gradient-to-b from-amber-50/90 via-white to-amber-50/40 border-2 border-amber-300 hover:border-amber-400 p-6 shadow-md transition-all cursor-pointer group text-center space-y-3 transform md:-translate-y-2"
                   >
@@ -368,7 +367,7 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
 
                 return (
                   <div
-                    onClick={() => onSelectParticipant(thirdP.chestNo)}
+                    onClick={() => onSelectParticipant(thirdP.admissionNo || thirdP.chestNo)}
                     className="order-3 relative rounded-2xl bg-white border border-slate-200 hover:border-slate-300 p-5 shadow-xs transition-all cursor-pointer group text-center space-y-2"
                   >
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
@@ -451,7 +450,7 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                   return (
                     <tr
                       key={p.id || `p-lb-${p.chestNo || idx}-${idx}`}
-                      onClick={() => onSelectParticipant(p.chestNo)}
+                      onClick={() => onSelectParticipant(p.admissionNo || p.chestNo)}
                       className="hover:bg-slate-50 transition-colors cursor-pointer"
                     >
                       <td className="py-3 px-4 text-center font-bold font-display text-sm">
@@ -539,7 +538,7 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                 return (
                   <div
                     key={p.id || `p-grid-${p.chestNo || idx}-${idx}`}
-                    onClick={() => onSelectParticipant(p.chestNo)}
+                    onClick={() => onSelectParticipant(p.admissionNo || p.chestNo)}
                     className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-indigo-300 transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4 shadow-sm"
                   >
                     <div>
@@ -635,7 +634,7 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                     return (
                       <tr
                         key={p.id || `p-tbl-${p.chestNo || idx}-${idx}`}
-                        onClick={() => onSelectParticipant(p.chestNo)}
+                        onClick={() => onSelectParticipant(p.admissionNo || p.chestNo)}
                         className="hover:bg-slate-50 transition-colors cursor-pointer"
                       >
                         <td className="py-3 px-4 font-mono font-bold text-indigo-700">

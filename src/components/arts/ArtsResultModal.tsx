@@ -29,9 +29,9 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
   const second = program.results.find((r) => r.rank === 2);
   const third = program.results.find((r) => r.rank === 3);
 
-  const handleChestClick = (chestNo: string) => {
+  const handleChestClick = (identifier: string) => {
     if (onSelectParticipant) {
-      onSelectParticipant(chestNo);
+      onSelectParticipant(identifier);
       onClose();
     } else {
       setActiveTab('results');
@@ -130,10 +130,10 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
                     {first.participantName}
                   </div>
                   <button
-                    onClick={() => handleChestClick(first.chestNo)}
+                    onClick={() => handleChestClick(first.admissionNo || first.chestNo)}
                     className="text-xs font-mono text-amber-300 underline hover:text-white cursor-pointer"
                   >
-                    Chest #{first.chestNo}
+                    Ad No: {first.admissionNo || first.chestNo}
                   </button>
                   <div className="text-xs font-mono font-bold text-amber-400 pt-1">
                     {first.marks} Marks • Grade {first.grade}
@@ -155,10 +155,10 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
                     {second.participantName}
                   </div>
                   <button
-                    onClick={() => handleChestClick(second.chestNo)}
+                    onClick={() => handleChestClick(second.admissionNo || second.chestNo)}
                     className="text-xs font-mono text-slate-300 underline hover:text-white cursor-pointer"
                   >
-                    Chest #{second.chestNo}
+                    Ad No: {second.admissionNo || second.chestNo}
                   </button>
                   <div className="text-xs font-mono font-bold text-slate-200 pt-1">
                     {second.marks} Marks • Grade {second.grade}
@@ -180,10 +180,10 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
                     {third.participantName}
                   </div>
                   <button
-                    onClick={() => handleChestClick(third.chestNo)}
+                    onClick={() => handleChestClick(third.admissionNo || third.chestNo)}
                     className="text-xs font-mono text-amber-400 underline hover:text-white cursor-pointer"
                   >
-                    Chest #{third.chestNo}
+                    Ad No: {third.admissionNo || third.chestNo}
                   </button>
                   <div className="text-xs font-mono font-bold text-amber-300 pt-1">
                     {third.marks} Marks • Grade {third.grade}
@@ -243,10 +243,10 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
                         </td>
                         <td className="py-3 px-3 font-mono font-bold text-purple-700">
                           <button
-                            onClick={() => handleChestClick(res.chestNo)}
+                            onClick={() => handleChestClick(res.admissionNo || res.chestNo)}
                             className="hover:underline cursor-pointer"
                           >
-                            {res.chestNo}
+                            {res.admissionNo || res.chestNo}
                           </button>
                         </td>
                         <td className="py-3 px-3 font-bold text-slate-900">{res.participantName}</td>

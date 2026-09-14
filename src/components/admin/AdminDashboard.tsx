@@ -122,13 +122,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   }, [artsPrograms]);
 
   const filteredResults = useMemo(() => {
-    const q = (resultsSearch || '').toLowerCase();
+    const q = (resultsSearch || '').toLowerCase().trim();
+    const cleanQ = q.replace(/[\s-_]/g, '');
     return allResultRecords.filter((r) => {
+      const cleanAdm = String(r.admissionNo || '').toLowerCase().replace(/[\s-_]/g, '');
       const matchQuery =
-        !q ||
-        String(r.participantName || '').toLowerCase().includes(q) ||
-        String(r.admissionNo || '').toLowerCase().includes(q) ||
-        String(r.chestNo || '').toLowerCase().includes(q) ||
+        !cleanQ ||
+        cleanAdm.includes(cleanQ) ||
         String(r.programTitle || '').toLowerCase().includes(q) ||
         String(r.programCode || '').toLowerCase().includes(q) ||
         String(r.grade || '').toLowerCase().includes(q) ||
@@ -365,14 +365,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [newPartPhotoUrl, setNewPartPhotoUrl] = useState('');
 
   const filteredParticipants = useMemo(() => {
-    const q = (partSearch || '').toLowerCase();
+    const q = (partSearch || '').toLowerCase().trim();
+    const cleanQ = q.replace(/[\s-_]/g, '');
     return participants.filter((p) => {
+      const cleanAdm = String(p.admissionNo || '').toLowerCase().replace(/[\s-_]/g, '');
       const matchSearch =
-        !q ||
-        String(p.name || '').toLowerCase().includes(q) ||
-        String(p.admissionNo || '').toLowerCase().includes(q) ||
-        String(p.chestNo || '').toLowerCase().includes(q) ||
-        String(p.yearClass || '').toLowerCase().includes(q);
+        !cleanQ ||
+        cleanAdm.includes(cleanQ);
 
       const matchHouse =
         partHouseFilter === 'All' || p.teamId === partHouseFilter;
@@ -1462,7 +1461,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 type="text"
                 value={resultsSearch}
                 onChange={(e) => setResultsSearch(e.target.value)}
-                placeholder="Search results by student name, admission no, program code, team, grade..."
+                placeholder="Search results by Admission No (Ad No), program code, team, grade..."
                 className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               />
             </div>
@@ -2104,7 +2103,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 type="text"
                 value={partSearch}
                 onChange={(e) => setPartSearch(e.target.value)}
-                placeholder="Search participants by admission no, student name, house, class..."
+                placeholder="Search participants by Admission No (Ad No, e.g. AD-101)..."
                 className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               />
             </div>

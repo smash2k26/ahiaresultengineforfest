@@ -66,11 +66,13 @@ export const AdminCertificatesSection: React.FC = () => {
   };
 
   const filteredCerts = (certificates || []).filter((c) => {
-    const q = (search || '').toLowerCase();
+    const q = (search || '').toLowerCase().trim();
+    const cleanQ = q.replace(/[\s-_]/g, '');
+    const cleanAdm = String(c.admissionNo || '').toLowerCase().replace(/[\s-_]/g, '');
     const matchesQuery =
-      !q ||
+      !cleanQ ||
+      cleanAdm.includes(cleanQ) ||
       (c.participantName || '').toLowerCase().includes(q) ||
-      (c.chestNo || '').toLowerCase().includes(q) ||
       (c.teamName || '').toLowerCase().includes(q) ||
       (c.eventName || '').toLowerCase().includes(q) ||
       (c.programCode ? String(c.programCode).toLowerCase().includes(q) : false) ||
@@ -178,7 +180,7 @@ export const AdminCertificatesSection: React.FC = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search certificate by student name, chest number, event, program code, or certificate ID..."
+            placeholder="Search certificate by Admission No (Ad No), student name, event, program code, or certificate ID..."
             className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
           />
         </div>

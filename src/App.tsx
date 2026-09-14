@@ -7,6 +7,7 @@ import { ToastContainer } from './components/ui/ToastContainer';
 import { CelebrationFireworks } from './components/ui/CelebrationFireworks';
 
 // View Hubs
+import { HomeCelebrationBanner } from './components/home/HomeCelebrationBanner';
 import { HeroSection } from './components/home/HeroSection';
 import { PodiumLeaderboard } from './components/home/PodiumLeaderboard';
 import { OverallLeaderboardTable } from './components/home/OverallLeaderboardTable';
@@ -51,10 +52,10 @@ const MainFestivalApp: React.FC = () => {
   const [selectedCertParticipant, setSelectedCertParticipant] = useState<Participant | null>(null);
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [initialSearchChestNo, setInitialSearchChestNo] = useState<string>('');
+  const [initialSearchAdmissionNo, setInitialSearchAdmissionNo] = useState<string>('');
 
-  const handleSelectParticipant = (chestNo: string) => {
-    setInitialSearchChestNo(chestNo);
+  const handleSelectParticipant = (identifier: string) => {
+    setInitialSearchAdmissionNo(identifier);
     setActiveTab('results');
   };
 
@@ -102,6 +103,7 @@ const MainFestivalApp: React.FC = () => {
           {/* HOME DASHBOARD */}
           {activeTab === 'home' && (
             <div className="space-y-8 animate-in fade-in duration-200">
+              <HomeCelebrationBanner setActiveTab={setActiveTab} />
               <HeroSection setActiveTab={setActiveTab} />
               <LiveNowSection
                 setActiveTab={setActiveTab}
@@ -156,7 +158,8 @@ const MainFestivalApp: React.FC = () => {
           {activeTab === 'results' && (
             <div className="animate-in fade-in duration-200">
               <ResultSearchHub
-                initialChestNo={initialSearchChestNo}
+                initialAdmissionNo={initialSearchAdmissionNo}
+                initialChestNo={initialSearchAdmissionNo}
                 setActiveTab={setActiveTab}
                 onOpenCertificateModal={handleOpenCertificateModal}
               />
@@ -290,7 +293,7 @@ const MainFestivalApp: React.FC = () => {
         onSelectParticipant={handleSelectParticipant}
       />
 
-      <CelebrationFireworks />
+      <CelebrationFireworks activeTab={activeTab} />
       {/* Toast Notifications */}
       {activeTab === 'admin' && <ToastContainer />}
     </div>

@@ -36,13 +36,13 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
 
   const q = (query || '').toLowerCase().trim();
 
-  const matchedParticipants = q
-    ? participants.filter(
-        (p) =>
-          String(p.name || '').toLowerCase().includes(q) ||
-          String(p.chestNo || '').toLowerCase().includes(q) ||
-          String(p.admissionNo || '').toLowerCase().includes(q)
-      )
+  const cleanQ = q.replace(/[\s-_]/g, '');
+
+  const matchedParticipants = cleanQ
+    ? participants.filter((p) => {
+        const cleanAdm = String(p.admissionNo || '').toLowerCase().replace(/[\s-_]/g, '');
+        return cleanAdm.includes(cleanQ);
+      })
     : [];
 
   const matchedTeams = q
@@ -83,9 +83,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     matchedSports.length +
     matchedDocs.length;
 
-  const handleOpenParticipant = (chestNo: string) => {
+  const handleOpenParticipant = (participant: { admissionNo?: string; chestNo?: string }) => {
+    const ident = participant.admissionNo || participant.chestNo || '';
     if (onSelectParticipant) {
-      onSelectParticipant(chestNo);
+      onSelectParticipant(ident);
     } else {
       setActiveTab('results');
     }
@@ -104,7 +105,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           <Search className="w-5 h-5 text-purple-600 shrink-0" />
           <input
             type="text"
-            placeholder="Search chest no (e.g. A101), participant name, house, event..."
+            placeholder="Search by Admission No (Ad No, e.g. AD-101), house, event..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
@@ -129,11 +130,11 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             <div className="py-8 text-center text-slate-500 space-y-3">
               <Sparkles className="w-8 h-8 text-purple-500 mx-auto" />
               <p className="text-xs sm:text-sm">
-                Type a chest number like <span className="text-purple-600 font-mono font-bold">A101</span>,
+                Type an Admission No (Ad No) like <span className="text-purple-600 font-mono font-bold">AD-101</span>,
                 house name like <span className="text-amber-600 font-bold">Ruby Royals</span>, or program name.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                {['A101', 'Mappilappattu', 'Football', 'Ruby Royals', 'Aisha Safa', 'Rules'].map((s, idx) => (
+                {['AD-101', 'Mappilappattu', 'Football', 'Ruby Royals', 'Senior', 'Rules'].map((s, idx) => (
                   <button
                     key={`search-sug-${s}-${idx}`}
                     onClick={() => setQuery(s)}
@@ -149,7 +150,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           {q && totalResults === 0 && (
             <div className="py-12 text-center text-slate-500">
               <p className="text-sm font-medium text-slate-700">No results found for &ldquo;{query}&rdquo;</p>
-              <p className="text-xs text-slate-400 mt-1">Try checking for typos or searching by Chest Number</p>
+              <p className="text-xs text-slate-400 mt-1">Try checking for typos or searching by Admission No (Ad No)</p>
             </div>
           )}
 
@@ -166,7 +167,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                   return (
                     <button
                       key={p.id || `search-p-${p.chestNo || idx}-${idx}`}
-                      onClick={() => handleOpenParticipant(p.chestNo)}
+                      onClick={() => handleOpenParticipant(p)}
                       className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-colors text-left group cursor-pointer"
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -180,7 +181,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                             {p.name}
                           </div>
                           <div className="text-[10px] text-slate-500 flex items-center gap-2">
-                            <span className="font-mono text-purple-600 font-semibold">Chest: {p.chestNo}</span>
+                            <span className="font-mono text-purple-600 font-semibold">Adm No: {p.admissionNo || p.chestNo}</span>
                             <span>•</span>
                             <span className="text-slate-700">{team?.name}</span>
                             <span>•</span>

@@ -3,12 +3,17 @@ import confetti from 'canvas-confetti';
 import { useFestival } from '../../context/FestivalContext';
 import { SparklesIcon as Sparkles, FireIcon as Fire } from 'hugeicons-react';
 
-export const CelebrationFireworks: React.FC = () => {
+interface CelebrationFireworksProps {
+  activeTab?: string;
+}
+
+export const CelebrationFireworks: React.FC<CelebrationFireworksProps> = ({ activeTab }) => {
   const { festConfig, toggleCelebrationMode, isAdminLoggedIn } = useFestival();
   const [showBanner, setShowBanner] = useState(false);
   const [isBlasting, setIsBlasting] = useState(false);
   const intervalRef = useRef<any>(null);
   const periodicRef = useRef<any>(null);
+  const lastTabRef = useRef<string | undefined>(activeTab);
 
   // Multi-cannon explosive celebration sequence
   const launchFireworks = useCallback((customDuration = 6000) => {
@@ -16,16 +21,16 @@ export const CelebrationFireworks: React.FC = () => {
     setShowBanner(true);
 
     const animationEnd = Date.now() + customDuration;
-    const defaults = { startVelocity: 35, spread: 360, ticks: 80, zIndex: 9999 };
+    const defaults = { startVelocity: 38, spread: 360, ticks: 100, zIndex: 99999 };
     const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
-    // Center starburst
+    // Big initial center starburst
     confetti({
-      particleCount: 100,
-      spread: 100,
-      origin: { y: 0.6 },
-      colors: ['#F59E0B', '#EF4444', '#EC4899', '#8B5CF6', '#10B981', '#3B82F6'],
-      zIndex: 9999,
+      particleCount: 110,
+      spread: 120,
+      origin: { x: 0.5, y: 0.45 },
+      colors: ['#F59E0B', '#EF4444', '#EC4899', '#8B5CF6', '#10B981', '#3B82F6', '#FFD700'],
+      zIndex: 99999,
     });
 
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -42,21 +47,39 @@ export const CelebrationFireworks: React.FC = () => {
         return;
       }
 
-      const particleCount = 45 * (timeLeft / customDuration);
-      // Left cannon
+      const particleCount = Math.max(25, 50 * (timeLeft / customDuration));
+
+      // Left angle cannon
       confetti({
         ...defaults,
         particleCount,
-        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-        colors: ['#F59E0B', '#EF4444', '#10B981', '#6366F1', '#EC4899'],
+        angle: randomInRange(55, 75),
+        spread: 60,
+        origin: { x: randomInRange(0.05, 0.2), y: randomInRange(0.6, 0.8) },
+        colors: ['#F59E0B', '#EF4444', '#10B981', '#6366F1', '#EC4899', '#FFD700'],
       });
-      // Right cannon
+
+      // Right angle cannon
       confetti({
         ...defaults,
         particleCount,
-        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-        colors: ['#3B82F6', '#EC4899', '#F59E0B', '#8B5CF6', '#F97316'],
+        angle: randomInRange(105, 125),
+        spread: 60,
+        origin: { x: randomInRange(0.8, 0.95), y: randomInRange(0.6, 0.8) },
+        colors: ['#3B82F6', '#EC4899', '#F59E0B', '#8B5CF6', '#F97316', '#FFD700'],
       });
+
+      // Periodic random high bursts
+      if (Math.random() > 0.4) {
+        confetti({
+          particleCount: 35,
+          startVelocity: 30,
+          spread: 80,
+          origin: { x: randomInRange(0.3, 0.7), y: randomInRange(0.25, 0.5) },
+          colors: ['#FFD700', '#F59E0B', '#EC4899', '#10B981', '#3B82F6'],
+          zIndex: 99999,
+        });
+      }
     }, 280);
   }, []);
 
@@ -74,32 +97,48 @@ export const CelebrationFireworks: React.FC = () => {
     };
   }, [launchFireworks]);
 
+  // Trigger celebration fireworks whenever user enters 'home' tab with Celebration Mode active
+  useEffect(() => {
+    if (activeTab === 'home' && festConfig?.isCelebrationMode) {
+      // If switching to home from another tab, trigger fireworks
+      if (lastTabRef.current !== 'home') {
+        const timer = setTimeout(() => {
+          launchFireworks(6000);
+        }, 300);
+        return () => clearTimeout(timer);
+      }
+    }
+    lastTabRef.current = activeTab;
+  }, [activeTab, festConfig?.isCelebrationMode, launchFireworks]);
+
   // Handle celebration mode toggle
   useEffect(() => {
     if (festConfig?.isCelebrationMode) {
       // Fire initial celebration sequence
       launchFireworks(7000);
 
-      // Gentle periodic celebratory burst every 20s while Celebration Mode is active
+      // Gentle periodic celebratory burst every 15s while Celebration Mode is active
       if (periodicRef.current) clearInterval(periodicRef.current);
       periodicRef.current = setInterval(() => {
         if (!document.hidden) {
           confetti({
-            particleCount: 40,
+            particleCount: 45,
             angle: 60,
-            spread: 55,
-            origin: { x: 0, y: 0.8 },
-            zIndex: 9999,
+            spread: 60,
+            origin: { x: 0.05, y: 0.75 },
+            colors: ['#F59E0B', '#EC4899', '#10B981', '#6366F1', '#FFD700'],
+            zIndex: 99999,
           });
           confetti({
-            particleCount: 40,
+            particleCount: 45,
             angle: 120,
-            spread: 55,
-            origin: { x: 1, y: 0.8 },
-            zIndex: 9999,
+            spread: 60,
+            origin: { x: 0.95, y: 0.75 },
+            colors: ['#3B82F6', '#EC4899', '#F59E0B', '#8B5CF6', '#FFD700'],
+            zIndex: 99999,
           });
         }
-      }, 20000);
+      }, 15000);
     } else {
       setShowBanner(false);
       setIsBlasting(false);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { SparklesIcon as Sparkles, UserGroupIcon as Users, Award01Icon as Award, BrushIcon as Palette, Activity02Icon as Activity, Tick01Icon as CheckCircle2, FireIcon as Flame, RadioIcon as Radio, Location01Icon as MapPin, Calendar01Icon as Calendar, Megaphone01Icon as Megaphone, Video01Icon as Video, LinkSquare01Icon as ExternalLink } from 'hugeicons-react';
+import { SparklesIcon as Sparkles, UserGroupIcon as Users, Award01Icon as Award, BrushIcon as Palette, Activity02Icon as Activity, Tick01Icon as CheckCircle2, FireIcon as Flame, FireIcon as Fire, RadioIcon as Radio, Location01Icon as MapPin, Calendar01Icon as Calendar, Megaphone01Icon as Megaphone, Video01Icon as Video, LinkSquare01Icon as ExternalLink } from 'hugeicons-react';
 import { useFestival } from '../../context/FestivalContext';
 import { GlassCard, GlassBadge, GlassButton } from '../ui/GlassCard';
 import { ActiveTab } from '../layout/Sidebar';
@@ -90,7 +90,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200 p-6 sm:p-8 lg:p-10 shadow-xs">
+      <div
+        className={`relative overflow-hidden rounded-3xl bg-white p-6 sm:p-8 lg:p-10 transition-all ${
+          festConfig?.isCelebrationMode
+            ? 'border-2 border-amber-400/90 shadow-lg shadow-amber-100/60 ring-2 ring-amber-300/30'
+            : 'border border-slate-200 shadow-xs'
+        }`}
+      >
         {festConfig?.bannerUrl && isImageUrl(festConfig.bannerUrl) && (
           <div className="absolute inset-0 z-0">
             <img
@@ -106,6 +112,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
           <div className="max-w-2xl space-y-3 sm:space-y-4">
             <div className="flex flex-wrap items-center gap-2.5">
               {getStatusBadge()}
+              {festConfig?.isCelebrationMode && (
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('fest-trigger-fireworks'))}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-amber-400 via-rose-500 to-indigo-600 text-white shadow-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                  title="Click to launch fireworks!"
+                >
+                  <Sparkles className="w-3.5 h-3.5 animate-spin duration-3000" />
+                  <span>🎉 CELEBRATION ACTIVE</span>
+                </button>
+              )}
             </div>
 
             <div>
@@ -142,6 +159,18 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
               >
                 Check Your Result
               </GlassButton>
+
+              {festConfig?.isCelebrationMode && (
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('fest-trigger-fireworks'))}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 text-white shadow-sm hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                  title="Launch multi-cannon celebratory fireworks!"
+                >
+                  <Fire className="w-4 h-4 text-amber-200" />
+                  <span>💥 Launch Fireworks</span>
+                </button>
+              )}
 
               {festConfig?.liveStreamUrl && (
                 <a

@@ -31,26 +31,24 @@ export const CertificateVerificationHub: React.FC<CertificateVerificationHubProp
     const matchedCert = (certificates || []).find((c) => {
       const cId = String(c.id || '').toUpperCase();
       const cCode = String(c.verificationCode || '').toUpperCase();
-      const cChest = String(c.chestNo || '').toUpperCase();
+      const cAdm = String(c.admissionNo || '').toUpperCase();
       return (
         cId === val ||
         cCode === val ||
-        cChest === val ||
+        cAdm === val ||
         (cId && val.includes(cId)) ||
-        (cCode && val.includes(cCode))
+        (cCode && val.includes(cCode)) ||
+        (cAdm && val.includes(cAdm))
       );
     });
 
-    // Match either chestNo, admissionNo, or exact certificate string in participants
+    // Match admissionNo or exact certificate string in participants (NOT chestNo)
     const found = participants.find((p) => {
-      const pChest = String(p.chestNo || '').toUpperCase();
       const pAdm = String(p.admissionNo || '').toUpperCase();
       return (
-        pChest === val ||
         pAdm === val ||
-        (pChest && val.includes(pChest)) ||
         (pAdm && val.includes(pAdm)) ||
-        (matchedCert && (p.id === matchedCert.participantId || (p.chestNo && p.chestNo === matchedCert.chestNo)))
+        (matchedCert && (p.id === matchedCert.participantId || (p.admissionNo && p.admissionNo === matchedCert.admissionNo)))
       );
     });
 
@@ -86,14 +84,14 @@ export const CertificateVerificationHub: React.FC<CertificateVerificationHubProp
       <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-md space-y-4 max-w-2xl mx-auto">
         <form onSubmit={handleVerify} className="space-y-3">
           <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-            Enter Certificate ID, Verification Code, or Chest Number
+            Enter Certificate ID, Verification Code, or Admission Number (Ad No)
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <QrCode className="w-5 h-5 text-amber-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="e.g. AHIA-2026-A101-0101, VREF-A101-0101, or A101"
+                placeholder="e.g. AHIA-2026-0101, VREF-0101, or AD-101"
                 value={certInput}
                 onChange={(e) => setCertInput(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"
@@ -110,8 +108,8 @@ export const CertificateVerificationHub: React.FC<CertificateVerificationHubProp
         </form>
 
         <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-          <span className="text-slate-500 font-medium">Sample IDs to try:</span>
-          {['A101', 'A102', 'A103', 'A104'].map((s, idx) => (
+          <span className="text-slate-500 font-medium">Sample IDs / Ad Nos to try:</span>
+          {['AD-101', 'AD-102', 'AD-103', 'AD-104'].map((s, idx) => (
             <button
               key={`sample-cert-${s}-${idx}`}
               type="button"

@@ -19,6 +19,66 @@
         }
       },
       "required": ["celebrationMode", "updatedAt"]
+    },
+    "DeletionRecord": {
+      "title": "DeletionRecord",
+      "description": "Cross-device real-time tombstone for deleted results, marks, and festival items",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique deleted identifier or composite key"
+        },
+        "itemType": {
+          "type": "string",
+          "description": "Category of deleted item e.g. result_mark, program, participant"
+        },
+        "programId": {
+          "type": "string",
+          "description": "Parent program ID if applicable"
+        },
+        "participantId": {
+          "type": "string",
+          "description": "Participant ID or chest number if applicable"
+        },
+        "chestNo": {
+          "type": "string",
+          "description": "Chest number of student"
+        },
+        "deletedAt": {
+          "type": "string",
+          "description": "ISO timestamp of deletion"
+        }
+      },
+      "required": ["id", "deletedAt"]
+    },
+    "LiveProgramResult": {
+      "title": "LiveProgramResult",
+      "description": "Real-time published and draft podium result state per program across all connected devices",
+      "type": "object",
+      "properties": {
+        "programId": {
+          "type": "string",
+          "description": "Program ID"
+        },
+        "programCode": {
+          "type": "string",
+          "description": "Program event code"
+        },
+        "resultsJson": {
+          "type": "string",
+          "description": "JSON stringified array of current valid result entries"
+        },
+        "publishStatus": {
+          "type": "string",
+          "description": "Current status: Published or Draft"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      },
+      "required": ["programId", "resultsJson", "updatedAt"]
     }
   },
   "firestore": {
@@ -29,6 +89,14 @@
     "/celebration_history/{eventId}": {
       "schema": "CelebrationSetting",
       "description": "Historical audit log of celebration mode activations and events"
+    },
+    "/deletions/{deletionId}": {
+      "schema": "DeletionRecord",
+      "description": "Live real-time deletion markers propagated across all connected devices and accounts"
+    },
+    "/live_results/{programId}": {
+      "schema": "LiveProgramResult",
+      "description": "Live real-time podium results synchronized instantly across all tabs and devices"
     }
   }
 }

@@ -881,9 +881,23 @@ function deleteRowById(sheet, id) {
     if (!matchFound && targetStr.indexOf("_") !== -1) {
       var progCol = headers.indexOf("programCode");
       var chestCol = headers.indexOf("chestNo");
-      if (progCol !== -1 && chestCol !== -1) {
-        var compKey = (String(data[i][progCol]).trim() + "_" + String(data[i][chestCol]).trim()).toLowerCase();
-        if (compKey === targetStr) matchFound = true;
+      var partCol = headers.indexOf("participantName");
+      var admCol = headers.indexOf("admissionNo");
+      var idCol = headers.indexOf("id");
+      if (progCol !== -1) {
+        var rowProg = String(data[i][progCol]).trim().toLowerCase();
+        var rowChest = chestCol !== -1 ? String(data[i][chestCol]).trim().toLowerCase() : "";
+        var rowPart = partCol !== -1 ? String(data[i][partCol]).trim().toLowerCase() : "";
+        var rowAdm = admCol !== -1 ? String(data[i][admCol]).trim().toLowerCase() : "";
+        var rowId = idCol !== -1 ? String(data[i][idCol]).trim().toLowerCase() : "";
+        if (
+          (rowChest && targetStr === rowProg + "_" + rowChest) ||
+          (rowPart && targetStr === rowProg + "_" + rowPart) ||
+          (rowAdm && targetStr === rowProg + "_" + rowAdm) ||
+          (rowId && targetStr === rowProg + "_" + rowId)
+        ) {
+          matchFound = true;
+        }
       }
     }
 

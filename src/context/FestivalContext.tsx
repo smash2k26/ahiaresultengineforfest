@@ -36,7 +36,14 @@ import {
   INITIAL_ADMIN_USER
 } from '../data/initialData';
 import { isSportsProgram } from '../utils/programHelpers';
-import { persistCelebrationMode, listenToCelebrationMode } from '../lib/firebase';
+import {
+  persistCelebrationMode,
+  listenToCelebrationMode,
+  persistRemoteDeletion,
+  listenToDeletions,
+  persistLiveProgramResult,
+  listenToLiveResults,
+} from '../lib/firebase';
 
 export interface ToastMessage {
   id: string;
@@ -762,6 +769,113 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, [artsPrograms, sportsMatches, scoringRules]);
 
+  // Real-time Firestore Sync for Deletions across all accounts & devices
+  useEffect(() => {
+    const unsubscribe = listenToDeletions((records) => {
+      if (!records || records.length === 0) return;
+      let hasNewDeletions = false;
+      records.forEach((rec) => {
+        if (rec.id) {
+          const clean = String(rec.id).trim().toLowerCase();
+          if (!deletedIdsRef.current.has(clean)) {
+            deletedIdsRef.current.add(clean);
+            hasNewDeletions = true;
+          }
+        }
+      });
+      if (hasNewDeletions) {
+        try {
+          localStorage.setItem('ahia_deleted_ids_v2', JSON.stringify(Array.from(deletedIdsRef.current)));
+        } catch {}
+
+        // Instantly remove any deleted marks or results from local artsPrograms in real time
+        setArtsPrograms((prev) => {
+          let modified = false;
+          const cleaned = prev.map((p) => {
+            const currentResults = p.results || [];
+            const filtered = currentResults.filter((r) => {
+              const keys = [
+                `${p.id}_${r.participantId}`,
+                `${p.id}_${r.chestNo}`,
+                p.code ? `${p.code}_${r.participantId}` : '',
+                p.code ? `${p.code}_${r.chestNo}` : '',
+                r.participantId,
+                r.chestNo,
+                r.id,
+              ].filter(Boolean);
+              return !keys.some((k) => isDeleted(k));
+            });
+            if (filtered.length !== currentResults.length) {
+              modified = true;
+              return { ...p, results: filtered };
+            }
+            return p;
+          });
+          if (modified) {
+            localStorage.setItem('ahia_arts_programs', JSON.stringify(cleaned));
+            setTimeout(recalculateAllStandings, 50);
+            return cleaned;
+          }
+          return prev;
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isDeleted, recalculateAllStandings]);
+
+  // Real-time Firestore Sync for Live Program Results across all accounts & devices
+  useEffect(() => {
+    const unsubscribe = listenToLiveResults((resultsMap) => {
+      if (!resultsMap || resultsMap.size === 0) return;
+      setArtsPrograms((prev) => {
+        let changed = false;
+        const updated = prev.map((p) => {
+          const liveData = resultsMap.get(p.id) || (p.code ? resultsMap.get(p.code) : undefined);
+          if (liveData && Array.isArray(liveData.results)) {
+            const sanitizedLiveResults = liveData.results.filter((r) => {
+              const keys = [
+                `${p.id}_${r.participantId}`,
+                `${p.id}_${r.chestNo}`,
+                p.code ? `${p.code}_${r.participantId}` : '',
+                p.code ? `${p.code}_${r.chestNo}` : '',
+                r.participantId,
+                r.chestNo,
+                r.id,
+              ].filter(Boolean);
+              return !keys.some((k) => isDeleted(k));
+            });
+
+            const currentStr = JSON.stringify(p.results || []);
+            const liveStr = JSON.stringify(sanitizedLiveResults);
+            if (currentStr !== liveStr) {
+              changed = true;
+              return {
+                ...p,
+                results: sanitizedLiveResults,
+                publishStatus: liveData.publishStatus || p.publishStatus,
+              };
+            }
+          }
+          return p;
+        });
+
+        if (changed) {
+          localStorage.setItem('ahia_arts_programs', JSON.stringify(updated));
+          setTimeout(recalculateAllStandings, 50);
+          return updated;
+        }
+        return prev;
+      });
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isDeleted, recalculateAllStandings]);
+
   // Auto push helper for all mutations
   const triggerAutoPush = useCallback((customOverrides?: any) => {
     isRemoteSyncInProgressRef.current = true;
@@ -773,10 +887,18 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, 4000);
   }, []);
 
-  // Immediate remote delete dispatcher for individual items
+  // Immediate remote delete dispatcher with instant Firestore broadcasting
   const dispatchRemoteDelete = useCallback((sheetName: string, id: string) => {
     if (!id) return;
     recordDeletedId(id);
+
+    // Broadcast deletion tombstone to Firestore so all devices/accounts update in real time
+    persistRemoteDeletion({
+      id: String(id).trim(),
+      itemType: sheetName,
+      deletedAt: new Date().toISOString(),
+    });
+
     const targetUrl = googleSheetsConfig.appsScriptUrl || 'https://script.google.com/macros/s/AKfycbwwh4ZwnwW2C98pwlgoVfN4MI3VokZjr12fO6z5BflcLrFwJoTAhyE4NSvy4JeClymp8w/exec';
     fetch(targetUrl, {
       method: 'POST',
@@ -914,20 +1036,24 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [showToast, triggerAutoPush]);
 
   const deleteArtsProgram = useCallback((id: string) => {
-    dispatchRemoteDelete('Programs', id);
+    const prog = artsPrograms.find((p) => p.id === id || p.code === id);
+    const progId = prog?.id || id;
+    const progCode = prog?.code || '';
+
+    persistLiveProgramResult(progId, progCode, [], 'Draft');
+    dispatchRemoteDelete('Programs', progId);
+    if (progCode) {
+      recordDeletedId(progCode);
+      dispatchRemoteDelete('Programs', progCode);
+    }
     setArtsPrograms((prev) => {
-      const prog = prev.find((p) => p.id === id);
-      if (prog && prog.code) {
-        recordDeletedId(prog.code);
-        dispatchRemoteDelete('Programs', prog.code);
-      }
-      const updated = prev.filter((p) => p.id !== id && p.code !== id);
+      const updated = prev.filter((p) => p.id !== progId && (!progCode || p.code !== progCode));
       localStorage.setItem('ahia_arts_programs', JSON.stringify(updated));
       triggerAutoPush({ artsPrograms: updated });
       return updated;
     });
     showToast('Program Deleted', 'Arts event deleted.', 'warning');
-  }, [showToast, triggerAutoPush, dispatchRemoteDelete, recordDeletedId]);
+  }, [artsPrograms, showToast, triggerAutoPush, dispatchRemoteDelete, recordDeletedId]);
 
   // Sports Actions
   const updateSportsScore = useCallback((
@@ -1529,19 +1655,129 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return updated;
     });
 
+    // Broadcast live results to Firestore in real-time for all accounts and devices
+    persistLiveProgramResult(
+      prog.id,
+      prog.code || '',
+      validEntries,
+      publishNow ? 'Published' : prog.publishStatus || 'Draft'
+    );
+
+    // Clean up any removed slots (tombstone records for cleared winners)
+    const validParticipantIds = new Set(validEntries.map((v) => v.participantId));
+    (prog.results || []).forEach((oldRes) => {
+      if (oldRes.participantId && !validParticipantIds.has(oldRes.participantId)) {
+        const keysToDelete = [
+          `${prog.id}_${oldRes.participantId}`,
+          `${prog.id}_${oldRes.chestNo || ''}`,
+          prog.code ? `${prog.code}_${oldRes.participantId}` : '',
+          prog.code ? `${prog.code}_${oldRes.chestNo || ''}` : '',
+          oldRes.id || '',
+        ].filter(Boolean);
+        keysToDelete.forEach((k) => {
+          recordDeletedId(k);
+          persistRemoteDeletion({
+            id: k,
+            itemType: 'result_mark',
+            programId: prog.id,
+            participantId: oldRes.participantId,
+            chestNo: oldRes.chestNo || '',
+            deletedAt: new Date().toISOString(),
+          });
+        });
+        if (prog.code && oldRes.chestNo) {
+          dispatchRemoteDelete('ResultsMarks', `${prog.code}_${oldRes.chestNo}`);
+        }
+      }
+    });
+
     showToast('Podium Results Published', `Top 3 results for "${prog.name}" saved & synced.`, 'success');
     setTimeout(recalculateAllStandings, 100);
-  }, [artsPrograms, participants, showToast, recalculateAllStandings, triggerAutoPush]);
+  }, [artsPrograms, participants, showToast, recalculateAllStandings, triggerAutoPush, recordDeletedId, dispatchRemoteDelete]);
 
   const deleteResultMark = useCallback((programId: string, participantId: string) => {
-    const compositeKey = `${programId}_${participantId}`;
-    dispatchRemoteDelete('ResultsMarks', compositeKey);
+    if (!programId || !participantId) return;
+
+    // Find the relevant program
+    const prog = artsPrograms.find(
+      (p) =>
+        p.id === programId ||
+        (p.code && p.code.trim().toLowerCase() === programId.trim().toLowerCase()) ||
+        (p.name && p.name.trim().toLowerCase() === programId.trim().toLowerCase())
+    );
+    const progId = prog?.id || programId;
+    const progCode = prog?.code ? prog.code.trim() : '';
+
+    // Find the specific result entry to be removed
+    const targetResult = (prog?.results || []).find(
+      (r) =>
+        (r.participantId && r.participantId === participantId) ||
+        (r.chestNo && String(r.chestNo).trim().toLowerCase() === String(participantId).trim().toLowerCase()) ||
+        (r.admissionNo && String(r.admissionNo).trim().toLowerCase() === String(participantId).trim().toLowerCase()) ||
+        (r.id && r.id === participantId)
+    );
+
+    const ptId = targetResult?.participantId || participantId;
+    const chestNo = targetResult?.chestNo || '';
+    const admNo = targetResult?.admissionNo || '';
+    const resId = targetResult?.id || '';
+
+    // Generate comprehensive tombstone keys to cover all matching formats
+    const keysToDelete = [
+      `${progId}_${ptId}`,
+      `${progId}_${chestNo}`,
+      progCode ? `${progCode}_${ptId}` : '',
+      progCode ? `${progCode}_${chestNo}` : '',
+      admNo ? `${progId}_${admNo}` : '',
+      admNo && progCode ? `${progCode}_${admNo}` : '',
+      resId,
+      `${progId}_${participantId}`,
+      progCode ? `${progCode}_${participantId}` : '',
+    ].filter(Boolean);
+
+    // 1. Record tombstones locally and broadcast to Firestore in real time
+    keysToDelete.forEach((key) => {
+      recordDeletedId(key);
+      persistRemoteDeletion({
+        id: key,
+        itemType: 'result_mark',
+        programId: progId,
+        participantId: ptId,
+        chestNo,
+        deletedAt: new Date().toISOString(),
+      });
+    });
+
+    // 2. Dispatch to Google Apps Script for ResultsMarks sheet
+    if (progCode && chestNo) {
+      dispatchRemoteDelete('ResultsMarks', `${progCode}_${chestNo}`);
+    }
+    dispatchRemoteDelete('ResultsMarks', `${progId}_${ptId}`);
+    if (resId) {
+      dispatchRemoteDelete('ResultsMarks', resId);
+    }
+
+    // 3. Update local artsPrograms and calculate remaining results
+    let updatedResultsForProg: any[] = [];
     setArtsPrograms((prev) => {
       const updated = prev.map((p) => {
-        if (p.id === programId || p.code === programId) {
+        if (
+          p.id === progId ||
+          (progCode && p.code && p.code.trim().toLowerCase() === progCode.toLowerCase())
+        ) {
+          const remaining = (p.results || []).filter((r) => {
+            const isMatch =
+              (ptId && r.participantId === ptId) ||
+              (chestNo && r.chestNo && String(r.chestNo).trim().toLowerCase() === String(chestNo).trim().toLowerCase()) ||
+              (admNo && r.admissionNo && String(r.admissionNo).trim().toLowerCase() === String(admNo).trim().toLowerCase()) ||
+              (resId && r.id === resId) ||
+              (participantId && (r.participantId === participantId || r.chestNo === participantId || r.id === participantId));
+            return !isMatch;
+          });
+          updatedResultsForProg = remaining;
           return {
             ...p,
-            results: (p.results || []).filter((r) => r.participantId !== participantId),
+            results: remaining,
           };
         }
         return p;
@@ -1550,9 +1786,18 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       triggerAutoPush({ artsPrograms: updated });
       return updated;
     });
-    showToast('Mark Deleted', 'Result entry removed.', 'info');
-    setTimeout(recalculateAllStandings, 0);
-  }, [showToast, recalculateAllStandings, dispatchRemoteDelete, triggerAutoPush]);
+
+    // 4. Persist updated results to Firestore live_results in real-time
+    persistLiveProgramResult(
+      progId,
+      progCode,
+      updatedResultsForProg,
+      prog?.publishStatus || 'Published'
+    );
+
+    showToast('Mark Deleted', 'Result entry removed in real-time across all devices.', 'info');
+    setTimeout(recalculateAllStandings, 50);
+  }, [artsPrograms, recordDeletedId, dispatchRemoteDelete, triggerAutoPush, showToast, recalculateAllStandings]);
 
   // Scoring Rules
   const updateScoringRules = useCallback((rules: ScoringRules) => {
@@ -1911,7 +2156,18 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   try { results = JSON.parse(results); } catch { results = []; }
                 }
                 const filteredResults = Array.isArray(results)
-                  ? results.filter((r: any) => !isDeleted(`${pr.code || pr.id}_${r.participantId}`) && !isDeleted(r.participantId))
+                  ? results.filter((r: any) => {
+                      const keys = [
+                        `${pr.code || pr.id}_${r.participantId}`,
+                        `${pr.id}_${r.participantId}`,
+                        `${pr.code || pr.id}_${r.chestNo}`,
+                        `${pr.id}_${r.chestNo}`,
+                        r.participantId,
+                        r.chestNo,
+                        r.id,
+                      ].filter(Boolean);
+                      return !keys.some((k) => isDeleted(k));
+                    })
                   : [];
                 const isSport = isSportsProgram(pr);
                 const disciplineType = pr.disciplineType
@@ -1938,23 +2194,42 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   (lp) => lp.id === remotePr.id || (lp.code && remotePr.code && lp.code.trim().toLowerCase() === remotePr.code.trim().toLowerCase())
                 );
                 if (localMatch) {
-                  // Merge results: keep both remote results and any freshly entered local marks
+                  // Remote results are authoritative; only keep locally entered marks if explicitly tagged as unsaved draft
+                  const unsavedLocalDrafts = (localMatch.results || []).filter(
+                    (r: any) => (r as any)._isLocalDraft === true
+                  );
                   const resultMap = new Map<string, any>();
                   (remotePr.results || []).forEach((r: any) => {
-                    const key = r.participantId || r.chestNo;
-                    if (key && !isDeleted(`${remotePr.code || remotePr.id}_${key}`) && !isDeleted(key)) {
-                      resultMap.set(key, r);
+                    const key = r.participantId || r.chestNo || r.id;
+                    if (key) {
+                      const keys = [
+                        `${remotePr.code || remotePr.id}_${r.participantId}`,
+                        `${remotePr.id}_${r.participantId}`,
+                        `${remotePr.code || remotePr.id}_${r.chestNo}`,
+                        `${remotePr.id}_${r.chestNo}`,
+                        r.participantId,
+                        r.chestNo,
+                        r.id,
+                      ].filter(Boolean);
+                      if (!keys.some((k) => isDeleted(k))) {
+                        resultMap.set(key, r);
+                      }
                     }
                   });
-                  (localMatch.results || []).forEach((r: any) => {
-                    const key = r.participantId || r.chestNo;
-                    if (key && !isDeleted(`${remotePr.code || remotePr.id}_${key}`) && !isDeleted(key)) {
-                      const existingRes = resultMap.get(key);
-                      if (!existingRes) {
-                        resultMap.set(key, r); // Keep locally recorded result
-                        hasLocalAdditionsToSyncBack = true;
-                      } else {
-                        resultMap.set(key, { ...existingRes, ...r });
+                  unsavedLocalDrafts.forEach((r: any) => {
+                    const key = r.participantId || r.chestNo || r.id;
+                    if (key && !resultMap.has(key)) {
+                      const keys = [
+                        `${remotePr.code || remotePr.id}_${r.participantId}`,
+                        `${remotePr.id}_${r.participantId}`,
+                        `${remotePr.code || remotePr.id}_${r.chestNo}`,
+                        `${remotePr.id}_${r.chestNo}`,
+                        r.participantId,
+                        r.chestNo,
+                        r.id,
+                      ].filter(Boolean);
+                      if (!keys.some((k) => isDeleted(k))) {
+                        resultMap.set(key, r);
                       }
                     }
                   });
@@ -1979,9 +2254,18 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
                 const codeKey = localPr.code ? localPr.code.trim().toLowerCase() : '';
                 if (!mergedIdSet.has(localPr.id) && (!codeKey || !mergedCodeSet.has(codeKey))) {
-                  const validResults = (localPr.results || []).filter(
-                    (r) => !isDeleted(`${localPr.code || localPr.id}_${r.participantId}`) && !isDeleted(r.participantId)
-                  );
+                  const validResults = (localPr.results || []).filter((r) => {
+                    const keys = [
+                      `${localPr.code || localPr.id}_${r.participantId}`,
+                      `${localPr.id}_${r.participantId}`,
+                      `${localPr.code || localPr.id}_${r.chestNo}`,
+                      `${localPr.id}_${r.chestNo}`,
+                      r.participantId,
+                      r.chestNo,
+                      r.id,
+                    ].filter(Boolean);
+                    return !keys.some((k) => isDeleted(k));
+                  });
                   merged.push({ ...localPr, results: validResults });
                   mergedIdSet.add(localPr.id);
                   if (codeKey) mergedCodeSet.add(codeKey);

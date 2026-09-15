@@ -1377,7 +1377,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => deleteResultMark(r.programObjId, r.participantId)}
+                                onClick={() => deleteResultMark(r.programObjId, r.participantId || r.chestNo || r.id || '')}
                                 className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-95 rounded-lg transition-all cursor-pointer"
                                 title="Delete Record"
                               >

@@ -9,5 +9,13 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.resource.data.celebrationMode is bool;
     }
+    match /deletions/{deletionId} {
+      allow read: if true;
+      allow write: if request.resource.data.id is string;
+    }
+    match /live_results/{programId} {
+      allow read: if true;
+      allow write: if request.resource.data.programId is string;
+    }
   }
 }

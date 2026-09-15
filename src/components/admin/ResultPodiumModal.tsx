@@ -38,6 +38,7 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
     teams,
     scoringRules,
     savePodiumResults,
+    deleteResultMark,
     showToast,
   } = useFestival();
 
@@ -346,6 +347,22 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
 
     savePodiumResults(activeProgram.id, podiumSlots, publishImmediate);
     onClose();
+  };
+
+  const handleClearAllResults = () => {
+    if (!activeProgram) return;
+    const count = (activeProgram.results || []).length;
+    if (count === 0) return;
+    if (window.confirm(`Are you sure you want to delete all ${count} recorded result marks for "${activeProgram.name}"? This action will sync across all accounts and devices in real time.`)) {
+      (activeProgram.results || []).forEach((r) => {
+        deleteResultMark(activeProgram.id, r.participantId || r.chestNo || r.id || '');
+      });
+      setSlot1({ participantId: '', grade: 'Grade A+ (Outstanding)', points: scoringRules.goldPoints });
+      setSlot2({ participantId: '', grade: 'Grade A (Distinction)', points: scoringRules.silverPoints });
+      setSlot3({ participantId: '', grade: 'Grade B+ (Merit)', points: scoringRules.bronzePoints });
+      showToast('Results Cleared', `All marks for "${activeProgram.name}" have been deleted in real time.`, 'info');
+      onClose();
+    }
   };
 
   const getParticipantObj = (idOrRef?: string) => {
@@ -1097,21 +1114,36 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
           </div>
 
           {/* Footer Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 border border-slate-300 rounded-xl text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 cursor-pointer transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm cursor-pointer transition-colors"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Save &amp; Publish Podium Results</span>
-            </button>
+          <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100">
+            <div>
+              {activeProgram && (activeProgram.results || []).length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAllResults}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+                  title="Delete all podium results for this event across all devices"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Event Results ({(activeProgram.results || []).length})</span>
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2.5 border border-slate-300 rounded-xl text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm cursor-pointer transition-colors"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Save &amp; Publish Podium Results</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>

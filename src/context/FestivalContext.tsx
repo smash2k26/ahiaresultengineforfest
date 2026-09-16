@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Team,
+  TeamMinus,
   Participant,
   ArtsProgram,
   SportsMatch,
@@ -21,6 +22,7 @@ import {
 } from '../types/festival';
 import {
   INITIAL_TEAMS,
+  INITIAL_TEAM_MINUSES,
   INITIAL_FEST_CONFIG,
   INITIAL_PARTICIPANTS,
   INITIAL_ARTS_PROGRAMS,
@@ -56,6 +58,7 @@ export interface ToastMessage {
 interface FestivalContextType {
   // Primary State
   teams: Team[];
+  teamMinuses: TeamMinus[];
   participants: Participant[];
   artsPrograms: ArtsProgram[];
   sportsMatches: SportsMatch[];
@@ -122,6 +125,11 @@ interface FestivalContextType {
   addTeam: (team: Omit<Team, 'id' | 'artsPoints' | 'sportsPoints' | 'totalPoints' | 'golds' | 'silvers' | 'bronzes' | 'totalWins' | 'rank' | 'previousRank' | 'trend'>) => void;
   editTeam: (id: string, data: Partial<Team>) => void;
   deleteTeam: (id: string) => void;
+
+  // Team Minuses & Penalty Points
+  addTeamMinus: (minus: Omit<TeamMinus, 'id' | 'timestamp'>) => void;
+  editTeamMinus: (id: string, data: Partial<TeamMinus>) => void;
+  deleteTeamMinus: (id: string) => void;
 
   // Schedule & Announcements
   addScheduleItem: (item: Omit<ScheduleItem, 'id'>) => void;
@@ -196,6 +204,19 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } catch (e) {}
     }
     return INITIAL_TEAMS;
+  });
+
+  const [teamMinuses, setTeamMinuses] = useState<TeamMinus[]>(() => {
+    const saved = localStorage.getItem('ahia_team_minuses');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      } catch (e) {}
+    }
+    return INITIAL_TEAM_MINUSES;
   });
 
   const [participants, setParticipants] = useState<Participant[]>(() => {
@@ -436,6 +457,10 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [teams]);
 
   useEffect(() => {
+    localStorage.setItem('ahia_team_minuses', JSON.stringify(teamMinuses));
+  }, [teamMinuses]);
+
+  useEffect(() => {
     localStorage.setItem('ahia_participants', JSON.stringify(participants));
   }, [participants]);
 
@@ -605,11 +630,14 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Recalculate each team
       const updatedTeams = prevTeams.map((team) => {
         const stats = teamStats[team.id] || { arts: 0, sports: 0, golds: 0, silvers: 0, bronzes: 0, wins: 0 };
-        const total = stats.arts + stats.sports;
+        const teamMinusList = teamMinuses.filter((m) => m.teamId === team.id);
+        const minusPoints = teamMinusList.reduce((acc, m) => acc + (Number(m.pointsDeducted) || 0), 0);
+        const total = Math.max(0, stats.arts + stats.sports - minusPoints);
         return {
           ...team,
           artsPoints: stats.arts,
           sportsPoints: stats.sports,
+          minusPoints: minusPoints,
           totalPoints: total,
           golds: stats.golds,
           silvers: stats.silvers,
@@ -767,7 +795,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         sportsRank: sportsRankMap.get(p.id) || 1,
       }));
     });
-  }, [artsPrograms, sportsMatches, scoringRules]);
+  }, [artsPrograms, sportsMatches, scoringRules, teamMinuses]);
 
   // Real-time Firestore Sync for Deletions across all accounts & devices
   useEffect(() => {
@@ -1064,8 +1092,8 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     winnerTeamId?: string,
     status?: EventStatus
   ) => {
-    setSportsMatches((prev) =>
-      prev.map((m) => {
+    setSportsMatches((prev) => {
+      const updated = prev.map((m) => {
         if (m.id === matchId) {
           return {
             ...m,
@@ -1078,14 +1106,17 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           };
         }
         return m;
-      })
-    );
+      });
+      localStorage.setItem('ahia_sports_matches', JSON.stringify(updated));
+      triggerAutoPush({ sportsMatches: updated });
+      return updated;
+    });
 
     showToast('Score Updated', 'Live match scoreboard refreshed.', 'success');
     if (status === 'COMPLETED') {
       setTimeout(recalculateAllStandings, 100);
     }
-  }, [showToast, recalculateAllStandings]);
+  }, [showToast, recalculateAllStandings, triggerAutoPush]);
 
   const addMatchEvent = useCallback((matchId: string, event: Omit<SportsMatch['events'][0], 'id'>) => {
     const newEvent = { ...event, id: 'ev-' + Date.now() };
@@ -1344,6 +1375,52 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showToast('Team Deleted', 'House removed from festival registry.', 'warning');
     setTimeout(recalculateAllStandings, 0);
   }, [showToast, recalculateAllStandings, triggerAutoPush, dispatchRemoteDelete, recordDeletedId]);
+
+  // Team Minuses & Penalty Deductions
+  const addTeamMinus = useCallback((minusData: Omit<TeamMinus, 'id' | 'timestamp'>) => {
+    const id = `minus-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    const newMinus: TeamMinus = {
+      ...minusData,
+      id,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    clearDeletedId(id);
+
+    setTeamMinuses((prev) => {
+      const updated = [newMinus, ...prev];
+      localStorage.setItem('ahia_team_minuses', JSON.stringify(updated));
+      triggerAutoPush({ teamMinuses: updated });
+      return updated;
+    });
+
+    showToast(
+      'Penalty Points Registered',
+      `${minusData.pointsDeducted} minus points deducted from ${minusData.teamName} for "${minusData.reason}".`,
+      'warning'
+    );
+  }, [showToast, triggerAutoPush, clearDeletedId]);
+
+  const editTeamMinus = useCallback((id: string, data: Partial<TeamMinus>) => {
+    setTeamMinuses((prev) => {
+      const updated = prev.map((m) => (m.id === id ? { ...m, ...data } : m));
+      localStorage.setItem('ahia_team_minuses', JSON.stringify(updated));
+      triggerAutoPush({ teamMinuses: updated });
+      return updated;
+    });
+    showToast('Penalty Updated', 'The penalty deduction was successfully updated.', 'info');
+  }, [showToast, triggerAutoPush]);
+
+  const deleteTeamMinus = useCallback((id: string) => {
+    recordDeletedId(id);
+    dispatchRemoteDelete('TeamMinuses', id);
+    setTeamMinuses((prev) => {
+      const updated = prev.filter((m) => m.id !== id);
+      localStorage.setItem('ahia_team_minuses', JSON.stringify(updated));
+      triggerAutoPush({ teamMinuses: updated });
+      return updated;
+    });
+    showToast('Penalty Removed', 'The penalty deduction has been removed and standings updated.', 'info');
+  }, [recordDeletedId, dispatchRemoteDelete, showToast, triggerAutoPush]);
 
   // Schedule & Announcements
   const addScheduleItem = useCallback((item: Omit<ScheduleItem, 'id'>) => {
@@ -1998,6 +2075,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 description: t.description || '',
                 artsPoints: Number(t.artsPoints) || 0,
                 sportsPoints: Number(t.sportsPoints) || 0,
+                minusPoints: Number(t.minusPoints) || 0,
                 totalPoints: Number(t.totalPoints) || 0,
                 golds: Number(t.golds) || 0,
                 silvers: Number(t.silvers) || 0,
@@ -2417,7 +2495,31 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             recordsUpdated++;
           }
 
-          // 10. Sync Scoring Rules
+          // 10. Safe Merge Team Minuses (Penalties)
+          if (Array.isArray(data.teamMinuses) && data.teamMinuses.length > 0) {
+            const remoteSanitized = data.teamMinuses
+              .filter((m: any) => m && m.id && !isDeleted(m.id))
+              .map((m: any) => ({
+                ...m,
+                pointsDeducted: Number(m.pointsDeducted) || 0,
+              }));
+            setTeamMinuses((prevLocal) => {
+              const remoteIds = new Set(remoteSanitized.map((m: any) => m.id));
+              const merged = [...remoteSanitized];
+              prevLocal.forEach((lm) => {
+                if (lm && lm.id && !isDeleted(lm.id) && !remoteIds.has(lm.id)) {
+                  merged.push(lm);
+                  remoteIds.add(lm.id);
+                  hasLocalAdditionsToSyncBack = true;
+                }
+              });
+              localStorage.setItem('ahia_team_minuses', JSON.stringify(merged));
+              return merged;
+            });
+            recordsUpdated++;
+          }
+
+          // 11. Sync Scoring Rules
           if (data.scoringRules && typeof data.scoringRules === 'object') {
             setScoringRules((prev) => {
               const updated = { ...prev, ...data.scoringRules };
@@ -2487,6 +2589,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const pushToGoogleSheets = useCallback(async (customOverrides?: {
     teams?: Team[];
+    teamMinuses?: TeamMinus[];
     participants?: Participant[];
     artsPrograms?: ArtsProgram[];
     sportsMatches?: SportsMatch[];
@@ -2503,6 +2606,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     try {
       const currentTeams = customOverrides?.teams ?? teams;
+      const currentTeamMinuses = customOverrides?.teamMinuses ?? teamMinuses;
       const currentParticipants = customOverrides?.participants ?? participants;
       const currentPrograms = customOverrides?.artsPrograms ?? artsPrograms;
       const currentMatches = customOverrides?.sportsMatches ?? sportsMatches;
@@ -2541,6 +2645,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         festConfig: currentFestConfig,
         siteSettings: currentFestConfig,
         teams: currentTeams,
+        teamMinuses: currentTeamMinuses,
         participants: currentParticipants,
         artsPrograms: currentPrograms,
         resultsMarks,
@@ -2584,7 +2689,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       return true;
     }
-  }, [festConfig, googleSheetsConfig.appsScriptUrl, googleSheetsConfig.deploymentId, teams, participants, artsPrograms, sportsMatches, schedule, announcements, certificates, documents, scoringRules, showToast]);
+  }, [festConfig, googleSheetsConfig.appsScriptUrl, googleSheetsConfig.deploymentId, teams, teamMinuses, participants, artsPrograms, sportsMatches, schedule, announcements, certificates, documents, scoringRules, showToast]);
 
   pushToGoogleSheetsRef.current = pushToGoogleSheets;
   syncWithGoogleSheetsRef.current = syncWithGoogleSheets;
@@ -2606,17 +2711,19 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (pushToGoogleSheetsRef.current && !isRemoteSyncInProgressRef.current) {
         pushToGoogleSheetsRef.current({ silent: true });
       }
-    }, 1800);
+    }, 800);
 
     return () => clearTimeout(timer);
   }, [
     teams,
+    teamMinuses,
     participants,
     artsPrograms,
     sportsMatches,
     schedule,
     announcements,
     certificates,
+    documents,
     scoringRules,
     festConfig,
     googleSheetsConfig.autoSync,
@@ -2848,6 +2955,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     <FestivalContext.Provider
       value={{
         teams,
+        teamMinuses,
         participants,
         artsPrograms,
         sportsMatches,
@@ -2903,6 +3011,9 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addTeam,
         editTeam,
         deleteTeam,
+        addTeamMinus,
+        editTeamMinus,
+        deleteTeamMinus,
         addScheduleItem,
         editScheduleItem,
         deleteScheduleItem,

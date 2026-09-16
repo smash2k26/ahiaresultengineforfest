@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   UserGroupIcon as Users,
+  Alert02Icon as AlertTriangle,
 } from 'hugeicons-react';
 import { GlassModal } from '../ui/GlassModal';
 import { Team } from '../../types/festival';
@@ -21,11 +22,12 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
   setActiveTab,
   onSelectParticipant,
 }) => {
-  const { participants } = useFestival();
+  const { participants, teamMinuses } = useFestival();
 
   if (!team) return null;
 
   const houseMembers = participants.filter((p) => p.teamId === team.id);
+  const housePenalties = teamMinuses.filter((m) => m.teamId === team.id);
 
   const handleParticipantClick = (identifier: string) => {
     if (onSelectParticipant) {
@@ -60,7 +62,7 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
     >
       <div className="space-y-6">
         {/* House Overview Banner */}
-        <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-sm grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+        <div className={`p-5 rounded-3xl bg-white border border-slate-200 shadow-sm grid grid-cols-2 ${(team.minusPoints || 0) > 0 ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-4 text-center`}>
           <div className="space-y-1 p-2 rounded-2xl bg-amber-50/50 border border-amber-100">
             <span className="text-[10px] font-mono uppercase text-slate-500 font-semibold block">Total Points</span>
             <span className="text-2xl sm:text-3xl font-black font-display font-mono text-amber-700">
@@ -81,6 +83,15 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
               {team.sportsPoints}
             </span>
           </div>
+
+          {(team.minusPoints || 0) > 0 && (
+            <div className="space-y-1 p-2 rounded-2xl bg-rose-50/50 border border-rose-100">
+              <span className="text-[10px] font-mono uppercase text-rose-700 font-semibold block">Deductions</span>
+              <span className="text-2xl sm:text-3xl font-black font-display font-mono text-rose-700">
+                -{team.minusPoints}
+              </span>
+            </div>
+          )}
 
           <div className="space-y-1 p-2 rounded-2xl bg-slate-50 border border-slate-100">
             <span className="text-[10px] font-mono uppercase text-slate-500 font-semibold block">Medals Tally</span>
@@ -105,6 +116,35 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
             <span className="font-semibold text-slate-800">{team.staffInCharge}</span>
           </div>
         </div>
+
+        {/* House Penalties Log if any */}
+        {housePenalties.length > 0 && (
+          <div className="p-4 rounded-2xl bg-rose-50/50 border border-rose-200/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-rose-900 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-rose-600" />
+                House Disciplinary Deductions ({housePenalties.length} Records, -{team.minusPoints || 0} pts total)
+              </h4>
+            </div>
+            <div className="space-y-2">
+              {housePenalties.map((pen) => (
+                <div key={pen.id} className="p-2.5 rounded-xl bg-white border border-rose-100 flex items-center justify-between text-xs">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900">{pen.reason}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-semibold">{pen.category}</span>
+                    </div>
+                    {pen.notes && <p className="text-[11px] text-slate-500 mt-0.5">{pen.notes}</p>}
+                    <span className="text-[10px] text-slate-400 font-mono">By: {pen.registeredBy} • {pen.timestamp}</span>
+                  </div>
+                  <span className="text-xs font-bold font-mono text-rose-700 bg-rose-50 px-2 py-1 rounded-md border border-rose-200">
+                    -{pen.pointsDeducted} pts
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Roster Table */}
         <div className="space-y-3">

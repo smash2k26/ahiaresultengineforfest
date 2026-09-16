@@ -109,15 +109,21 @@ export const TeamsHub: React.FC<TeamsHubProps> = ({
                 </div>
 
                 {/* Points Split & Medals */}
-                <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-center">
-                    <span className="text-[10px] text-purple-700 uppercase font-mono font-semibold block">Arts Points</span>
+                <div className={`mt-4 grid ${(team.minusPoints || 0) > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-2 text-xs`}>
+                  <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 text-center">
+                    <span className="text-[10px] text-purple-700 uppercase font-mono font-semibold block truncate">Arts</span>
                     <span className="text-base font-bold font-mono text-purple-900">{team.artsPoints}</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-sky-50 border border-sky-200 text-center">
-                    <span className="text-[10px] text-sky-700 uppercase font-mono font-semibold block">Sports Points</span>
+                  <div className="p-2 rounded-xl bg-sky-50 border border-sky-200 text-center">
+                    <span className="text-[10px] text-sky-700 uppercase font-mono font-semibold block truncate">Sports</span>
                     <span className="text-base font-bold font-mono text-sky-900">{team.sportsPoints}</span>
                   </div>
+                  {(team.minusPoints || 0) > 0 && (
+                    <div className="p-2 rounded-xl bg-rose-50 border border-rose-200 text-center">
+                      <span className="text-[10px] text-rose-700 uppercase font-mono font-semibold block truncate">Penalties</span>
+                      <span className="text-base font-bold font-mono text-rose-700">-{team.minusPoints}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Medals Row */}

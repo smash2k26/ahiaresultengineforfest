@@ -16,6 +16,7 @@ import { AdminSportsSection } from './AdminSportsSection';
 import { AdminAnnouncementsSection } from './AdminAnnouncementsSection';
 import { AdminScheduleSection } from './AdminScheduleSection';
 import { AdminScoringSection } from './AdminScoringSection';
+import { AdminTeamMinusesSection } from './AdminTeamMinusesSection';
 import { AdminCertificatesSection } from './AdminCertificatesSection';
 import { AdminBulkDataModal } from './AdminBulkDataModal';
 import { ResultPodiumModal } from './ResultPodiumModal';
@@ -179,7 +180,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         'PDF Downloaded',
         filterCurrentView && (resultsProgramFilter !== 'All' || resultsHouseFilter !== 'All' || resultsSearch)
           ? `Filtered results exported to official PDF statement.`
-          : `All ${allResultRecords.length} results exported to official PDF statement with program, ad no, name, ranks, team & category.`,
+          : `Official PDF exported with Sub Junior, Junior, Senior, General divisions, category team totals, and grand total standings.`,
         'success'
       );
     } catch (err: any) {
@@ -2170,7 +2171,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-50 rounded-xl text-xs text-slate-600">
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase font-bold block">Total Score</span>
-                    <span className="font-bold text-slate-900 text-sm font-mono">{t.totalPoints || 0} pts</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-bold text-slate-900 text-sm font-mono">{t.totalPoints || 0} pts</span>
+                      {(t.minusPoints || 0) > 0 && (
+                        <span className="text-[10px] font-bold text-rose-600 font-mono">(-{t.minusPoints})</span>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase font-bold block">Current Rank</span>
@@ -2264,6 +2270,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* House Penalty & Minus Points Section */}
+          <div className="pt-8 border-t border-slate-200">
+            <AdminTeamMinusesSection />
           </div>
 
           {/* Add Team Modal */}

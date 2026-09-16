@@ -1,5 +1,6 @@
 import {
   Team,
+  TeamMinus,
   Participant,
   ArtsProgram,
   SportsMatch,
@@ -58,6 +59,7 @@ export const INITIAL_SCORING_RULES: ScoringRules = {
   sportsWinnerPoints: 15,
   sportsRunnerUpPoints: 10,
   sportsThirdPlacePoints: 5,
+  defaultMinusPoints: 5,
 };
 
 export const INITIAL_TEAMS: Team[] = [
@@ -152,6 +154,8 @@ export const INITIAL_GALLERY: GalleryItem[] = [];
 export const INITIAL_DOCUMENTS: DocumentItem[] = [];
 
 export const INITIAL_CERTIFICATES: Certificate[] = [];
+
+export const INITIAL_TEAM_MINUSES: TeamMinus[] = [];
 
 export const INITIAL_GOOGLE_SHEETS_CONFIG: GoogleSheetsConfig = {
   sheetUrl: 'https://script.google.com/macros/s/AKfycbwwh4ZwnwW2C98pwlgoVfN4MI3VokZjr12fO6z5BflcLrFwJoTAhyE4NSvy4JeClymp8w/exec',

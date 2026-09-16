@@ -59,6 +59,7 @@ export interface Team {
   slogan?: string;
   artsPoints: number;
   sportsPoints: number;
+  minusPoints?: number;
   totalPoints: number;
   golds: number;
   silvers: number;
@@ -68,6 +69,18 @@ export interface Team {
   previousRank: number;
   trend: 'up' | 'down' | 'same';
   membersCount: number;
+}
+
+export interface TeamMinus {
+  id: string;
+  teamId: string;
+  teamName: string;
+  pointsDeducted: number;
+  reason: string;
+  category?: 'Disciplinary' | 'Late Entry' | 'Rule Violation' | 'Stage Time Exceeded' | 'Dress Code' | 'Misconduct' | 'Other' | string;
+  registeredBy?: string;
+  timestamp: string;
+  notes?: string;
 }
 
 export interface Participant {
@@ -285,6 +298,7 @@ export interface ScoringRules {
   sportsWinnerPoints: number; // default 15
   sportsRunnerUpPoints: number; // default 10
   sportsThirdPlacePoints: number; // default 5
+  defaultMinusPoints?: number; // default penalty value (e.g., 5 pts)
 }
 
 export interface GoogleSheetsConfig {

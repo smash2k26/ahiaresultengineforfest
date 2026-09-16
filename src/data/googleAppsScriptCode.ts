@@ -33,15 +33,22 @@ var FEST_SHEETS_CONFIG = {
     headerColor: "#1E3A8A", // Deep Royal Blue Header
     headers: [
       "id", "name", "shortCode", "color", "accentColor", "logo", "captain", "viceCaptain", 
-      "staffAdvisor", "slogan", "description", "artsPoints", "sportsPoints", "totalPoints", 
+      "staffAdvisor", "slogan", "description", "artsPoints", "sportsPoints", "minusPoints", "totalPoints", 
       "golds", "silvers", "bronzes", "totalWins", "rank", "previousRank", "trend", "membersCount"
     ],
     colAlignments: [
       "center", "left", "center", "center", "center", "center", "left", "left",
-      "left", "left", "left", "right", "right", "right",
+      "left", "left", "left", "right", "right", "right", "right",
       "right", "right", "right", "right", "center", "center", "center", "right"
     ],
-    colWidths: [100, 190, 90, 100, 100, 80, 140, 140, 150, 180, 220, 100, 100, 110, 75, 75, 75, 85, 70, 70, 70, 100]
+    colWidths: [100, 190, 90, 100, 100, 80, 140, 140, 150, 180, 220, 100, 100, 100, 110, 75, 75, 75, 85, 70, 70, 70, 100]
+  },
+  TeamMinuses: {
+    tabColor: "#991B1B",
+    headerColor: "#991B1B", // Dark Crimson Header for Penalties
+    headers: ["id", "teamId", "teamName", "pointsDeducted", "reason", "category", "registeredBy", "timestamp", "notes"],
+    colAlignments: ["center", "center", "left", "right", "left", "center", "left", "center", "left"],
+    colWidths: [100, 100, 160, 110, 240, 130, 140, 130, 240]
   },
   Participants: {
     tabColor: "#0369A1",
@@ -203,10 +210,21 @@ function setupFestivalSheets() {
 }
 
 /**
- * 2. GET REQUEST HANDLER (Web App pulls live data from Google Sheets)
+ * 2. GET REQUEST HANDLER (Web App pulls live data from Google Sheets with High-Speed Cache)
  */
 function doGet(e) {
   try {
+    var forceFresh = e && e.parameter && (e.parameter.fresh === "1" || e.parameter.action === "fresh" || e.parameter.nocache === "1");
+    var cache = CacheService.getScriptCache();
+    
+    // High-speed cached response for ultra-fast rendering (<150ms)
+    if (!forceFresh) {
+      var cachedJson = cache.get("ahia_fest_live_data_v3");
+      if (cachedJson) {
+        return ContentService.createTextOutput(cachedJson).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
     // Ping or direct setup
@@ -229,6 +247,7 @@ function doGet(e) {
 
     var festConfig = readSiteSettings(settingsSheet) || {};
     var teams = readSheetData(ss.getSheetByName("Teams"));
+    var teamMinuses = readSheetData(ss.getSheetByName("TeamMinuses"));
     var participants = readSheetData(ss.getSheetByName("Participants"));
     var artsPrograms = readSheetData(ss.getSheetByName("Programs"));
     var sportsMatches = readSheetData(ss.getSheetByName("SportsMatches"));
@@ -272,6 +291,7 @@ function doGet(e) {
     teams = teams.map(function(t) {
       t.artsPoints = Number(t.artsPoints) || 0;
       t.sportsPoints = Number(t.sportsPoints) || 0;
+      t.minusPoints = Number(t.minusPoints) || 0;
       t.totalPoints = Number(t.totalPoints) || 0;
       t.golds = Number(t.golds) || 0;
       t.silvers = Number(t.silvers) || 0;
@@ -281,13 +301,19 @@ function doGet(e) {
       return t;
     });
 
-    return jsonResponse({
+    teamMinuses = teamMinuses.map(function(m) {
+      m.pointsDeducted = Number(m.pointsDeducted) || 0;
+      return m;
+    });
+
+    var responsePayload = {
       status: "success",
-      version: "3.5-live-inplace-sync",
+      version: "3.6-fast-sync",
       timestamp: new Date().toISOString(),
       festConfig: festConfig,
       siteSettings: festConfig,
       teams: teams,
+      teamMinuses: teamMinuses,
       participants: participants,
       artsPrograms: artsPrograms,
       sportsMatches: sportsMatches,
@@ -296,7 +322,15 @@ function doGet(e) {
       certificates: certificates,
       documents: documents,
       scoringRules: scoringRules
-    });
+    };
+
+    var outputStr = JSON.stringify(responsePayload);
+    // Cache for 10 minutes (600s). Will be automatically cleared on any doPost update.
+    try {
+      cache.put("ahia_fest_live_data_v3", outputStr, 600);
+    } catch (cErr) {}
+
+    return ContentService.createTextOutput(outputStr).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return jsonResponse({
       status: "error",
@@ -310,6 +344,11 @@ function doGet(e) {
  */
 function doPost(e) {
   try {
+    // Invalidate high-speed cache so next read returns freshest live data
+    try {
+      CacheService.getScriptCache().remove("ahia_fest_live_data_v3");
+    } catch (cErr) {}
+
     var raw = e.postData && e.postData.contents ? e.postData.contents : "{}";
     var payload = JSON.parse(raw);
     var action = payload.action || "syncData";
@@ -499,6 +538,15 @@ function doPost(e) {
           ss.getSheetByName("Certificates") || ss.insertSheet("Certificates"),
           payload.certificates,
           FEST_SHEETS_CONFIG.Certificates
+        );
+      }
+
+      // TEAM MINUSES (Penalties)
+      if (payload.teamMinuses && Array.isArray(payload.teamMinuses)) {
+        writeDecoratedSheetData(
+          ss.getSheetByName("TeamMinuses") || ss.insertSheet("TeamMinuses"),
+          payload.teamMinuses,
+          FEST_SHEETS_CONFIG.TeamMinuses
         );
       }
 

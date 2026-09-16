@@ -20,6 +20,7 @@ import { AdminCertificatesSection } from './AdminCertificatesSection';
 import { AdminBulkDataModal } from './AdminBulkDataModal';
 import { ResultPodiumModal } from './ResultPodiumModal';
 import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
+import { generateResultsPDF } from '../../utils/pdfExport';
 
 interface AdminDashboardProps {
   onClose?: () => void;
@@ -153,6 +154,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const handleOpenEditMarkModal = (markRecord: any) => {
     setPodiumModalProgramId(markRecord.programObjId);
     setIsPodiumModalOpen(true);
+  };
+
+  const handleDownloadResultsPDF = (filterCurrentView: boolean = false) => {
+    if (allResultRecords.length === 0) {
+      showToast('No Results Recorded', 'There are no published or recorded results to export to PDF.', 'warning');
+      return;
+    }
+
+    try {
+      const selectedProg = artsPrograms.find((p) => p.id === resultsProgramFilter);
+      const selectedHouse = teams.find((t) => t.id === resultsHouseFilter);
+
+      generateResultsPDF(artsPrograms, teams, participants, {
+        festConfig,
+        filterProgramId: filterCurrentView && resultsProgramFilter !== 'All' ? resultsProgramFilter : undefined,
+        filterProgramTitle: filterCurrentView && selectedProg ? selectedProg.name : undefined,
+        filterHouseId: filterCurrentView && resultsHouseFilter !== 'All' ? resultsHouseFilter : undefined,
+        filterHouseName: filterCurrentView && selectedHouse ? selectedHouse.name : undefined,
+        searchTerm: filterCurrentView && resultsSearch ? resultsSearch : undefined,
+      });
+
+      showToast(
+        'PDF Downloaded',
+        filterCurrentView && (resultsProgramFilter !== 'All' || resultsHouseFilter !== 'All' || resultsSearch)
+          ? `Filtered results exported to official PDF statement.`
+          : `All ${allResultRecords.length} results exported to official PDF statement with program, ad no, name, ranks, team & category.`,
+        'success'
+      );
+    } catch (err: any) {
+      console.error('Failed to generate results PDF:', err);
+      showToast('Export Error', 'Failed to generate results PDF. Please try again.', 'error');
+    }
   };
 
   // -------------------------------------------------------------
@@ -1224,13 +1257,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 Assign 1st, 2nd &amp; 3rd place podium winners. Automatic points calculation syncs instantly to live leaderboards.
               </p>
             </div>
-            <button
-              onClick={handleOpenNewMarkModal}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors cursor-pointer"
-            >
-              <Trophy className="w-4 h-4 text-amber-300" />
-              <span>Enter Podium Results (1st, 2nd, 3rd)</span>
-            </button>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <button
+                onClick={() => handleDownloadResultsPDF(false)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors cursor-pointer"
+                title="Download complete results statement PDF containing Program, Ad No, Name, Ranks, Team, Category"
+              >
+                <Download className="w-4 h-4 text-amber-400" />
+                <span>Download All Results (PDF)</span>
+              </button>
+
+              <button
+                onClick={handleOpenNewMarkModal}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors cursor-pointer"
+              >
+                <Trophy className="w-4 h-4 text-amber-300" />
+                <span>Enter Podium Results</span>
+              </button>
+            </div>
           </div>
 
           {/* 3-Slot Podium Results Modal */}
@@ -1283,6 +1327,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
               <span className="text-xs text-slate-500 whitespace-nowrap">
                 Showing {filteredResults.length} of {allResultRecords.length}
               </span>
+
+              <button
+                type="button"
+                onClick={() => handleDownloadResultsPDF(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 rounded-lg transition-colors cursor-pointer shrink-0 border border-slate-200"
+                title="Download filtered results view as PDF"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+                <span>PDF (View)</span>
+              </button>
             </div>
           </div>
 

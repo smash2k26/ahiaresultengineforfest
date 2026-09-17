@@ -689,6 +689,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     setFestAccentColor(hex);
     setFestAccentPreset('custom');
     document.documentElement.style.setProperty('--fest-accent', hex);
+    if (/^#([0-9A-F]{3}){1,2}$/i.test(hex.trim())) {
+      updateFestConfig({ accentColor: hex.trim(), accentPreset: 'custom' }, true);
+    }
   };
 
   const handleApplyCustomAccentColor = async () => {
@@ -3124,7 +3127,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                       type="text"
                       required
                       value={festNameInput}
-                      onChange={(e) => setFestNameInput(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFestNameInput(val);
+                        updateFestConfig({ festivalName: val, name: val }, true);
+                      }}
                       placeholder="smash 2026"
                       className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none font-medium"
                     />
@@ -3137,7 +3144,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     <input
                       type="text"
                       value={festEditionInput}
-                      onChange={(e) => setFestEditionInput(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFestEditionInput(val);
+                        updateFestConfig({ edition: val }, true);
+                      }}
                       placeholder="Annual Championship Edition"
                       className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
@@ -3152,7 +3163,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         type="text"
                         required
                         value={festYearInput}
-                        onChange={(e) => setFestYearInput(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFestYearInput(val);
+                          updateFestConfig({ year: val }, true);
+                        }}
                         placeholder="2026"
                         className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                       />
@@ -3164,7 +3179,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                       </label>
                       <select
                         value={festBannerInput}
-                        onChange={(e) => setFestBannerInput(e.target.value as any)}
+                        onChange={(e) => {
+                          const val = e.target.value as any;
+                          setFestBannerInput(val);
+                          updateFestConfig({ statusBanner: val }, true);
+                        }}
                         className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none font-semibold text-slate-800"
                       >
                         <option value="LIVE">LIVE</option>
@@ -3184,7 +3203,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     <input
                       type="text"
                       value={festTaglineInput}
-                      onChange={(e) => setFestTaglineInput(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFestTaglineInput(val);
+                        updateFestConfig({ tagline: val }, true);
+                      }}
                       placeholder="Annual Inter-House Arts & Athletics Fest"
                       className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
@@ -3197,7 +3220,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     <input
                       type="text"
                       value={festThemeInput}
-                      onChange={(e) => setFestThemeInput(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFestThemeInput(val);
+                        updateFestConfig({ theme: val }, true);
+                      }}
                       placeholder="Where talent meets competition."
                       className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
@@ -3212,7 +3239,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     <input
                       type="text"
                       value={festLogoUrlInput}
-                      onChange={(e) => setFestLogoUrlInput(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFestLogoUrlInput(val);
+                        updateFestConfig({ logoUrl: val }, true);
+                      }}
                       placeholder="https://..."
                       className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
@@ -3225,7 +3256,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     <input
                       type="text"
                       value={festBannerUrlInput}
-                      onChange={(e) => setFestBannerUrlInput(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFestBannerUrlInput(val);
+                        updateFestConfig({ bannerUrl: val }, true);
+                      }}
                       placeholder="https://..."
                       className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
@@ -3239,7 +3274,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       type="button"
-                      onClick={() => setFestPodiumCategory('arts')}
+                      onClick={() => {
+                        setFestPodiumCategory('arts');
+                        updateFestConfig({ podiumCategory: 'arts' }, true);
+                      }}
                       className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                         festPodiumCategory === 'arts'
                           ? 'border-purple-500 bg-purple-50 text-purple-900 font-bold'
@@ -3256,7 +3294,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
 
                     <button
                       type="button"
-                      onClick={() => setFestPodiumCategory('sports')}
+                      onClick={() => {
+                        setFestPodiumCategory('sports');
+                        updateFestConfig({ podiumCategory: 'sports' }, true);
+                      }}
                       className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                         festPodiumCategory === 'sports'
                           ? 'border-sky-500 bg-sky-50 text-sky-900 font-bold'
@@ -3292,7 +3333,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <input
                     type="text"
                     value={festVenueInput}
-                    onChange={(e) => setFestVenueInput(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFestVenueInput(val);
+                      updateFestConfig({ venue: val }, true);
+                    }}
                     placeholder="Grand Central Stage & Main Athletic Arena"
                     className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
@@ -3305,7 +3350,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <input
                     type="text"
                     value={festOrganizedByInput}
-                    onChange={(e) => setFestOrganizedByInput(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFestOrganizedByInput(val);
+                      updateFestConfig({ organizedBy: val }, true);
+                    }}
                     placeholder="Hidaya Union Devoted Activities (HUDA)"
                     className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
@@ -3318,7 +3367,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <input
                     type="text"
                     value={festChiefGuestInput}
-                    onChange={(e) => setFestChiefGuestInput(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFestChiefGuestInput(val);
+                      updateFestConfig({ chiefGuest: val }, true);
+                    }}
                     placeholder="Prof. Dr. K. M. Andrews"
                     className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
@@ -3332,7 +3385,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <input
                   type="text"
                   value={festLiveStreamUrl}
-                  onChange={(e) => setFestLiveStreamUrl(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFestLiveStreamUrl(val);
+                    updateFestConfig({ liveStreamUrl: val }, true);
+                  }}
                   placeholder="https://youtube.com/live/..."
                   className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
                 />
@@ -3355,7 +3412,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     type="checkbox"
                     className="sr-only peer"
                     checked={festEnableTicker}
-                    onChange={(e) => setFestEnableTicker(e.target.checked)}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      setFestEnableTicker(val);
+                      updateFestConfig({ enableLiveTicker: val }, true);
+                    }}
                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                 </label>
@@ -3369,7 +3430,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <input
                     type="text"
                     value={festTickerText}
-                    onChange={(e) => setFestTickerText(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFestTickerText(val);
+                      updateFestConfig({ announcementTicker: val }, true);
+                    }}
                     placeholder="Official Live Results posting in real-time! Stay tuned for house standings updates."
                     className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
@@ -3381,7 +3446,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   </label>
                   <select
                     value={festTickerSpeed}
-                    onChange={(e) => setFestTickerSpeed(e.target.value as any)}
+                    onChange={(e) => {
+                      const val = e.target.value as any;
+                      setFestTickerSpeed(val);
+                      updateFestConfig({ announcementTickerSpeed: val }, true);
+                    }}
                     className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   >
                     <option value="slow">Slow (Readable)</option>
@@ -3409,7 +3478,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <input
                     type="email"
                     value={festContactEmail}
-                    onChange={(e) => setFestContactEmail(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFestContactEmail(val);
+                      updateFestConfig({ contactEmail: val }, true);
+                    }}
                     placeholder="festival@ahiaedu.org"
                     className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
@@ -3422,7 +3495,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <input
                     type="text"
                     value={festContactPhone}
-                    onChange={(e) => setFestContactPhone(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFestContactPhone(val);
+                      updateFestConfig({ contactPhone: val }, true);
+                    }}
                     placeholder="+91 98470 12345"
                     className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
@@ -3436,7 +3513,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <input
                   type="text"
                   value={festCopyright}
-                  onChange={(e) => setFestCopyright(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFestCopyright(val);
+                    updateFestConfig({ copyrightText: val }, true);
+                  }}
                   placeholder="© 2026 AHIA FEST • Hidaya Union Devoted Activities (HUDA). All Rights Reserved."
                   className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
@@ -3460,7 +3541,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <input
                     type="text"
                     value={festAdminUsernameInput}
-                    onChange={(e) => setFestAdminUsernameInput(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFestAdminUsernameInput(val);
+                      updateFestConfig({ adminUsername: val }, true);
+                    }}
                     placeholder="Enter admin username"
                     className="w-full px-3.5 py-2.5 text-sm font-mono rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
@@ -3473,7 +3558,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <input
                     type="password"
                     value={festPasswordInput}
-                    onChange={(e) => setFestPasswordInput(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFestPasswordInput(val);
+                      if (val.trim()) {
+                        changeAdminPassword(val.trim());
+                        updateFestConfig({ adminPassword: val.trim() }, true);
+                      }
+                    }}
                     placeholder="e.g. hudaahiasmash20262027"
                     className="w-full px-3.5 py-2.5 text-sm font-mono rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />

@@ -21,13 +21,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
       tab: 'participants' as ActiveTab,
     },
     {
-      label: 'Total Programs',
-      value: stats.totalPrograms,
-      sub: 'Arts & Sports events',
-      icon: <Flame className="w-4 h-4 text-amber-500" />,
-      tab: 'schedule' as ActiveTab,
-    },
-    {
       label: 'Arts Programs',
       value: stats.artsPrograms,
       sub: 'Cultural stages',
@@ -186,51 +179,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
               )}
             </div>
           </div>
-
-          {/* Quick House Standings Snippet */}
-          <div className="lg:w-80 p-4 rounded-2xl bg-white border border-slate-200 shrink-0 space-y-3 shadow-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-black">
-                Top Contenders
-              </span>
-              <span className="text-[10px] font-mono font-semibold" style={{ color: 'var(--fest-accent)' }}>Live Points</span>
-            </div>
-
-            <div className="space-y-2">
-              {teams.slice(0, 3).map((team, idx) => (
-                <div
-                  key={team.id || `hero-team-${idx}`}
-                  onClick={() => setActiveTab('leaderboard')}
-                  className="flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-100 hover:border-slate-300 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs font-mono font-bold text-black w-4">
-                      0{idx + 1}
-                    </span>
-                    <TeamLogo
-                      logo={team.logo}
-                      name={team.name}
-                      color={team.color}
-                      size="sm"
-                      roundedClassName="rounded-md"
-                    />
-                    <span className="text-xs font-bold text-slate-900 truncate">{team.name}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-xs font-mono font-bold text-amber-600">
-                      {team.totalPoints}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-semibold">PTS</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* 5 Animated Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+      {/* 4 Animated Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {statCards.map((stat, idx) => (
           <div
             key={`stat-card-${stat.label}-${idx}`}

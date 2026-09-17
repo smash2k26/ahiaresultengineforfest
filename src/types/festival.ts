@@ -43,6 +43,9 @@ export interface FestConfig {
   accentColor?: string;
   accentPreset?: 'indigo' | 'purple' | 'emerald' | 'sky' | 'rose' | 'amber' | 'cyan' | 'pink' | 'custom';
   copyrightText?: string;
+  applyPenaltiesToPodium?: boolean;
+  applyArtsPenalties?: boolean;
+  applySportsPenalties?: boolean;
 }
 
 export interface Team {
@@ -59,6 +62,8 @@ export interface Team {
   slogan?: string;
   artsPoints: number;
   sportsPoints: number;
+  artsMinusPoints?: number;
+  sportsMinusPoints?: number;
   minusPoints?: number;
   totalPoints: number;
   golds: number;
@@ -77,6 +82,7 @@ export interface TeamMinus {
   teamName: string;
   pointsDeducted: number;
   reason: string;
+  scope: 'arts' | 'sports';
   category?: 'Disciplinary' | 'Late Entry' | 'Rule Violation' | 'Stage Time Exceeded' | 'Dress Code' | 'Misconduct' | 'Other' | string;
   registeredBy?: string;
   timestamp: string;

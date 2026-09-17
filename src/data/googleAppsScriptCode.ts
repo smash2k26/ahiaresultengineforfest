@@ -33,22 +33,22 @@ var FEST_SHEETS_CONFIG = {
     headerColor: "#1E3A8A", // Deep Royal Blue Header
     headers: [
       "id", "name", "shortCode", "color", "accentColor", "logo", "captain", "viceCaptain", 
-      "staffAdvisor", "slogan", "description", "artsPoints", "sportsPoints", "minusPoints", "totalPoints", 
+      "staffAdvisor", "slogan", "description", "artsPoints", "sportsPoints", "artsMinusPoints", "sportsMinusPoints", "minusPoints", "totalPoints", 
       "golds", "silvers", "bronzes", "totalWins", "rank", "previousRank", "trend", "membersCount"
     ],
     colAlignments: [
       "center", "left", "center", "center", "center", "center", "left", "left",
-      "left", "left", "left", "right", "right", "right", "right",
+      "left", "left", "left", "right", "right", "right", "right", "right", "right",
       "right", "right", "right", "right", "center", "center", "center", "right"
     ],
-    colWidths: [100, 190, 90, 100, 100, 80, 140, 140, 150, 180, 220, 100, 100, 100, 110, 75, 75, 75, 85, 70, 70, 70, 100]
+    colWidths: [100, 190, 90, 100, 100, 80, 140, 140, 150, 180, 220, 100, 100, 100, 100, 100, 110, 75, 75, 75, 85, 70, 70, 70, 100]
   },
   TeamMinuses: {
     tabColor: "#991B1B",
     headerColor: "#991B1B", // Dark Crimson Header for Penalties
-    headers: ["id", "teamId", "teamName", "pointsDeducted", "reason", "category", "registeredBy", "timestamp", "notes"],
-    colAlignments: ["center", "center", "left", "right", "left", "center", "left", "center", "left"],
-    colWidths: [100, 100, 160, 110, 240, 130, 140, 130, 240]
+    headers: ["id", "teamId", "teamName", "pointsDeducted", "reason", "scope", "category", "registeredBy", "timestamp", "notes"],
+    colAlignments: ["center", "center", "left", "right", "left", "center", "center", "left", "center", "left"],
+    colWidths: [100, 100, 160, 110, 240, 90, 130, 140, 130, 240]
   },
   Participants: {
     tabColor: "#0369A1",
@@ -291,6 +291,8 @@ function doGet(e) {
     teams = teams.map(function(t) {
       t.artsPoints = Number(t.artsPoints) || 0;
       t.sportsPoints = Number(t.sportsPoints) || 0;
+      t.artsMinusPoints = Number(t.artsMinusPoints) || 0;
+      t.sportsMinusPoints = Number(t.sportsMinusPoints) || 0;
       t.minusPoints = Number(t.minusPoints) || 0;
       t.totalPoints = Number(t.totalPoints) || 0;
       t.golds = Number(t.golds) || 0;
@@ -383,6 +385,9 @@ function doPost(e) {
         adminPassword: (siteConfig && siteConfig.adminPassword !== undefined) ? siteConfig.adminPassword : (currentCfg.adminPassword || "hudaahiasmash20262027"),
         adminUsername: (siteConfig && siteConfig.adminUsername !== undefined) ? siteConfig.adminUsername : (currentCfg.adminUsername || "smash2k26"),
         podiumCategory: (siteConfig && siteConfig.podiumCategory !== undefined) ? siteConfig.podiumCategory : (currentCfg.podiumCategory || "arts"),
+        applyPenaltiesToPodium: (siteConfig && siteConfig.applyPenaltiesToPodium !== undefined) ? String(siteConfig.applyPenaltiesToPodium) : (currentCfg.applyPenaltiesToPodium || "TRUE"),
+        applyArtsPenalties: (siteConfig && siteConfig.applyArtsPenalties !== undefined) ? String(siteConfig.applyArtsPenalties) : (currentCfg.applyArtsPenalties || "TRUE"),
+        applySportsPenalties: (siteConfig && siteConfig.applySportsPenalties !== undefined) ? String(siteConfig.applySportsPenalties) : (currentCfg.applySportsPenalties || "TRUE"),
         accentColor: (siteConfig && siteConfig.accentColor !== undefined) ? siteConfig.accentColor : (currentCfg.accentColor || "#4F46E5"),
         accentPreset: (siteConfig && siteConfig.accentPreset !== undefined) ? siteConfig.accentPreset : (currentCfg.accentPreset || "indigo"),
         copyrightText: (siteConfig && siteConfig.copyrightText !== undefined) ? siteConfig.copyrightText : (currentCfg.copyrightText || "© 2026 AHIA FEST • Hidaya Union Devoted Activities (HUDA). All Rights Reserved."),
@@ -717,6 +722,9 @@ function initSiteSettingsSheet(sheet, config) {
     ["adminUsername", "Portal Admin Username", config.adminUsername !== undefined ? config.adminUsername : "smash2k26", "Master administrator username for portal access."],
     ["adminPassword", "Portal Admin Password", config.adminPassword !== undefined ? config.adminPassword : "hudaahiasmash20262027", "Master security passkey for Chief Festival Controller."],
     ["podiumCategory", "Championship Podium Display Mode", config.podiumCategory || "arts", "Championship Podium Display Mode: arts (Arts Only) | sports (Sports Only) | overall (Combined)."],
+    ["applyPenaltiesToPodium", "Deduct Penalties from Podium Points", config.applyPenaltiesToPodium !== undefined ? String(config.applyPenaltiesToPodium) : "TRUE", "When TRUE, disciplinary minus points will be subtracted from live podium rankings & PDF exports."],
+    ["applyArtsPenalties", "Deduct Arts Penalty Minuses", config.applyArtsPenalties !== undefined ? String(config.applyArtsPenalties) : "TRUE", "When TRUE, Arts minus points will be deducted from Arts rankings & PDF exports."],
+    ["applySportsPenalties", "Deduct Sports Penalty Minuses", config.applySportsPenalties !== undefined ? String(config.applySportsPenalties) : "TRUE", "When TRUE, Sports minus points will be deducted from Sports rankings & PDF exports."],
     ["accentColor", "Web Accent Color", config.accentColor !== undefined ? config.accentColor : "#4F46E5", "Primary brand accent hex code used for buttons, active badges, and highlights."],
     ["accentPreset", "Color Palette Preset", config.accentPreset || "indigo", "Color theme preset name: indigo | purple | emerald | sky | rose | amber | cyan | pink | custom."],
     ["copyrightText", "Footer Copyright Notice", config.copyrightText !== undefined ? config.copyrightText : "© 2026 AHIA FEST • Hidaya Union Devoted Activities (HUDA). All Rights Reserved.", "Official footer copyright line displayed on public pages."],

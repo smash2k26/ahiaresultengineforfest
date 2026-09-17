@@ -21,7 +21,7 @@ import { AdminCertificatesSection } from './AdminCertificatesSection';
 import { AdminBulkDataModal } from './AdminBulkDataModal';
 import { ResultPodiumModal } from './ResultPodiumModal';
 import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
-import { generateResultsPDF } from '../../utils/pdfExport';
+import { generateResultsPDF, generateSportsResultsPDF, generateArtsResultsOnlyPDF } from '../../utils/pdfExport';
 
 interface AdminDashboardProps {
   onClose?: () => void;
@@ -95,13 +95,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   // -------------------------------------------------------------
   const [resultsSearch, setResultsSearch] = useState('');
   const [resultsProgramFilter, setResultsProgramFilter] = useState('All');
+  const [resultsCategoryFilter, setResultsCategoryFilter] = useState('All');
   const [resultsHouseFilter, setResultsHouseFilter] = useState('All');
   const [isPodiumModalOpen, setIsPodiumModalOpen] = useState(false);
   const [podiumModalProgramId, setPodiumModalProgramId] = useState('');
 
   // Aggregate all result entries across programs
   const allResultRecords = useMemo(() => {
-    const list: Array<ArtsResultEntry & { programTitle: string; programCode: string; programObjId: string }> = [];
+    const list: Array<ArtsResultEntry & { programTitle: string; programCode: string; programObjId: string; programCategory: string }> = [];
     artsPrograms.forEach((p) => {
       (p.results || []).forEach((r) => {
         list.push({
@@ -109,6 +110,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
           programObjId: p.id,
           programTitle: p.name,
           programCode: p.code || 'EV-' + p.id.slice(-3),
+          programCategory: p.category || 'General',
         });
       });
     });
@@ -134,13 +136,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         r.programObjId === resultsProgramFilter ||
         r.programTitle === resultsProgramFilter;
 
+      const matchCategory =
+        resultsCategoryFilter === 'All' ||
+        r.programCategory === resultsCategoryFilter;
+
       const matchHouse =
         resultsHouseFilter === 'All' ||
         r.teamId === resultsHouseFilter;
 
-      return matchQuery && matchProgram && matchHouse;
+      return matchQuery && matchProgram && matchCategory && matchHouse;
     });
-  }, [allResultRecords, resultsSearch, resultsProgramFilter, resultsHouseFilter]);
+  }, [allResultRecords, resultsSearch, resultsProgramFilter, resultsCategoryFilter, resultsHouseFilter]);
 
   const handleOpenNewMarkModal = () => {
     if (artsPrograms.length === 0) {
@@ -186,6 +192,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     } catch (err: any) {
       console.error('Failed to generate results PDF:', err);
       showToast('Export Error', 'Failed to generate results PDF. Please try again.', 'error');
+    }
+  };
+
+  const handleDownloadSportsResultsPDF = () => {
+    try {
+      generateSportsResultsPDF(sportsMatches, teams, participants, { festConfig }, artsPrograms);
+      showToast('Sports PDF Downloaded', 'Official Sports Championship & Athletics results exported to PDF.', 'success');
+    } catch (err: any) {
+      console.error('Failed to generate sports results PDF:', err);
+      showToast('Export Error', 'Failed to generate sports results PDF. Please try again.', 'error');
+    }
+  };
+
+  const handleDownloadArtsResultsOnlyPDF = () => {
+    if (allResultRecords.length === 0) {
+      showToast('No Results Recorded', 'There are no published arts results to export.', 'warning');
+      return;
+    }
+    try {
+      generateArtsResultsOnlyPDF(artsPrograms, teams, participants, { festConfig });
+      showToast('Arts Results Only PDF Downloaded', 'Official Arts competition results statement (results only) exported.', 'success');
+    } catch (err: any) {
+      console.error('Failed to generate arts results only PDF:', err);
+      showToast('Export Error', 'Failed to generate arts results PDF. Please try again.', 'error');
     }
   };
 
@@ -589,6 +619,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [festPasswordInput, setFestPasswordInput] = useState('');
   const [festAdminUsernameInput, setFestAdminUsernameInput] = useState(String(festConfig?.adminUsername || 'smash2k26'));
   const [festCelebrationMode, setFestCelebrationMode] = useState(Boolean(festConfig?.isCelebrationMode));
+  const [festApplyPenaltiesToPodium, setFestApplyPenaltiesToPodium] = useState(festConfig?.applyPenaltiesToPodium ?? true);
+  const [festApplyArtsPenalties, setFestApplyArtsPenalties] = useState(festConfig?.applyArtsPenalties ?? (festConfig?.applyPenaltiesToPodium ?? true));
+  const [festApplySportsPenalties, setFestApplySportsPenalties] = useState(festConfig?.applySportsPenalties ?? (festConfig?.applyPenaltiesToPodium ?? true));
   const [festPodiumCategory, setFestPodiumCategory] = useState<'arts' | 'sports'>(
     festConfig?.podiumCategory === 'sports' ? 'sports' : 'arts'
   );
@@ -621,6 +654,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       setFestAdminUsernameInput(String(festConfig.adminUsername || 'smash2k26'));
       setFestPodiumCategory(festConfig.podiumCategory === 'sports' ? 'sports' : 'arts');
       setFestCelebrationMode(Boolean(festConfig.isCelebrationMode));
+      setFestApplyPenaltiesToPodium(festConfig.applyPenaltiesToPodium ?? true);
+      setFestApplyArtsPenalties(festConfig.applyArtsPenalties ?? (festConfig.applyPenaltiesToPodium ?? true));
+      setFestApplySportsPenalties(festConfig.applySportsPenalties ?? (festConfig.applyPenaltiesToPodium ?? true));
       setFestAccentColor(String(festConfig.accentColor || '#4F46E5'));
       setFestAccentPreset(festConfig.accentPreset || 'indigo');
       setFestTickerText(String(festConfig.announcementTicker || ''));
@@ -710,6 +746,73 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     }
   };
 
+  const handleQuickTogglePenalties = async () => {
+    const nextVal = !festApplyPenaltiesToPodium;
+    setFestApplyPenaltiesToPodium(nextVal);
+    setFestApplyArtsPenalties(nextVal);
+    setFestApplySportsPenalties(nextVal);
+    const updated = {
+      ...festConfig,
+      applyPenaltiesToPodium: nextVal,
+      applyArtsPenalties: nextVal,
+      applySportsPenalties: nextVal,
+    };
+    updateFestConfig(updated, true);
+    if (nextVal) {
+      showToast('All Penalties Applied', 'Disciplinary penalties will now be deducted from podium points.', 'info');
+    } else {
+      showToast('All Penalties Hidden', 'Podium now shows gross points without minus points deducted.', 'info');
+    }
+    if (googleSheetsConfig.appsScriptUrl) {
+      await pushToGoogleSheets({
+        festConfig: updated,
+        silent: true,
+      });
+    }
+  };
+
+  const handleQuickToggleArtsPenalties = async () => {
+    const nextVal = !festApplyArtsPenalties;
+    setFestApplyArtsPenalties(nextVal);
+    const updated = {
+      ...festConfig,
+      applyArtsPenalties: nextVal,
+    };
+    updateFestConfig(updated, true);
+    if (nextVal) {
+      showToast('Arts Penalties Active', 'Arts minus points will now be deducted from Arts rankings.', 'info');
+    } else {
+      showToast('Arts Penalties Hidden', 'Arts leaderboard now displays raw points without minus deductions.', 'info');
+    }
+    if (googleSheetsConfig.appsScriptUrl) {
+      await pushToGoogleSheets({
+        festConfig: updated,
+        silent: true,
+      });
+    }
+  };
+
+  const handleQuickToggleSportsPenalties = async () => {
+    const nextVal = !festApplySportsPenalties;
+    setFestApplySportsPenalties(nextVal);
+    const updated = {
+      ...festConfig,
+      applySportsPenalties: nextVal,
+    };
+    updateFestConfig(updated, true);
+    if (nextVal) {
+      showToast('Sports Penalties Active', 'Sports minus points will now be deducted from Sports rankings.', 'info');
+    } else {
+      showToast('Sports Penalties Hidden', 'Sports leaderboard now displays raw points without minus deductions.', 'info');
+    }
+    if (googleSheetsConfig.appsScriptUrl) {
+      await pushToGoogleSheets({
+        festConfig: updated,
+        silent: true,
+      });
+    }
+  };
+
   const handleTestFireworks = () => {
     window.dispatchEvent(new CustomEvent('fest-trigger-fireworks'));
     showToast('🎉 Test Fireworks Launched!', 'Celebration sequence active on screen.', 'success');
@@ -732,6 +835,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       bannerUrl: String(festBannerUrlInput || '').trim(),
       podiumCategory: festPodiumCategory,
       isCelebrationMode: festCelebrationMode,
+      applyPenaltiesToPodium: festApplyPenaltiesToPodium,
+      applyArtsPenalties: festApplyArtsPenalties,
+      applySportsPenalties: festApplySportsPenalties,
       accentColor: festAccentColor,
       accentPreset: festAccentPreset as any,
       announcementTicker: festTickerText,
@@ -1261,16 +1367,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
             <div className="flex items-center gap-2.5 flex-wrap">
               <button
                 onClick={() => handleDownloadResultsPDF(false)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors cursor-pointer"
-                title="Download complete results statement PDF containing Program, Ad No, Name, Ranks, Team, Category"
+                className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition-colors cursor-pointer"
+                title="Download Arts Results & Standings PDF statement"
               >
-                <Download className="w-4 h-4 text-amber-400" />
-                <span>Download All Results (PDF)</span>
+                <Download className="w-4 h-4 text-amber-300" />
+                <span>Download Arts Results & Standings (PDF)</span>
+              </button>
+
+              <button
+                onClick={handleDownloadArtsResultsOnlyPDF}
+                className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition-colors cursor-pointer"
+                title="Download Arts Results Only PDF statement"
+              >
+                <Download className="w-4 h-4 text-amber-300" />
+                <span>Download Arts Results Only (PDF)</span>
+              </button>
+
+              <button
+                onClick={handleDownloadSportsResultsPDF}
+                className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition-colors cursor-pointer"
+                title="Download Sports Results PDF statement"
+              >
+                <Download className="w-4 h-4 text-amber-300" />
+                <span>Download Sports Results (PDF)</span>
               </button>
 
               <button
                 onClick={handleOpenNewMarkModal}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition-colors cursor-pointer"
               >
                 <Trophy className="w-4 h-4 text-amber-300" />
                 <span>Enter Podium Results</span>
@@ -1310,6 +1434,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     {p.code ? `${p.code} - ` : ''} {p.name}
                   </option>
                 ))}
+              </select>
+
+              <select
+                value={resultsCategoryFilter}
+                onChange={(e) => setResultsCategoryFilter(e.target.value)}
+                className="px-3 py-2 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="All">All Categories</option>
+                <option value="Senior">Senior</option>
+                <option value="Junior">Junior</option>
+                <option value="Sub Junior">Sub Junior</option>
+                <option value="General">General</option>
               </select>
 
               <select
@@ -2894,6 +3030,88 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <div className="text-[11px] text-slate-500 font-mono bg-white/80 p-2 rounded-lg border border-slate-200 flex flex-wrap items-center justify-between gap-2">
                     <span>Database Record: <code>{JSON.stringify({ table: "settings", doc: "celebration", celebrationMode: festCelebrationMode, source: "admin_toggle" })}</code></span>
                     <span className="text-emerald-700 font-semibold flex items-center gap-1">✓ Cloud Database Synced</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
+                  <div className="border-b border-slate-200 pb-3">
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <span>Disciplinary Penalty Controls & Deductions</span>
+                      <span className="text-xs font-normal text-slate-500">(Google Sheets & Live App Synced)</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Control whether registered house penalty minuses are subtracted from live podium leaderboards, scorecards, and PDF reports.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Arts Penalty Toggle */}
+                    <div className="p-3 bg-white border border-slate-200 rounded-lg flex items-center justify-between gap-3 shadow-xs">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-purple-950 flex items-center gap-1.5">
+                            <span>🎨</span> Arts Penalty Minuses
+                          </span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            festApplyArtsPenalties ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${festApplyArtsPenalties ? 'bg-purple-600' : 'bg-slate-400'}`}></span>
+                            {festApplyArtsPenalties ? 'ON' : 'OFF'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Deduct Arts minus points from Arts podiums & scorecards.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={festApplyArtsPenalties}
+                          onChange={handleQuickToggleArtsPenalties}
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                      </label>
+                    </div>
+
+                    {/* Sports Penalty Toggle */}
+                    <div className="p-3 bg-white border border-slate-200 rounded-lg flex items-center justify-between gap-3 shadow-xs">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-sky-950 flex items-center gap-1.5">
+                            <span>⚽</span> Sports Penalty Minuses
+                          </span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            festApplySportsPenalties ? 'bg-sky-100 text-sky-800 border border-sky-200' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${festApplySportsPenalties ? 'bg-sky-600' : 'bg-slate-400'}`}></span>
+                            {festApplySportsPenalties ? 'ON' : 'OFF'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Deduct Sports minus points from Sports podiums & scorecards.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={festApplySportsPenalties}
+                          onChange={handleQuickToggleSportsPenalties}
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Master Toggle */}
+                  <div className="pt-1 flex items-center justify-between text-xs text-slate-600 bg-white/60 p-2.5 rounded-lg border border-slate-200">
+                    <span className="font-semibold text-slate-700">Master Switch (All Podium Penalties):</span>
+                    <button
+                      type="button"
+                      onClick={handleQuickTogglePenalties}
+                      className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                        festApplyPenaltiesToPodium 
+                          ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
+                          : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                      }`}
+                    >
+                      {festApplyPenaltiesToPodium ? 'Disable All Penalties' : 'Enable All Penalties'}
+                    </button>
                   </div>
                 </div>
 

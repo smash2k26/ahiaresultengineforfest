@@ -566,9 +566,9 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         teamStats[t.id] = { arts: 0, sports: 0, golds: 0, silvers: 0, bronzes: 0, wins: 0 };
       });
 
-      // 1. Process Published Arts Programs
+      // 1. Process Arts Programs with Results
       artsPrograms.forEach((prog) => {
-        if (prog.publishStatus === 'Published' && prog.results && prog.results.length > 0) {
+        if (prog.results && prog.results.length > 0) {
           const isGroup = prog.section === 'Group';
           const multiplier = isGroup ? scoringRules.groupEventMultiplier : 1;
           const isSports = isSportsProgram(prog);
@@ -576,30 +576,41 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           prog.results.forEach((res) => {
             if (teamStats[res.teamId]) {
               let pts = 0;
+              if (res.pointsAwarded !== undefined) {
+                pts = Number(res.pointsAwarded);
+              } else {
+                if (res.rank === 1) {
+                  pts += scoringRules.goldPoints;
+                } else if (res.rank === 2) {
+                  pts += scoringRules.silverPoints;
+                } else if (res.rank === 3) {
+                  pts += scoringRules.bronzePoints;
+                } else {
+                  pts += scoringRules.participationPoints;
+                }
+                
+                // Add Grade bonus
+                if (res.grade === 'A+') pts += scoringRules.gradePointsA_Plus;
+                else if (res.grade === 'A') pts += scoringRules.gradePointsA;
+                else if (res.grade === 'B+') pts += scoringRules.gradePointsB_Plus;
+                else if (res.grade === 'B') pts += scoringRules.gradePointsB;
+                
+                pts = Math.round(pts * multiplier);
+              }
+
               if (res.rank === 1) {
-                pts += scoringRules.goldPoints;
                 teamStats[res.teamId].golds += 1;
                 teamStats[res.teamId].wins += 1;
               } else if (res.rank === 2) {
-                pts += scoringRules.silverPoints;
                 teamStats[res.teamId].silvers += 1;
               } else if (res.rank === 3) {
-                pts += scoringRules.bronzePoints;
                 teamStats[res.teamId].bronzes += 1;
-              } else {
-                pts += scoringRules.participationPoints;
               }
 
-              // Add Grade bonus
-              if (res.grade === 'A+') pts += scoringRules.gradePointsA_Plus;
-              else if (res.grade === 'A') pts += scoringRules.gradePointsA;
-              else if (res.grade === 'B+') pts += scoringRules.gradePointsB_Plus;
-              else if (res.grade === 'B') pts += scoringRules.gradePointsB;
-
               if (isSports) {
-                teamStats[res.teamId].sports += Math.round(pts * multiplier);
+                teamStats[res.teamId].sports += pts;
               } else {
-                teamStats[res.teamId].arts += Math.round(pts * multiplier);
+                teamStats[res.teamId].arts += pts;
               }
             }
           });
@@ -631,12 +642,20 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const updatedTeams = prevTeams.map((team) => {
         const stats = teamStats[team.id] || { arts: 0, sports: 0, golds: 0, silvers: 0, bronzes: 0, wins: 0 };
         const teamMinusList = teamMinuses.filter((m) => m.teamId === team.id);
-        const minusPoints = teamMinusList.reduce((acc, m) => acc + (Number(m.pointsDeducted) || 0), 0);
-        const total = Math.max(0, stats.arts + stats.sports - minusPoints);
+        const applyArts = festConfig.applyArtsPenalties ?? (festConfig.applyPenaltiesToPodium ?? true);
+        const applySports = festConfig.applySportsPenalties ?? (festConfig.applyPenaltiesToPodium ?? true);
+        const artsMinusPoints = teamMinusList.filter((m) => (m.scope || 'arts') === 'arts').reduce((acc, m) => acc + (Number(m.pointsDeducted) || 0), 0);
+        const sportsMinusPoints = teamMinusList.filter((m) => m.scope === 'sports').reduce((acc, m) => acc + (Number(m.pointsDeducted) || 0), 0);
+        const minusPoints = artsMinusPoints + sportsMinusPoints;
+        const effectiveArtsMinus = applyArts ? artsMinusPoints : 0;
+        const effectiveSportsMinus = applySports ? sportsMinusPoints : 0;
+        const total = Math.max(0, stats.arts - effectiveArtsMinus) + Math.max(0, stats.sports - effectiveSportsMinus);
         return {
           ...team,
           artsPoints: stats.arts,
           sportsPoints: stats.sports,
+          artsMinusPoints,
+          sportsMinusPoints,
           minusPoints: minusPoints,
           totalPoints: total,
           golds: stats.golds,
@@ -1740,31 +1759,28 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       publishNow ? 'Published' : prog.publishStatus || 'Draft'
     );
 
-    // Clean up any removed slots (tombstone records for cleared winners)
-    const validParticipantIds = new Set(validEntries.map((v) => v.participantId));
+    // Clean up all previous results for this program to prevent stale marks on podiums
     (prog.results || []).forEach((oldRes) => {
-      if (oldRes.participantId && !validParticipantIds.has(oldRes.participantId)) {
-        const keysToDelete = [
-          `${prog.id}_${oldRes.participantId}`,
-          `${prog.id}_${oldRes.chestNo || ''}`,
-          prog.code ? `${prog.code}_${oldRes.participantId}` : '',
-          prog.code ? `${prog.code}_${oldRes.chestNo || ''}` : '',
-          oldRes.id || '',
-        ].filter(Boolean);
-        keysToDelete.forEach((k) => {
-          recordDeletedId(k);
-          persistRemoteDeletion({
-            id: k,
-            itemType: 'result_mark',
-            programId: prog.id,
-            participantId: oldRes.participantId,
-            chestNo: oldRes.chestNo || '',
-            deletedAt: new Date().toISOString(),
-          });
+      const keysToDelete = [
+        `${prog.id}_${oldRes.participantId}`,
+        `${prog.id}_${oldRes.chestNo || ''}`,
+        prog.code ? `${prog.code}_${oldRes.participantId}` : '',
+        prog.code ? `${prog.code}_${oldRes.chestNo || ''}` : '',
+        oldRes.id || '',
+      ].filter(Boolean);
+      keysToDelete.forEach((k) => {
+        recordDeletedId(k);
+        persistRemoteDeletion({
+          id: k,
+          itemType: 'result_mark',
+          programId: prog.id,
+          participantId: oldRes.participantId,
+          chestNo: oldRes.chestNo || '',
+          deletedAt: new Date().toISOString(),
         });
-        if (prog.code && oldRes.chestNo) {
-          dispatchRemoteDelete('ResultsMarks', `${prog.code}_${oldRes.chestNo}`);
-        }
+      });
+      if (prog.code && oldRes.chestNo) {
+        dispatchRemoteDelete('ResultsMarks', `${prog.code}_${oldRes.chestNo}`);
       }
     });
 
@@ -2035,7 +2051,10 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 organizedBy: cfg.organizedBy !== undefined ? cfg.organizedBy : prev.organizedBy,
                 chiefGuest: cfg.chiefGuest !== undefined ? cfg.chiefGuest : prev.chiefGuest,
                 announcementTicker: cfg.announcementTicker !== undefined ? cfg.announcementTicker : prev.announcementTicker,
-                enableLiveTicker: cfg.enableLiveTicker !== undefined ? (cfg.enableLiveTicker === 'true' || cfg.enableLiveTicker === true) : prev.enableLiveTicker,
+                enableLiveTicker: cfg.enableLiveTicker !== undefined ? (String(cfg.enableLiveTicker).toLowerCase() === 'true') : prev.enableLiveTicker,
+                applyPenaltiesToPodium: cfg.applyPenaltiesToPodium !== undefined && String(cfg.applyPenaltiesToPodium).trim() !== '' ? (String(cfg.applyPenaltiesToPodium).toLowerCase() === 'true') : (prev.applyPenaltiesToPodium ?? true),
+                applyArtsPenalties: cfg.applyArtsPenalties !== undefined && String(cfg.applyArtsPenalties).trim() !== '' ? (String(cfg.applyArtsPenalties).toLowerCase() === 'true') : (prev.applyArtsPenalties ?? prev.applyPenaltiesToPodium ?? true),
+                applySportsPenalties: cfg.applySportsPenalties !== undefined && String(cfg.applySportsPenalties).trim() !== '' ? (String(cfg.applySportsPenalties).toLowerCase() === 'true') : (prev.applySportsPenalties ?? prev.applyPenaltiesToPodium ?? true),
                 announcementTickerSpeed: (cfg.announcementTickerSpeed as any) || prev.announcementTickerSpeed || 'normal',
                 accentColor: cfg.accentColor || prev.accentColor || '#4F46E5',
                 accentPreset: (cfg.accentPreset as any) || prev.accentPreset || 'indigo',

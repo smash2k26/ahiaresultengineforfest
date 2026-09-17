@@ -14,24 +14,40 @@ export const OverallLeaderboardTable: React.FC<OverallLeaderboardTableProps> = (
   setActiveTab,
   onSelectTeam,
 }) => {
-  const { teams } = useFestival();
+  const { teams, festConfig } = useFestival();
   const [boardType, setBoardType] = useState<'arts' | 'sports'>('arts');
 
+  const applyArtsPenalties = festConfig.applyArtsPenalties ?? (festConfig.applyPenaltiesToPodium ?? true);
+  const applySportsPenalties = festConfig.applySportsPenalties ?? (festConfig.applyPenaltiesToPodium ?? true);
+
+  // Helper to compute net points
+  const getTeamNetPoints = (team: typeof teams[0], type: 'arts' | 'sports') => {
+    if (type === 'arts') {
+      const minus = applyArtsPenalties ? (Number(team.artsMinusPoints) || 0) : 0;
+      return Math.max(0, (team.artsPoints || 0) - minus);
+    } else {
+      const minus = applySportsPenalties ? (Number(team.sportsMinusPoints) || 0) : 0;
+      return Math.max(0, (team.sportsPoints || 0) - minus);
+    }
+  };
+
+  const getTeamGrossPoints = (team: typeof teams[0], type: 'arts' | 'sports') => {
+    if (type === 'arts') return team.artsPoints || 0;
+    return team.sportsPoints || 0;
+  };
+
   const maxPoints = Math.max(
-    ...teams.map((t) => (boardType === 'arts' ? t.artsPoints : t.sportsPoints)),
+    ...teams.map((t) => getTeamNetPoints(t, boardType)),
     1
   );
 
-  // Sort based on selected tab
+  // Sort based on selected tab and net points
   const sortedTeams = [...teams].sort((a, b) => {
-    if (boardType === 'arts') {
-      if (b.artsPoints !== a.artsPoints) return b.artsPoints - a.artsPoints;
-      if (b.golds !== a.golds) return b.golds - a.golds;
-      return b.silvers - a.silvers;
-    }
-    if (b.sportsPoints !== a.sportsPoints) return b.sportsPoints - a.sportsPoints;
-    if (b.totalWins !== a.totalWins) return b.totalWins - a.totalWins;
-    return b.golds - a.golds;
+    const aNet = getTeamNetPoints(a, boardType);
+    const bNet = getTeamNetPoints(b, boardType);
+    if (bNet !== aNet) return bNet - aNet;
+    if (b.golds !== a.golds) return b.golds - a.golds;
+    return b.silvers - a.silvers;
   });
 
   const handleRowClick = (teamId: string) => {
@@ -52,7 +68,9 @@ export const OverallLeaderboardTable: React.FC<OverallLeaderboardTableProps> = (
           </div>
           <div>
             <h3 className="text-base sm:text-lg font-bold font-display text-slate-900 tracking-wide">
-              {boardType === 'arts' ? 'ARTS FEST HOUSE STANDINGS' : 'SPORTS CHAMPIONSHIP STANDINGS'}
+              {boardType === 'arts'
+                ? 'ARTS FEST HOUSE STANDINGS'
+                : 'SPORTS CHAMPIONSHIP STANDINGS'}
             </h3>
             <p className="text-xs text-slate-500">
               {boardType === 'arts'
@@ -62,11 +80,11 @@ export const OverallLeaderboardTable: React.FC<OverallLeaderboardTableProps> = (
           </div>
         </div>
 
-        {/* View Switcher Tabs: Arts / Sports Only */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 self-start sm:self-auto">
+        {/* View Switcher Tabs: Arts / Sports */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 self-start sm:self-auto flex-wrap">
           <button
             onClick={() => setBoardType('arts')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
               boardType === 'arts'
                 ? 'bg-purple-600 text-white shadow-xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
@@ -77,7 +95,7 @@ export const OverallLeaderboardTable: React.FC<OverallLeaderboardTableProps> = (
           </button>
           <button
             onClick={() => setBoardType('sports')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
               boardType === 'sports'
                 ? 'bg-sky-600 text-white shadow-xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
@@ -100,7 +118,7 @@ export const OverallLeaderboardTable: React.FC<OverallLeaderboardTableProps> = (
               <th className="py-3 px-3 text-right">Sports Pts</th>
               <th className="py-3 px-3 text-center hidden md:table-cell">Medals</th>
               <th className="py-3 px-4 sm:px-6 text-right font-bold text-slate-900">
-                {boardType === 'arts' ? 'Arts Points' : 'Sports Points'}
+                {boardType === 'arts' ? 'Net Arts Points' : 'Net Sports Points'}
               </th>
               <th className="py-3 px-4 text-center w-16">Trend</th>
             </tr>
@@ -108,8 +126,12 @@ export const OverallLeaderboardTable: React.FC<OverallLeaderboardTableProps> = (
           <tbody className="divide-y divide-slate-100 text-sm">
             {sortedTeams.map((team, idx) => {
               const rank = idx + 1;
-              const pointsToShow = boardType === 'arts' ? team.artsPoints : team.sportsPoints;
-              const percentage = Math.round((pointsToShow / maxPoints) * 100);
+              const netPoints = getTeamNetPoints(team, boardType);
+              const grossPoints = getTeamGrossPoints(team, boardType);
+              const minusPoints = boardType === 'arts' 
+                ? (Number(team.artsMinusPoints) || 0)
+                : (Number(team.sportsMinusPoints) || 0);
+              const percentage = Math.round((netPoints / maxPoints) * 100);
 
               const rankBadges = {
                 1: <span className="w-7 h-7 rounded-full bg-amber-50 text-amber-800 font-bold border border-amber-300 inline-flex items-center justify-center font-mono shadow-2xs">01</span>,
@@ -188,13 +210,17 @@ export const OverallLeaderboardTable: React.FC<OverallLeaderboardTableProps> = (
                     </div>
                   </td>
 
-                  {/* Total Points for Active Category */}
+                  {/* Net Total Points for Active Category */}
                   <td className="py-4 px-4 sm:px-6 text-right">
                     <div className={`text-base sm:text-lg font-black font-display font-mono ${boardType === 'arts' ? 'text-purple-600' : 'text-sky-600'}`}>
-                      {pointsToShow}
+                      {netPoints}
                     </div>
                     <div className="text-[10px] text-slate-400 font-mono font-semibold">
-                      {boardType === 'arts' ? 'ARTS PTS' : 'SPORTS PTS'}
+                      {(boardType === 'arts' ? applyArtsPenalties : applySportsPenalties) && minusPoints > 0 ? (
+                        <span className="text-slate-400">Gross: {grossPoints} | -{minusPoints}</span>
+                      ) : (
+                        <span>NET {boardType.toUpperCase()} PTS</span>
+                      )}
                     </div>
                   </td>
 

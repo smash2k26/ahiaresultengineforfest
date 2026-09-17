@@ -27,6 +27,7 @@ export const AdminTeamMinusesSection: React.FC = () => {
     showToast,
   } = useFestival();
 
+  const [activeTab, setActiveTab] = useState<'arts' | 'sports'>('arts');
   const [isNewMinusModalOpen, setIsNewMinusModalOpen] = useState(false);
   const [editingMinus, setEditingMinus] = useState<TeamMinus | null>(null);
 
@@ -38,6 +39,7 @@ export const AdminTeamMinusesSection: React.FC = () => {
   const [selectedTeamId, setSelectedTeamId] = useState(teams[0]?.id || '');
   const [pointsDeducted, setPointsDeducted] = useState<number>(scoringRules.defaultMinusPoints || 5);
   const [reason, setReason] = useState('');
+  const [scope, setScope] = useState<'arts' | 'sports'>('arts');
   const [category, setCategory] = useState<'Discipline' | 'Late Arrival' | 'Code of Conduct' | 'Attendance' | 'Unsportsmanlike' | 'Other'>('Discipline');
   const [registeredBy, setRegisteredBy] = useState('Festival Admin');
   const [notes, setNotes] = useState('');
@@ -48,6 +50,7 @@ export const AdminTeamMinusesSection: React.FC = () => {
     setSelectedTeamId(teams[0]?.id || '');
     setPointsDeducted(defaultMinusValue);
     setReason('');
+    setScope(activeTab);
     setCategory('Discipline');
     setRegisteredBy('Festival Admin');
     setNotes('');
@@ -59,6 +62,7 @@ export const AdminTeamMinusesSection: React.FC = () => {
     setSelectedTeamId(minus.teamId);
     setPointsDeducted(minus.pointsDeducted);
     setReason(minus.reason);
+    setScope(minus.scope || 'arts');
     setCategory(minus.category || 'Discipline');
     setRegisteredBy(minus.registeredBy || 'Festival Admin');
     setNotes(minus.notes || '');
@@ -81,6 +85,7 @@ export const AdminTeamMinusesSection: React.FC = () => {
       teamName: targetTeam.name,
       pointsDeducted: Math.max(0, Number(pointsDeducted) || 0),
       reason: reason.trim(),
+      scope,
       category,
       registeredBy: registeredBy.trim() || 'Festival Admin',
       notes: notes.trim(),
@@ -103,6 +108,7 @@ export const AdminTeamMinusesSection: React.FC = () => {
       teamName: targetTeam ? targetTeam.name : editingMinus.teamName,
       pointsDeducted: Math.max(0, Number(pointsDeducted) || 0),
       reason: reason.trim(),
+      scope,
       category,
       registeredBy: registeredBy.trim() || 'Festival Admin',
       notes: notes.trim(),
@@ -114,6 +120,7 @@ export const AdminTeamMinusesSection: React.FC = () => {
   // Filtered Minuses List
   const filteredMinuses = useMemo(() => {
     return teamMinuses.filter((m) => {
+      const matchScope = (m.scope || 'arts') === activeTab;
       const matchHouse = houseFilter === 'All' || m.teamId === houseFilter;
       const q = searchQuery.toLowerCase().trim();
       const matchSearch =
@@ -122,25 +129,29 @@ export const AdminTeamMinusesSection: React.FC = () => {
         m.reason.toLowerCase().includes(q) ||
         (m.category && m.category.toLowerCase().includes(q)) ||
         (m.registeredBy && m.registeredBy.toLowerCase().includes(q));
-      return matchHouse && matchSearch;
+      return matchScope && matchHouse && matchSearch;
     });
-  }, [teamMinuses, houseFilter, searchQuery]);
+  }, [teamMinuses, activeTab, houseFilter, searchQuery]);
 
-  // Total Minus points per house
+  // Total Minus points per house for active tab
   const houseMinusTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     teams.forEach((t) => {
       totals[t.id] = 0;
     });
     teamMinuses.forEach((m) => {
-      totals[m.teamId] = (totals[m.teamId] || 0) + (Number(m.pointsDeducted) || 0);
+      if ((m.scope || 'arts') === activeTab) {
+        totals[m.teamId] = (totals[m.teamId] || 0) + (Number(m.pointsDeducted) || 0);
+      }
     });
     return totals;
-  }, [teams, teamMinuses]);
+  }, [teams, teamMinuses, activeTab]);
 
-  const grandTotalDeductions = useMemo(() => {
-    return teamMinuses.reduce((sum, m) => sum + (Number(m.pointsDeducted) || 0), 0);
-  }, [teamMinuses]);
+  const activeTabTotalDeductions = useMemo(() => {
+    return teamMinuses
+      .filter((m) => (m.scope || 'arts') === activeTab)
+      .reduce((sum, m) => sum + (Number(m.pointsDeducted) || 0), 0);
+  }, [teamMinuses, activeTab]);
 
   return (
     <div className="space-y-6">
@@ -152,7 +163,7 @@ export const AdminTeamMinusesSection: React.FC = () => {
               House Penalty &amp; Minus Points Manager
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
-              Active Deductions: {grandTotalDeductions} pts
+              Active Deductions: {activeTabTotalDeductions} pts
             </span>
           </div>
           <p className="text-sm text-slate-600 mt-0.5">
@@ -179,6 +190,32 @@ export const AdminTeamMinusesSection: React.FC = () => {
             <span>Sync to Sheets</span>
           </button>
         </div>
+      </div>
+
+      {/* Scope Tabs: Arts Penalties vs Sports Penalties */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+        <button
+          onClick={() => setActiveTab('arts')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === 'arts'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+          }`}
+        >
+          <span>🎭</span>
+          <span>Arts Penalties ({teamMinuses.filter(m => (m.scope || 'arts') === 'arts').length})</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('sports')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === 'sports'
+              ? 'bg-sky-600 text-white shadow-sm'
+              : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+          }`}
+        >
+          <span>⚽</span>
+          <span>Sports Penalties ({teamMinuses.filter(m => m.scope === 'sports').length})</span>
+        </button>
       </div>
 
       {/* House Minus Summary Cards */}
@@ -411,6 +448,20 @@ export const AdminTeamMinusesSection: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                    Penalty Scope
+                  </label>
+                  <select
+                    value={scope}
+                    onChange={(e) => setScope(e.target.value as any)}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none cursor-pointer font-bold text-slate-800"
+                  >
+                    <option value="arts">🎭 Arts Penalty</option>
+                    <option value="sports">⚽ Sports Penalty</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                     Violation Category
                   </label>
                   <select
@@ -425,20 +476,6 @@ export const AdminTeamMinusesSection: React.FC = () => {
                     <option value="Unsportsmanlike">Unsportsmanlike Conduct</option>
                     <option value="Other">Other Infraction</option>
                   </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Registered By (Officer / Judge)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={registeredBy}
-                    onChange={(e) => setRegisteredBy(e.target.value)}
-                    placeholder="e.g. Chief Disciplinary Officer"
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none"
-                  />
                 </div>
               </div>
 
@@ -544,6 +581,20 @@ export const AdminTeamMinusesSection: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                    Penalty Scope
+                  </label>
+                  <select
+                    value={scope}
+                    onChange={(e) => setScope(e.target.value as any)}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer font-bold text-slate-800"
+                  >
+                    <option value="arts">🎭 Arts Penalty</option>
+                    <option value="sports">⚽ Sports Penalty</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                     Violation Category
                   </label>
                   <select
@@ -558,19 +609,6 @@ export const AdminTeamMinusesSection: React.FC = () => {
                     <option value="Unsportsmanlike">Unsportsmanlike Conduct</option>
                     <option value="Other">Other Infraction</option>
                   </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Registered By
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={registeredBy}
-                    onChange={(e) => setRegisteredBy(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
                 </div>
               </div>
 

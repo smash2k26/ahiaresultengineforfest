@@ -5,6 +5,7 @@ import { GlassBadge, GlassButton } from '../ui/GlassCard';
 import { Participant, ArtsResultEntry, ArtsProgram } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
 import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
+import { generateResultsPDF } from '../../utils/pdfExport';
 
 interface ResultSearchHubProps {
   initialChestNo?: string;
@@ -172,42 +173,54 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
         </div>
       </div>
 
-      {/* View Switcher Tabs */}
-      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 border border-slate-200 max-w-fit">
-        <button
-          onClick={() => setViewTab('participants')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            viewTab === 'participants'
-              ? 'bg-white text-purple-700 shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <User className="w-4 h-4" />
-          By Participant (Ad No)
-        </button>
+      {/* View Switcher Tabs & Download PDF Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 border border-slate-200 max-w-fit flex-wrap">
+          <button
+            onClick={() => setViewTab('participants')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              viewTab === 'participants'
+                ? 'bg-white text-purple-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <User className="w-4 h-4" />
+            By Participant (Ad No)
+          </button>
+
+          <button
+            onClick={() => setViewTab('programs')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              viewTab === 'programs'
+                ? 'bg-white text-purple-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Palette className="w-4 h-4" />
+            By Program Result Sheet
+          </button>
+
+          <button
+            onClick={() => setViewTab('houses')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              viewTab === 'houses'
+                ? 'bg-white text-purple-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Trophy className="w-4 h-4" />
+            House Standings & Medals
+          </button>
+        </div>
 
         <button
-          onClick={() => setViewTab('programs')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            viewTab === 'programs'
-              ? 'bg-white text-purple-700 shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
+          type="button"
+          onClick={() => generateResultsPDF(artsPrograms, teams, participants, { festConfig })}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-sm hover:shadow-md transition-all cursor-pointer shrink-0"
+          title="Download complete certified Results PDF containing Category Totals & Grand Total With/Without Minus"
         >
-          <Palette className="w-4 h-4" />
-          By Program Result Sheet
-        </button>
-
-        <button
-          onClick={() => setViewTab('houses')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            viewTab === 'houses'
-              ? 'bg-white text-purple-700 shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Trophy className="w-4 h-4" />
-          House Standings & Medals
+          <Download className="w-4 h-4 text-amber-400" />
+          <span>Download Official PDF (Grand Total)</span>
         </button>
       </div>
 

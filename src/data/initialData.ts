@@ -44,6 +44,7 @@ export const INITIAL_FEST_CONFIG: FestConfig = {
   enableLiveTicker: true,
   announcementTickerSpeed: 'normal',
   copyrightText: '© 2026 AHIA FEST • Hidaya Union Devoted Activities (HUDA). All Rights Reserved.',
+  applyPenaltiesToPodium: true,
 };
 
 export const INITIAL_SCORING_RULES: ScoringRules = {

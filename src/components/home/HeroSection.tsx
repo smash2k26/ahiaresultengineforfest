@@ -190,7 +190,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
           {/* Quick House Standings Snippet */}
           <div className="lg:w-80 p-4 rounded-2xl bg-white border border-slate-200 shrink-0 space-y-3 shadow-xs">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-black">
                 Top Contenders
               </span>
               <span className="text-[10px] font-mono font-semibold" style={{ color: 'var(--fest-accent)' }}>Live Points</span>
@@ -204,7 +204,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
                   className="flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-100 hover:border-slate-300 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs font-mono font-bold text-slate-400 w-4">
+                    <span className="text-xs font-mono font-bold text-black w-4">
                       0{idx + 1}
                     </span>
                     <TeamLogo
@@ -248,7 +248,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ setActiveTab }) => {
               <div className="text-xl sm:text-2xl font-black font-display text-slate-900 tracking-tight transition-colors">
                 {stat.value}
               </div>
-              <div className="text-xs font-semibold text-slate-700 mt-0.5">{stat.label}</div>
+              <div className="text-xs font-semibold text-black mt-0.5">{stat.label}</div>
               <div className="text-[10px] text-slate-400 truncate mt-0.5">{stat.sub}</div>
             </div>
           </div>

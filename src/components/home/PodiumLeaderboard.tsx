@@ -15,30 +15,50 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
   if (teams.length < 3) return null;
 
   const podiumCategory = festConfig.podiumCategory || 'arts';
+  const applyArtsPenalties = festConfig.applyArtsPenalties ?? (festConfig.applyPenaltiesToPodium ?? true);
+  const applySportsPenalties = festConfig.applySportsPenalties ?? (festConfig.applyPenaltiesToPodium ?? true);
 
-  // Sort strictly by the selected podium mode
+  // Sort strictly by the selected podium mode after optionally subtracting registered team minuses
   const sortedTeams = [...teams].sort((a, b) => {
     if (podiumCategory === 'sports') {
-      if (b.sportsPoints !== a.sportsPoints) return b.sportsPoints - a.sportsPoints;
+      const aMinus = applySportsPenalties ? (Number(a.sportsMinusPoints) || 0) : 0;
+      const bMinus = applySportsPenalties ? (Number(b.sportsMinusPoints) || 0) : 0;
+      const aNet = Math.max(0, (a.sportsPoints || 0) - aMinus);
+      const bNet = Math.max(0, (b.sportsPoints || 0) - bMinus);
+      if (bNet !== aNet) return bNet - aNet;
       if (b.golds !== a.golds) return b.golds - a.golds;
       return b.totalWins - a.totalWins;
     }
-    if (podiumCategory === 'arts') {
-      if (b.artsPoints !== a.artsPoints) return b.artsPoints - a.artsPoints;
-      if (b.golds !== a.golds) return b.golds - a.golds;
-      return b.totalWins - a.totalWins;
-    }
-    return b.totalPoints - a.totalPoints;
+    
+    // Arts mode (default)
+    const aMinus = applyArtsPenalties ? (Number(a.artsMinusPoints) || 0) : 0;
+    const bMinus = applyArtsPenalties ? (Number(b.artsMinusPoints) || 0) : 0;
+    const aNet = Math.max(0, (a.artsPoints || 0) - aMinus);
+    const bNet = Math.max(0, (b.artsPoints || 0) - bMinus);
+    if (bNet !== aNet) return bNet - aNet;
+    if (b.golds !== a.golds) return b.golds - a.golds;
+    return b.totalWins - a.totalWins;
   });
 
   const first = sortedTeams[0] || teams[0];
   const second = sortedTeams[1] || teams[1];
   const third = sortedTeams[2] || teams[2];
 
+  // Helper to compute net points after subtracting minus points
   const getPoints = (team: typeof first) => {
-    if (podiumCategory === 'sports') return team.sportsPoints;
-    if (podiumCategory === 'arts') return team.artsPoints;
-    return team.totalPoints;
+    if (!team) return 0;
+    if (podiumCategory === 'sports') {
+      const minus = applySportsPenalties ? (Number(team.sportsMinusPoints) || 0) : 0;
+      return Math.max(0, (team.sportsPoints || 0) - minus);
+    }
+    const minus = applyArtsPenalties ? (Number(team.artsMinusPoints) || 0) : 0;
+    return Math.max(0, (team.artsPoints || 0) - minus);
+  };
+
+  const getGrossPoints = (team: typeof first) => {
+    if (!team) return 0;
+    if (podiumCategory === 'sports') return team.sportsPoints || 0;
+    return team.artsPoints || 0;
   };
 
   const getCategoryTitle = () => {
@@ -142,6 +162,7 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
                   <span className="text-purple-600 font-semibold">Arts Points Standings</span>
                 )}
               </div>
+
             </div>
 
             <div className="flex items-center justify-center gap-2 pt-1 border-t border-slate-100 text-xs font-mono">
@@ -191,6 +212,7 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
                   <span className="text-purple-700 font-bold">Leading in Arts Points</span>
                 )}
               </div>
+
             </div>
 
             <div className="flex items-center justify-center gap-3 pt-1 border-t border-amber-100 text-xs font-mono font-bold">
@@ -240,6 +262,7 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
                   <span className="text-purple-600 font-semibold">Arts Points Standings</span>
                 )}
               </div>
+
             </div>
 
             <div className="flex items-center justify-center gap-2 pt-1 border-t border-slate-100 text-xs font-mono">

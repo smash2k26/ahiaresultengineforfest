@@ -27,6 +27,17 @@ interface PodiumSlotState {
   points: number;
 }
 
+export const isProgramPublished = (p?: ArtsProgram | null): boolean => {
+  if (!p) return false;
+  if (p.publishStatus === 'Published') return true;
+  if (Array.isArray(p.results) && p.results.length > 0) {
+    if (p.publishStatus === 'Published' || p.results.some((r) => r.status === 'Published')) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
   isOpen,
   onClose,
@@ -44,10 +55,11 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
 
   // Selected Program
   const [selectedProgramId, setSelectedProgramId] = useState<string>(
-    initialProgramId || (artsPrograms[0]?.id ?? '')
+    initialProgramId || (artsPrograms.find((p) => !isProgramPublished(p))?.id ?? artsPrograms[0]?.id ?? '')
   );
   const [programSearch, setProgramSearch] = useState('');
   const [programTypeFilter, setProgramTypeFilter] = useState<'All' | 'Arts' | 'Sports'>('All');
+  const [programStatusFilter, setProgramStatusFilter] = useState<'pending' | 'published' | 'all'>('pending');
   const [isProgramDropdownOpen, setIsProgramDropdownOpen] = useState(false);
   const programDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -56,10 +68,17 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
     if (isOpen) {
       if (initialProgramId) {
         setSelectedProgramId(initialProgramId);
-      } else if (!selectedProgramId && artsPrograms.length > 0) {
-        setSelectedProgramId(artsPrograms[0].id);
+      } else {
+        // Default to first unpublished/pending program so published events do not occupy the modal by default
+        const pendingProg = artsPrograms.find((p) => !isProgramPublished(p));
+        if (pendingProg) {
+          setSelectedProgramId(pendingProg.id);
+        } else if (artsPrograms.length > 0) {
+          setSelectedProgramId(artsPrograms[0].id);
+        }
       }
       setProgramSearch('');
+      setProgramStatusFilter('pending');
       setIsProgramDropdownOpen(false);
       setIsDropdownSlot1(false);
       setIsDropdownSlot2(false);
@@ -238,7 +257,16 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter programs based on search input & type filter
+  const pendingProgramsCount = useMemo(
+    () => artsPrograms.filter((p) => !isProgramPublished(p)).length,
+    [artsPrograms]
+  );
+  const publishedProgramsCount = useMemo(
+    () => artsPrograms.filter((p) => isProgramPublished(p)).length,
+    [artsPrograms]
+  );
+
+  // Filter programs based on search input, type filter & published status
   const filteredPrograms = useMemo(() => {
     const q = programSearch.toLowerCase().trim();
     return artsPrograms.filter((p) => {
@@ -246,15 +274,20 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
       if (programTypeFilter === 'Arts' && isSports) return false;
       if (programTypeFilter === 'Sports' && !isSports) return false;
 
+      const isPublished = isProgramPublished(p);
+      if (programStatusFilter === 'pending' && isPublished) return false;
+      if (programStatusFilter === 'published' && !isPublished) return false;
+
       if (!q) return true;
       return (
         p.name.toLowerCase().includes(q) ||
         (p.code && p.code.toLowerCase().includes(q)) ||
         (p.category && p.category.toLowerCase().includes(q)) ||
-        (p.section && p.section.toLowerCase().includes(q))
+        (p.section && p.section.toLowerCase().includes(q)) ||
+        (isPublished ? 'published' : 'pending').includes(q)
       );
     });
-  }, [artsPrograms, programSearch, programTypeFilter]);
+  }, [artsPrograms, programSearch, programTypeFilter, programStatusFilter]);
 
   // Filter participants helper strictly adhering to category
   const filterParticipants = (query: string, currentSelectedId?: string) => {
@@ -513,10 +546,10 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
             <div className="relative" ref={programDropdownRef}>
               <div
                 onClick={() => setIsProgramDropdownOpen(!isProgramDropdownOpen)}
-                className="w-full flex items-center justify-between px-4 py-2.5 bg-white border border-slate-300 rounded-xl cursor-pointer hover:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500 transition-all text-sm"
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-white border border-slate-300 rounded-xl cursor-pointer hover:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500 transition-all text-sm gap-2"
               >
                 {activeProgram ? (
-                  <div className="flex items-center gap-2 overflow-hidden">
+                  <div className="flex items-center gap-2 overflow-hidden flex-1">
                     {activeProgram.code && (
                       <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-mono font-bold text-xs shrink-0">
                         {activeProgram.code}
@@ -526,11 +559,21 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
                     <span className="text-xs text-slate-500 hidden sm:inline truncate">
                       ({activeProgram.category} • Stage: {activeProgram.stage || 'Main'})
                     </span>
+                    {isProgramPublished(activeProgram) ? (
+                      <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        Published
+                      </span>
+                    ) : (
+                      <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+                        ⏳ Pending
+                      </span>
+                    )}
                   </div>
                 ) : (
                   <span className="text-slate-400">Search and select program...</span>
                 )}
-                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
+                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
               </div>
 
               {/* Dropdown Menu */}
@@ -546,7 +589,7 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
                           programTypeFilter === 'All' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
-                        All Events
+                        All Disciplines
                       </button>
                       <button
                         type="button"
@@ -568,6 +611,44 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
                       </button>
                     </div>
 
+                    {/* Published Status Filter Tabs */}
+                    <div className="grid grid-cols-3 gap-1 p-0.5 bg-slate-200/70 rounded-lg text-xs font-semibold">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setProgramStatusFilter('pending'); }}
+                        className={`py-1 rounded-md transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                          programStatusFilter === 'pending'
+                            ? 'bg-amber-500 text-white shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-amber-800'
+                        }`}
+                      >
+                        <span>⏳ Pending ({pendingProgramsCount})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setProgramStatusFilter('published'); }}
+                        className={`py-1 rounded-md transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                          programStatusFilter === 'published'
+                            ? 'bg-emerald-600 text-white shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-emerald-800'
+                        }`}
+                      >
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>Published ({publishedProgramsCount})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setProgramStatusFilter('all'); }}
+                        className={`py-1 rounded-md transition-all cursor-pointer ${
+                          programStatusFilter === 'all'
+                            ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        All ({artsPrograms.length})
+                      </button>
+                    </div>
+
                     <div className="relative">
                       <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
@@ -584,12 +665,15 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
                   <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
                     {filteredPrograms.length === 0 ? (
                       <div className="p-4 text-center text-xs text-slate-400">
-                        No events found matching "{programSearch}"
+                        {programStatusFilter === 'pending' && artsPrograms.length > 0
+                          ? 'No pending events found. All matching programs have been published!'
+                          : `No events found matching "${programSearch}"`}
                       </div>
                     ) : (
                       filteredPrograms.map((p) => {
                         const isSelected = p.id === activeProgram?.id;
                         const isSports = isSportsProgram(p);
+                        const isPub = isProgramPublished(p);
                         return (
                           <div
                             key={`p-sel-${p.id}`}
@@ -598,27 +682,39 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
                               setIsProgramDropdownOpen(false);
                               setProgramSearch('');
                             }}
-                            className={`flex items-center justify-between px-3.5 py-2.5 hover:bg-indigo-50/70 cursor-pointer text-xs transition-colors ${
+                            className={`flex items-center justify-between px-3.5 py-2.5 hover:bg-indigo-50/70 cursor-pointer text-xs transition-colors gap-2 ${
                               isSelected ? 'bg-indigo-50/90 font-semibold text-indigo-900' : 'text-slate-800'
                             }`}
                           >
-                            <div className="flex items-center gap-2 truncate">
+                            <div className="flex items-center gap-2 truncate flex-1">
                               <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
                                 isSports ? 'bg-sky-100 text-sky-800' : 'bg-purple-100 text-purple-800'
                               }`}>
                                 {isSports ? 'Sports' : 'Arts'}
                               </span>
                               {p.code && (
-                                <span className="px-1.5 py-0.5 rounded font-mono text-[11px] font-bold bg-slate-100 text-slate-700">
+                                <span className="px-1.5 py-0.5 rounded font-mono text-[11px] font-bold bg-slate-100 text-slate-700 shrink-0">
                                   {p.code}
                                 </span>
                               )}
                               <span className="font-medium text-slate-900 truncate">{p.name}</span>
-                              <span className="text-[11px] text-slate-500">({p.category})</span>
+                              <span className="text-[11px] text-slate-500 shrink-0">({p.category})</span>
                             </div>
-                            <span className="text-[10px] uppercase font-bold text-slate-400 shrink-0">
-                              {p.section}
-                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {isPub ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  Published
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                  Pending
+                                </span>
+                              )}
+                              <span className="text-[10px] uppercase font-bold text-slate-400 hidden sm:inline">
+                                {p.section}
+                              </span>
+                            </div>
                           </div>
                         );
                       })
@@ -627,6 +723,16 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Published Notification Banner */}
+            {isProgramPublished(activeProgram) && (
+              <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 shadow-2xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <div>
+                  <span className="font-bold">Results Already Published:</span> Podium winners for "{activeProgram?.name}" are currently live on leaderboards. Any adjustments made here will update the live scores upon saving.
+                </div>
+              </div>
+            )}
           </div>
 
           {/* STEP 2: Three Podium Slots */}

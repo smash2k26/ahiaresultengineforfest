@@ -19,7 +19,7 @@ import { AdminScoringSection } from './AdminScoringSection';
 import { AdminTeamMinusesSection } from './AdminTeamMinusesSection';
 import { AdminCertificatesSection } from './AdminCertificatesSection';
 import { AdminBulkDataModal } from './AdminBulkDataModal';
-import { ResultPodiumModal } from './ResultPodiumModal';
+import { ResultPodiumModal, isProgramPublished } from './ResultPodiumModal';
 import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
 import { generateResultsPDF, generateSportsResultsPDF, generateArtsResultsOnlyPDF } from '../../utils/pdfExport';
 
@@ -1462,11 +1462,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 className="px-3 py-2 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="All">All Programs</option>
-                {artsPrograms.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.code ? `${p.code} - ` : ''} {p.name}
-                  </option>
-                ))}
+                {artsPrograms.map((p) => {
+                  const isPub = isProgramPublished(p);
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {p.code ? `${p.code} - ` : ''} {p.name} {isPub ? '✓ [Published]' : '• [Pending]'}
+                    </option>
+                  );
+                })}
               </select>
 
               <select
@@ -1848,19 +1851,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3">Date &amp; Time</th>
                     <th className="px-4 py-3">Venue</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Event Status</th>
+                    <th className="px-4 py-3">Results Status</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {filteredPrograms.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center text-slate-400">
+                      <td colSpan={9} className="px-4 py-12 text-center text-slate-400">
                         No programs found matching your search query.
                       </td>
                     </tr>
                   ) : (
-                    filteredPrograms.map((p, idx) => (
+                    filteredPrograms.map((p, idx) => {
+                      const isPub = isProgramPublished(p);
+                      return (
                       <tr key={p.id ? `adm-prog-${p.id}-${idx}` : `adm-prog-${p.code || idx}-${idx}`} className="hover:bg-slate-50/60 transition-colors">
                         <td className="px-4 py-3 font-mono font-bold text-indigo-700">{p.code || 'EV-100'}</td>
                         <td className="px-4 py-3 font-semibold text-slate-900">{p.name}</td>
@@ -1889,6 +1895,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                             {p.status}
                           </span>
                         </td>
+                        <td className="px-4 py-3">
+                          {isPub ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Published
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                              ⏳ Pending
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button
@@ -1896,8 +1913,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                                 setPodiumModalProgramId(p.id);
                                 setIsPodiumModalOpen(true);
                               }}
-                              className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 active:scale-95 rounded-lg transition-all cursor-pointer"
-                              title="Enter / Edit Podium Results"
+                              className={`p-1.5 active:scale-95 rounded-lg transition-all cursor-pointer ${
+                                isPub
+                                  ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+                                  : 'text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200'
+                              }`}
+                              title={isPub ? 'Podium Results Published (Click to Edit)' : 'Enter Podium Results (Pending)'}
                             >
                               <Trophy className="w-4 h-4" />
                             </button>
@@ -1918,7 +1939,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                           </div>
                         </td>
                       </tr>
-                    ))
+                      );
+                    })
                   )}
                 </tbody>
               </table>

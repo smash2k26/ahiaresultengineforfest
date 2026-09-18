@@ -37,7 +37,7 @@ import {
   INITIAL_GOOGLE_SHEETS_CONFIG,
   INITIAL_ADMIN_USER
 } from '../data/initialData';
-import { isSportsProgram } from '../utils/programHelpers';
+import { isSportsProgram, deduplicateProgramResults } from '../utils/programHelpers';
 import {
   persistCelebrationMode,
   listenToCelebrationMode,
@@ -245,10 +245,18 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.map((p) => ({
+            ...p,
+            results: deduplicateProgramResults(p.results || []),
+          }));
+        }
       } catch (e) {}
     }
-    return INITIAL_ARTS_PROGRAMS;
+    return INITIAL_ARTS_PROGRAMS.map((p) => ({
+      ...p,
+      results: deduplicateProgramResults(p.results || []),
+    }));
   });
 
   const [sportsMatches, setSportsMatches] = useState<SportsMatch[]>(() => {
@@ -605,12 +613,13 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       // 1. Process Arts Programs with Results
       artsPrograms.forEach((prog) => {
-        if (prog.results && prog.results.length > 0) {
+        const cleanResults = deduplicateProgramResults(prog.results || []);
+        if (cleanResults.length > 0) {
           const isGroup = prog.section === 'Group';
           const multiplier = isGroup ? scoringRules.groupEventMultiplier : 1;
           const isSports = isSportsProgram(prog);
 
-          prog.results.forEach((res) => {
+          cleanResults.forEach((res) => {
             if (teamStats[res.teamId]) {
               let pts = 0;
               if (res.pointsAwarded !== undefined) {
@@ -917,30 +926,18 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               return p;
             }
 
-            const sanitizedLiveResults = liveData.results.filter((r) => {
-              if (!r) return false;
-              if (r.id && isDeleted(r.id)) return false;
-              return true;
-            });
+            const sanitizedLiveResults = deduplicateProgramResults(
+              liveData.results.filter((r) => {
+                if (!r) return false;
+                if (r.id && isDeleted(r.id)) return false;
+                return true;
+              })
+            );
 
-            // If remote sanitized results are empty, retain existing local results
+            // Authoritative clean results from live source
             let finalResults = sanitizedLiveResults;
-            if (sanitizedLiveResults.length === 0 && (p.results || []).length > 0) {
-              finalResults = p.results || [];
-            } else if (sanitizedLiveResults.length > 0 && (p.results || []).length > 0) {
-              // Merge local results with incoming live results to avoid dropping valid local entries
-              const map = new Map<string, any>();
-              sanitizedLiveResults.forEach((r) => {
-                const k = r.participantId || r.chestNo || r.id;
-                if (k) map.set(k, r);
-              });
-              (p.results || []).forEach((lr) => {
-                const k = lr.participantId || lr.chestNo || lr.id;
-                if (k && !map.has(k)) {
-                  map.set(k, lr);
-                }
-              });
-              finalResults = Array.from(map.values());
+            if (sanitizedLiveResults.length === 0 && (p.results || []).length > 0 && p.publishStatus === 'Published') {
+              finalResults = deduplicateProgramResults(p.results || []);
             }
 
             const currentStr = JSON.stringify(p.results || []);
@@ -1710,8 +1707,15 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setArtsPrograms((prev) => {
       const updated = prev.map((p) => {
         if (p.id === prog.id || (p.code && prog.code && p.code.trim().toLowerCase() === prog.code.trim().toLowerCase())) {
-          const existingResults = (p.results || []).filter((r) => r.participantId !== participant.id);
-          const updatedResults = [...existingResults, resultEntry];
+          const existingResults = (p.results || []).filter((r) => {
+            const isMatch =
+              r.participantId === participant.id ||
+              (participant.chestNo && r.chestNo && r.chestNo.trim().toLowerCase() === participant.chestNo.trim().toLowerCase()) ||
+              (participant.admissionNo && r.admissionNo && r.admissionNo.trim().toLowerCase() === participant.admissionNo.trim().toLowerCase()) ||
+              (rankNum <= 3 && r.rank === rankNum);
+            return !isMatch;
+          });
+          const updatedResults = deduplicateProgramResults([...existingResults, resultEntry]);
           fullUpdatedResults = updatedResults;
           return {
             ...p,
@@ -1906,7 +1910,8 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
 
     // 1. Explicitly clear tombstones for all entered winners so they can NEVER be suppressed
-    validEntries.forEach((entry) => {
+    const cleanResults = deduplicateProgramResults(validEntries);
+    cleanResults.forEach((entry) => {
       clearResultTombstones(prog.id, prog.code, entry.participantId, entry.chestNo, entry.id);
     });
 
@@ -1918,7 +1923,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       ) {
         return {
           ...p,
-          results: validEntries,
+          results: cleanResults,
           publishStatus: publishNow ? 'Published' : p.publishStatus,
           status: publishNow ? 'COMPLETED' : p.status,
         };
@@ -1938,7 +1943,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     persistLiveProgramResult(
       prog.id,
       prog.code || '',
-      validEntries,
+      cleanResults,
       publishNow ? 'Published' : prog.publishStatus || 'Draft'
     );
 
@@ -2554,10 +2559,10 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   let finalResults: ArtsResultEntry[] = [];
                   if (remoteResults.length === 0 && localResults.length > 0) {
                     // Remote has no results yet (stale cache, latency, or fresh local publish): KEEP ALL LOCAL RESULTS!
-                    finalResults = localResults;
+                    finalResults = deduplicateProgramResults(localResults);
                     hasLocalAdditionsToSyncBack = true;
                   } else if (remoteResults.length > 0 && localResults.length === 0) {
-                    finalResults = remoteResults;
+                    finalResults = deduplicateProgramResults(remoteResults);
                   } else {
                     // Both have results: merge by participant / chestNo / rank / id
                     const resultMap = new Map<string, any>();
@@ -2586,7 +2591,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                         });
                       }
                     });
-                    finalResults = Array.from(resultMap.values());
+                    finalResults = deduplicateProgramResults(Array.from(resultMap.values()));
                   }
 
                   const isPublished =

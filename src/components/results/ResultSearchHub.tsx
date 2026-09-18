@@ -6,6 +6,7 @@ import { Participant, ArtsResultEntry, ArtsProgram } from '../../types/festival'
 import { ActiveTab } from '../layout/Sidebar';
 import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
 import { generateResultsPDF } from '../../utils/pdfExport';
+import { deduplicateProgramResults } from '../../utils/programHelpers';
 
 interface ResultSearchHubProps {
   initialChestNo?: string;
@@ -40,7 +41,8 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
     const map = new Map<string, Array<ArtsResultEntry & { programName: string; stage?: string; category?: string; code?: string }>>();
 
     artsPrograms.forEach((prog) => {
-      (prog.results || []).forEach((res) => {
+      const cleanResults = deduplicateProgramResults(prog.results || []);
+      cleanResults.forEach((res) => {
         const keyById = res.participantId;
         const keyByAdm = res.admissionNo ? String(res.admissionNo).toLowerCase().trim() : undefined;
         const keyByChest = res.chestNo ? String(res.chestNo).toLowerCase().trim() : undefined;
@@ -53,21 +55,18 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
           code: prog.code,
         };
 
-        if (keyById) {
-          const list = map.get(keyById) || [];
-          list.push(enrichedResult);
-          map.set(keyById, list);
-        }
-        if (keyByAdm && keyByAdm !== keyById) {
-          const list = map.get(keyByAdm) || [];
-          list.push(enrichedResult);
-          map.set(keyByAdm, list);
-        }
-        if (keyByChest && keyByChest !== keyById) {
-          const list = map.get(keyByChest) || [];
-          list.push(enrichedResult);
-          map.set(keyByChest, list);
-        }
+        const pushUnique = (k: string) => {
+          const list = map.get(k) || [];
+          const alreadyHas = list.some((item) => (item.code && item.code === prog.code) || (item.id && item.id === res.id) || (item.programName === prog.name && item.rank === res.rank));
+          if (!alreadyHas) {
+            list.push(enrichedResult);
+            map.set(k, list);
+          }
+        };
+
+        if (keyById) pushUnique(keyById);
+        if (keyByAdm && keyByAdm !== keyById) pushUnique(keyByAdm);
+        if (keyByChest && keyByChest !== keyById) pushUnique(keyByChest);
       });
     });
 
@@ -499,7 +498,7 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
 
           <div className="space-y-4">
             {filteredPrograms.map((prog, idx) => {
-              const results = prog.results || [];
+              const results = deduplicateProgramResults(prog.results || []);
               const sortedResults = [...results].sort((a, b) => a.rank - b.rank || b.marks - a.marks);
 
               return (

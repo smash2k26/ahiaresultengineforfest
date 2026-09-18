@@ -17,7 +17,7 @@ import { useFestival } from '../../context/FestivalContext';
 import { GlassCard, GlassBadge, GlassButton } from '../ui/GlassCard';
 import { ArtsProgram } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
-import { isSportsProgram } from '../../utils/programHelpers';
+import { isSportsProgram, deduplicateProgramResults } from '../../utils/programHelpers';
 
 interface ArtsHubProps {
   onOpenArtsDetail: (program: ArtsProgram) => void;
@@ -176,7 +176,8 @@ export const ArtsHub: React.FC<ArtsHubProps> = ({
         {filtered.map((program, idx) => {
           const isPublished = program.publishStatus === 'Published';
           const isLive = program.status === 'LIVE';
-          const winner = program.results.find((r) => r.rank === 1);
+          const cleanResults = deduplicateProgramResults(program.results || []);
+          const winner = cleanResults.find((r) => r.rank === 1);
 
           return (
             <div

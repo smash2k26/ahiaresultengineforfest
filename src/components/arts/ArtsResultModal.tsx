@@ -6,6 +6,7 @@ import { GlassBadge, GlassButton } from '../ui/GlassCard';
 import { ArtsProgram } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
 import { TeamLogo } from '../ui/TeamLogo';
+import { deduplicateProgramResults } from '../../utils/programHelpers';
 
 interface ArtsResultModalProps {
   program: ArtsProgram | null;
@@ -24,10 +25,11 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
 
   if (!program) return null;
 
+  const cleanResults = deduplicateProgramResults(program.results || []);
   const isPublished = program.publishStatus === 'Published';
-  const first = program.results.find((r) => r.rank === 1);
-  const second = program.results.find((r) => r.rank === 2);
-  const third = program.results.find((r) => r.rank === 3);
+  const first = cleanResults.find((r) => r.rank === 1);
+  const second = cleanResults.find((r) => r.rank === 2);
+  const third = cleanResults.find((r) => r.rank === 3);
 
   const handleChestClick = (identifier: string) => {
     if (onSelectParticipant) {
@@ -198,11 +200,11 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
         )}
 
         {/* Detailed Marksheet Table */}
-        {isPublished && program.results.length > 0 ? (
+        {isPublished && cleanResults.length > 0 ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Official Marks Breakdown ({program.results.length} Ranked)
+                Official Marks Breakdown ({cleanResults.length} Ranked)
               </span>
               <span className="text-[10px] font-mono text-slate-500">
                 Max Marks: {program.maxMarks}
@@ -224,7 +226,7 @@ export const ArtsResultModal: React.FC<ArtsResultModalProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {program.results.map((res, idx) => {
+                  {cleanResults.map((res, idx) => {
                     const team = teams.find((t) => t.id === res.teamId);
                     const isWinner = res.rank === 1;
 

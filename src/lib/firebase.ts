@@ -36,7 +36,7 @@ try {
 // Initialize Firebase App
 export const firebaseApp = initializeApp(firebaseConfig);
 
-// Initialize Firestore with memory local cache to prevent browser localStorage quota exceeded errors
+// Initialize Firestore with memory local cache and auto-detect long polling for reliable iframe connectivity
 const databaseId =
   firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
     ? firebaseConfig.firestoreDatabaseId
@@ -46,24 +46,32 @@ export const db = initializeFirestore(
   firebaseApp,
   {
     localCache: memoryLocalCache(),
+    experimentalAutoDetectLongPolling: true,
   },
   databaseId
 );
 
-// Test Connection as mandated by the firebase-integration skill
+// Test Connection gracefully as recommended by the firebase-integration skill
 async function testConnection() {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    if (typeof window !== 'undefined' && navigator.onLine) {
+      await getDocFromServer(doc(db, 'test', 'connection'));
+    }
   } catch (error: any) {
-    // In iframe environments or initial connection establishment, Firestore operates in offline cache mode
+    // In iframe environments, slow networks, or offline mode, Firestore operates gracefully with local cache fallback
     const msg = error?.message || '';
     if (msg.includes('offline') || msg.includes('unavailable') || error?.code === 'unavailable') {
-      // Normal expected behavior when offline or waiting for initial channel handshake
       return;
     }
   }
 }
-testConnection();
+
+if (typeof window !== 'undefined') {
+  // Run after a short delay so the main thread and network channel can initialize smoothly
+  setTimeout(() => {
+    testConnection();
+  }, 1000);
+}
 
 export interface CelebrationRecord {
   celebrationMode: boolean;

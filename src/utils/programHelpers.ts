@@ -1,4 +1,68 @@
-import { ArtsProgram } from '../types/festival';
+import { ArtsProgram, ArtsResultEntry } from '../types/festival';
+
+/**
+ * Deduplicates and canonicalizes program results.
+ * Guarantees that:
+ * 1. No participant appears more than once in the same program.
+ * 2. No podium rank (1st, 2nd, 3rd) is duplicated by multiple conflicting entries.
+ * 3. Results are cleanly sorted by rank (1, 2, 3...).
+ */
+export function deduplicateProgramResults(results?: any[]): ArtsResultEntry[] {
+  if (!Array.isArray(results) || results.length === 0) return [];
+
+  const valid = results.filter((r) => r && typeof r === 'object');
+  const seenRanks = new Set<number>();
+  const seenParticipants = new Set<string>();
+  const deduplicated: ArtsResultEntry[] = [];
+
+  // Iterate from newest/latest to oldest so the most recent verdict/update takes priority
+  for (let i = valid.length - 1; i >= 0; i--) {
+    const r = valid[i];
+    const rankNum = Number(r.rank);
+    const isPodiumRank = rankNum === 1 || rankNum === 2 || rankNum === 3;
+
+    const pId = r.participantId ? String(r.participantId).trim().toLowerCase() : '';
+    const chestNo = r.chestNo ? String(r.chestNo).trim().toLowerCase() : '';
+    const admNo = r.admissionNo ? String(r.admissionNo).trim().toLowerCase() : '';
+    const name = r.participantName ? String(r.participantName).trim().toLowerCase() : '';
+
+    // Check if this participant was already recorded
+    let duplicateParticipant = false;
+    if (pId && seenParticipants.has(`id_${pId}`)) duplicateParticipant = true;
+    if (chestNo && seenParticipants.has(`chest_${chestNo}`)) duplicateParticipant = true;
+    if (admNo && seenParticipants.has(`adm_${admNo}`)) duplicateParticipant = true;
+    if (name && pId.startsWith('team-group-') && seenParticipants.has(`teamgroup_${name}`)) duplicateParticipant = true;
+
+    if (duplicateParticipant) {
+      continue;
+    }
+
+    // For standard podium positions (1st, 2nd, 3rd), allow only one entry per rank slot
+    if (isPodiumRank && seenRanks.has(rankNum)) {
+      continue;
+    }
+
+    // Register this entry
+    if (pId) seenParticipants.add(`id_${pId}`);
+    if (chestNo) seenParticipants.add(`chest_${chestNo}`);
+    if (admNo) seenParticipants.add(`adm_${admNo}`);
+    if (name && pId.startsWith('team-group-')) seenParticipants.add(`teamgroup_${name}`);
+    if (isPodiumRank) seenRanks.add(rankNum);
+
+    deduplicated.push(r as ArtsResultEntry);
+  }
+
+  // Restore chronological rank ordering (1st, 2nd, 3rd...)
+  deduplicated.reverse();
+  deduplicated.sort((a, b) => {
+    const rA = Number(a.rank) || 999;
+    const rB = Number(b.rank) || 999;
+    if (rA !== rB) return rA - rB;
+    return (Number(b.marks) || 0) - (Number(a.marks) || 0);
+  });
+
+  return deduplicated;
+}
 
 /**
  * Accurately determines if a program is a Sports/Athletics event

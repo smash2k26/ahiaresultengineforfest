@@ -4,6 +4,7 @@ import { useFestival } from '../../context/FestivalContext';
 import { GlassCard, GlassBadge, GlassButton } from '../ui/GlassCard';
 import { ActiveTab } from '../layout/Sidebar';
 import { ArtsProgram } from '../../types/festival';
+import { deduplicateProgramResults } from '../../utils/programHelpers';
 
 interface RecentResultsFeedProps {
   setActiveTab: (tab: ActiveTab) => void;
@@ -41,9 +42,10 @@ export const RecentResultsFeed: React.FC<RecentResultsFeedProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {publishedPrograms.slice(0, 3).map((program, idx) => {
-          const firstPlace = program.results.find((r) => r.rank === 1);
-          const secondPlace = program.results.find((r) => r.rank === 2);
-          const thirdPlace = program.results.find((r) => r.rank === 3);
+          const cleanResults = deduplicateProgramResults(program.results || []);
+          const firstPlace = cleanResults.find((r) => r.rank === 1);
+          const secondPlace = cleanResults.find((r) => r.rank === 2);
+          const thirdPlace = cleanResults.find((r) => r.rank === 3);
 
           const teamFirst = firstPlace ? teams.find((t) => t.id === firstPlace.teamId) : null;
 

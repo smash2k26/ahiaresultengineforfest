@@ -11,7 +11,7 @@ import {
   FestConfig,
 } from '../../types/festival';
 import { GOOGLE_APPS_SCRIPT_CODE } from '../../data/googleAppsScriptCode';
-import { isSportsProgram } from '../../utils/programHelpers';
+import { isSportsProgram, deduplicateProgramResults } from '../../utils/programHelpers';
 import { AdminSportsSection } from './AdminSportsSection';
 import { AdminAnnouncementsSection } from './AdminAnnouncementsSection';
 import { AdminScheduleSection } from './AdminScheduleSection';
@@ -103,10 +103,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   // Aggregate all result entries across programs with rich participant & house fallback
   const allResultRecords = useMemo(() => {
     const list: Array<ArtsResultEntry & { programTitle: string; programCode: string; programObjId: string; programCategory: string }> = [];
+    const seenRecordKeys = new Set<string>();
+
     artsPrograms.forEach((p) => {
-      (p.results || []).forEach((r) => {
+      const cleanResults = deduplicateProgramResults(p.results || []);
+      cleanResults.forEach((r) => {
         const pt = participants.find((part) => part.id === r.participantId || (part.chestNo && r.chestNo && part.chestNo.toLowerCase() === r.chestNo.toLowerCase()));
         const tm = teams.find((t) => t.id === r.teamId || t.id === r.participantId || (pt && t.id === pt.teamId));
+
+        const pKey = p.id || p.code;
+        const partKey = r.participantId || (r.chestNo ? String(r.chestNo).trim().toLowerCase() : '') || (r.admissionNo ? String(r.admissionNo).trim().toLowerCase() : '') || r.id;
+        const rankKey = r.rank ? `r_${r.rank}` : '';
+        const uniqueKey = `${pKey}_${partKey}_${rankKey}`;
+
+        if (seenRecordKeys.has(uniqueKey)) return;
+        seenRecordKeys.add(uniqueKey);
+
         list.push({
           ...r,
           participantName: r.participantName || pt?.name || tm?.name || 'Winner',

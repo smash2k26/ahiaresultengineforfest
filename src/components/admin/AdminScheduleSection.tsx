@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Clock01Icon as Clock, Add01Icon as Plus, Delete01Icon as Trash2, Edit02Icon as Edit2, Calendar01Icon as Calendar, Search01Icon as Search, Location01Icon as MapPin, Cancel01Icon as X, SparklesIcon as Sparkles, Layers01Icon as Layers } from 'hugeicons-react';
 import { useFestival } from '../../context/FestivalContext';
-import { ScheduleItem } from '../../types/festival';
+import { ScheduleItem, CategoryType } from '../../types/festival';
 
 export const AdminScheduleSection: React.FC = () => {
   const {
@@ -24,8 +24,8 @@ export const AdminScheduleSection: React.FC = () => {
   const [time, setTime] = useState('09:30 AM');
   const [title, setTitle] = useState('');
   const [stage, setStage] = useState('Stage 1 (Main Auditorium)');
-  const [category, setCategory] = useState('Senior');
-  const [type, setType] = useState<'Arts' | 'Sports' | 'Ceremony'>('Arts');
+  const [category, setCategory] = useState<CategoryType>('Senior');
+  const [type, setType] = useState<'Arts' | 'Sports' | 'Ceremony' | 'Other'>('Arts');
   const [status, setStatus] = useState<ScheduleItem['status']>('UPCOMING');
 
   const filteredSchedule = (schedule || []).filter((item) => {
@@ -65,8 +65,8 @@ export const AdminScheduleSection: React.FC = () => {
     setDate(item.date || '2026-10-15');
     setTime(item.time || '09:30 AM');
     setStage(item.stage || 'Stage 1 (Main Auditorium)');
-    setCategory(item.category || 'Senior');
-    setType(item.type || 'Arts');
+    setCategory((item.category as CategoryType) || 'Senior');
+    setType((item.type as any) || 'Arts');
     setStatus(item.status || 'UPCOMING');
     setIsNewModalOpen(true);
   };
@@ -83,6 +83,9 @@ export const AdminScheduleSection: React.FC = () => {
         day,
         date,
         time,
+        startTime: time,
+        endTime: '',
+        venue: stage,
         title: title.trim(),
         stage,
         category,
@@ -95,6 +98,9 @@ export const AdminScheduleSection: React.FC = () => {
         day,
         date,
         time,
+        startTime: time,
+        endTime: '',
+        venue: stage,
         title: title.trim(),
         stage,
         category,
@@ -346,7 +352,7 @@ export const AdminScheduleSection: React.FC = () => {
                   <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Category</label>
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
+                    onChange={(e) => setCategory(e.target.value as CategoryType)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="Senior">Senior</option>

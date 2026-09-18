@@ -58,7 +58,9 @@ export function formatImageUrl(url?: string): string {
 
 export interface TeamLogoProps {
   logo?: string;
+  logoUrl?: string;
   name?: string;
+  teamName?: string;
   color?: string;
   className?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl';
@@ -73,7 +75,9 @@ export interface TeamLogoProps {
  */
 export const TeamLogo: React.FC<TeamLogoProps> = ({
   logo,
+  logoUrl,
   name = '',
+  teamName,
   color,
   className = '',
   size = 'md',
@@ -81,12 +85,14 @@ export const TeamLogo: React.FC<TeamLogoProps> = ({
   roundedClassName = 'rounded-xl',
 }) => {
   const [hasError, setHasError] = useState(false);
-  const rawLogo = logo?.trim();
+  const effectiveLogo = logo || logoUrl;
+  const effectiveName = name || teamName || '';
+  const rawLogo = effectiveLogo?.trim();
 
   // Reset error if logo prop changes
   useEffect(() => {
     setHasError(false);
-  }, [logo]);
+  }, [effectiveLogo]);
 
   const isImg = Boolean(rawLogo && isImageUrl(rawLogo) && !hasError);
 
@@ -109,7 +115,7 @@ export const TeamLogo: React.FC<TeamLogoProps> = ({
     return (
       <img
         src={formatImageUrl(rawLogo)}
-        alt={name ? `${name} crest` : 'Team crest'}
+        alt={effectiveName ? `${effectiveName} crest` : 'Team crest'}
         referrerPolicy="no-referrer"
         onError={() => setHasError(true)}
         className={`${currentSize.img} ${roundedClassName} shrink-0 transition-transform ${className}`}
@@ -127,13 +133,13 @@ export const TeamLogo: React.FC<TeamLogoProps> = ({
   }
 
   // Fallback to stylized team letter badge if color or name is available
-  if (name) {
+  if (effectiveName) {
     return (
       <span
         className={`inline-flex items-center justify-center font-black font-mono text-white select-none shrink-0 shadow-xs ${roundedClassName} ${currentSize.box} ${currentSize.font} ${className}`}
         style={{ backgroundColor: color || '#4f46e5' }}
       >
-        {name.slice(0, 2).toUpperCase()}
+        {effectiveName.slice(0, 2).toUpperCase()}
       </span>
     );
   }

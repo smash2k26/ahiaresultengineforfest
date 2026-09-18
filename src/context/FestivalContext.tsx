@@ -179,8 +179,8 @@ interface FestivalContextType {
 
   // Google Sheets Integration
   updateGoogleSheetsConfig: (config: Partial<GoogleSheetsConfig>) => void;
-  syncWithGoogleSheets: () => Promise<boolean>;
-  pushToGoogleSheets: () => Promise<boolean>;
+  syncWithGoogleSheets: (options?: any) => Promise<boolean>;
+  pushToGoogleSheets: (customOverrides?: any) => Promise<boolean>;
   exportDataAsJson: () => string;
   importDataFromJson: (jsonData: string) => boolean;
   generateCertificate: (certificateData: Omit<Certificate, 'id' | 'issueDate' | 'verificationCode' | 'digitalSignature'>) => Certificate;

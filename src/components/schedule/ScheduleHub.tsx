@@ -33,14 +33,14 @@ interface UnifiedScheduleEntry {
   source: 'schedule' | 'arts' | 'sports';
   title: string;
   code?: string;
-  type: 'Arts' | 'Sports' | 'Ceremony' | 'Other';
+  type: 'Arts' | 'Sports' | 'Ceremony' | 'Other' | string;
   category?: string;
   section?: string;
   stageVenue: string;
   dayLabel: string;
   dateStr: string;
   timeSlot: string;
-  status: 'LIVE' | 'COMPLETED' | 'UPCOMING';
+  status: 'LIVE' | 'COMPLETED' | 'UPCOMING' | 'RESULT PENDING' | string;
   publishStatus?: string;
   originalArtsProgram?: ArtsProgram;
   originalSportsMatch?: SportsMatch;

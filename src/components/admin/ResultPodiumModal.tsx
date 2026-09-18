@@ -267,7 +267,7 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
         filterByCategoryOnly &&
         activeProgram?.category &&
         activeProgram.category !== 'General' &&
-        activeProgram.category !== 'All'
+        (activeProgram.category as string) !== 'All'
       ) {
         if (!isMatchingCategory(pt.category, activeProgram.category)) {
           return false;
@@ -637,7 +637,7 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
                 <span>2. Assign Podium Winners (1st, 2nd &amp; 3rd Place)</span>
               </h3>
               <div className="flex items-center gap-2">
-                {activeProgram?.category && activeProgram.category !== 'General' && activeProgram.category !== 'All' && (
+                {activeProgram?.category && activeProgram.category !== 'General' && (activeProgram.category as string) !== 'All' && (
                   <button
                     type="button"
                     onClick={() => setFilterByCategoryOnly(!filterByCategoryOnly)}

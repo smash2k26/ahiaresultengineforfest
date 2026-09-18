@@ -1,7 +1,7 @@
-export type CategoryType = 'Senior' | 'Junior' | 'Sub Junior' | 'All';
-export type SectionType = 'Individual' | 'Group' | 'All';
+export type CategoryType = 'Senior' | 'Junior' | 'Sub Junior' | 'General' | 'All';
+export type SectionType = 'Individual' | 'Group' | 'Both' | 'General' | 'All';
 export type EventStatus = 'LIVE' | 'UPCOMING' | 'COMPLETED' | 'RESULT PENDING';
-export type ResultPublishStatus = 'Draft' | 'Verified' | 'Published';
+export type ResultPublishStatus = 'Draft' | 'Verified' | 'Published' | string;
 
 export type SportType = 
   | 'Football' 
@@ -17,6 +17,7 @@ export type SportType =
 export interface FestConfig {
   festivalName: string;
   name?: string;
+  shortName?: string;
   year: string;
   edition?: string;
   statusBanner: 'LIVE' | 'UPCOMING' | 'CONCLUDED' | 'PAUSED';
@@ -55,10 +56,13 @@ export interface Team {
   color: string;
   accentColor: string;
   logo: string;
+  logoUrl?: string;
   captain: string;
   viceCaptain?: string;
   staffAdvisor?: string;
+  staffInCharge?: string;
   description: string;
+  motto?: string;
   slogan?: string;
   artsPoints: number;
   sportsPoints: number;
@@ -83,7 +87,7 @@ export interface TeamMinus {
   pointsDeducted: number;
   reason: string;
   scope: 'arts' | 'sports';
-  category?: 'Disciplinary' | 'Late Entry' | 'Rule Violation' | 'Stage Time Exceeded' | 'Dress Code' | 'Misconduct' | 'Other' | string;
+  category?: 'Discipline' | 'Late Arrival' | 'Code of Conduct' | 'Attendance' | 'Unsportsmanlike' | 'Disciplinary' | 'Late Entry' | 'Rule Violation' | 'Stage Time Exceeded' | 'Dress Code' | 'Misconduct' | 'Other' | string;
   registeredBy?: string;
   timestamp: string;
   notes?: string;
@@ -96,9 +100,12 @@ export interface Participant {
   chestNo: string;
   teamId: string;
   category: 'Senior' | 'Junior' | 'Sub Junior' | 'General';
-  section: 'Individual' | 'Group' | 'Both';
+  section: 'Individual' | 'Group' | 'Both' | 'General';
   yearClass: string;
   classGrade?: string;
+  gradeClass?: string;
+  avatar?: string;
+  results?: any[];
   sectionName?: string;
   contact?: string;
   photo: string;
@@ -135,7 +142,8 @@ export interface ArtsResultEntry {
   rank: number; // 1, 2, 3, 4, etc.
   position: '1st' | '2nd' | '3rd' | '4th' | 'Consolation' | '-' | string;
   pointsAwarded: number;
-  status?: 'Published' | 'Draft' | 'Verified';
+  points?: number;
+  status?: 'Published' | 'Draft' | 'Verified' | string;
   publishedAt?: string;
 }
 
@@ -144,7 +152,7 @@ export interface ArtsProgram {
   code?: string;
   name: string;
   category: 'Senior' | 'Junior' | 'Sub Junior' | 'General';
-  section: 'Individual' | 'Group';
+  section: 'Individual' | 'Group' | 'Both' | 'General';
   disciplineType?: 'Arts' | 'Sports';
   stage: string;
   venue: string;
@@ -174,30 +182,32 @@ export interface SportsMatch {
   id: string;
   sport: SportType;
   category?: CategoryType;
-  title: string;
+  title?: string;
+  name?: string;
   round: 'League' | 'Quarter Final' | 'Semi Final' | 'Final' | '3rd Place Playoff' | string;
   teamAId: string;
   teamBId: string;
   scoreA: number | string;
   scoreB: number | string;
-  detailScore?: string; // e.g., "142/4 (20 ov) vs 138/8 (20 ov)" or "21-19, 18-21, 21-15"
+  detailScore?: string;
   venue: string;
-  date: string;
-  time: string;
+  date?: string;
+  time?: string;
   scheduledTime?: string;
   status: EventStatus;
-  publishStatus: ResultPublishStatus;
+  publishStatus?: ResultPublishStatus;
   matchTimer?: {
     minute: number;
     seconds: number;
     isRunning: boolean;
   };
   winnerTeamId?: string;
+  winnerId?: string;
   pointsAwardedA?: number;
   pointsAwardedB?: number;
   pointsToWinner?: number;
   referees?: string[];
-  events: MatchEvent[];
+  events?: MatchEvent[];
   stats?: {
     possessionA?: number;
     possessionB?: number;
@@ -213,8 +223,8 @@ export interface SportsMatch {
 export interface ScheduleItem {
   id: string;
   title: string;
-  type: 'Arts' | 'Sports' | 'Ceremony' | 'Other';
-  category: CategoryType;
+  type: 'Arts' | 'Sports' | 'Ceremony' | 'Other' | string;
+  category: CategoryType | string;
   venue: string;
   stage?: string;
   day: 'Day 1' | 'Day 2' | 'Day 3' | string;
@@ -249,10 +259,13 @@ export interface LiveUpdate {
 export interface GalleryItem {
   id: string;
   title: string;
-  category: 'Arts' | 'Sports' | 'Opening Ceremony' | 'Competitions' | 'Winners' | 'Behind the Scenes';
+  category: 'Arts' | 'Sports' | 'Opening Ceremony' | 'Competitions' | 'Winners' | 'Behind the Scenes' | string;
   imageUrl: string;
   caption: string;
   date: string;
+  photographer?: string;
+  timestamp?: string;
+  likes?: number;
 }
 
 export interface DocumentItem {
@@ -260,6 +273,7 @@ export interface DocumentItem {
   title: string;
   category: 'Official Circular' | 'Rules & Regulations' | 'Schedule' | 'Guidelines' | 'Circulars' | 'Results' | 'General Notice' | string;
   fileSize?: string;
+  fileType?: string;
   issueDate?: string;
   fileUrl?: string;
   updatedAt: string;

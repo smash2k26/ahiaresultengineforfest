@@ -40,7 +40,7 @@ export const AdminTeamMinusesSection: React.FC = () => {
   const [pointsDeducted, setPointsDeducted] = useState<number>(scoringRules.defaultMinusPoints || 5);
   const [reason, setReason] = useState('');
   const [scope, setScope] = useState<'arts' | 'sports'>('arts');
-  const [category, setCategory] = useState<'Discipline' | 'Late Arrival' | 'Code of Conduct' | 'Attendance' | 'Unsportsmanlike' | 'Other'>('Discipline');
+  const [category, setCategory] = useState<NonNullable<TeamMinus['category']>>('Discipline');
   const [registeredBy, setRegisteredBy] = useState('Festival Admin');
   const [notes, setNotes] = useState('');
 

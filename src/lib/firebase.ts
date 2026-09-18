@@ -1,8 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import {
   initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
+  memoryLocalCache,
   doc,
   getDocFromServer,
   setDoc,
@@ -14,10 +13,30 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
+// Clean up any stale Firestore mutation keys in localStorage from previous multi-tab manager sessions to prevent QuotaExceededError
+try {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key && (key.startsWith('firestore_mutations_') || key.startsWith('firestore_clients_') || key.startsWith('firestore_'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => {
+      try {
+        window.localStorage.removeItem(k);
+      } catch {}
+    });
+  }
+} catch (e) {
+  // Ignore
+}
+
 // Initialize Firebase App
 export const firebaseApp = initializeApp(firebaseConfig);
 
-// Initialize Firestore with robust local caching and long-polling fallback for restricted/iframe environments
+// Initialize Firestore with memory local cache to prevent browser localStorage quota exceeded errors
 const databaseId =
   firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
     ? firebaseConfig.firestoreDatabaseId
@@ -26,9 +45,7 @@ const databaseId =
 export const db = initializeFirestore(
   firebaseApp,
   {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
+    localCache: memoryLocalCache(),
   },
   databaseId
 );

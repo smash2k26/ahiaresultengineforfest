@@ -98,29 +98,52 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
 
   // Filter programs with published or drafted results (matches by program info, student name, or result admission no)
   const filteredPrograms = useMemo(() => {
+    const cleanQ = q.replace(/[\s-_]/g, '');
     return artsPrograms.filter((prog) => {
+      const cleanProgName = String(prog.name || '').toLowerCase().replace(/[\s-_]/g, '');
+      const cleanProgCode = String(prog.code || '').toLowerCase().replace(/[\s-_]/g, '');
+      const cleanStage = String(prog.stage || '').toLowerCase().replace(/[\s-_]/g, '');
+      const cleanCat = String(prog.category || '').toLowerCase().replace(/[\s-_]/g, '');
+
       const matchesQuery =
         !q ||
+        (cleanQ && cleanProgCode.includes(cleanQ)) ||
+        (cleanQ && cleanProgName.includes(cleanQ)) ||
+        (cleanQ && cleanStage.includes(cleanQ)) ||
+        (cleanQ && cleanCat.includes(cleanQ)) ||
         String(prog.name || '').toLowerCase().includes(q) ||
         String(prog.code || '').toLowerCase().includes(q) ||
         String(prog.stage || '').toLowerCase().includes(q) ||
         (prog.results || []).some(
-          (r) =>
-            String(r.admissionNo || '').toLowerCase().includes(q) ||
-            String(r.participantName || '').toLowerCase().includes(q) ||
-            String(r.chestNo || '').toLowerCase().includes(q)
+          (r) => {
+            const cleanAdm = String(r.admissionNo || '').toLowerCase().replace(/[\s-_]/g, '');
+            const cleanChest = String(r.chestNo || '').toLowerCase().replace(/[\s-_]/g, '');
+            const cleanPName = String(r.participantName || '').toLowerCase().replace(/[\s-_]/g, '');
+            const house = teams.find((t) => t.id === r.teamId);
+            const cleanHouse = String(house?.name || '').toLowerCase().replace(/[\s-_]/g, '');
+            return (
+              (cleanQ && cleanAdm.includes(cleanQ)) ||
+              (cleanQ && cleanChest.includes(cleanQ)) ||
+              (cleanQ && cleanPName.includes(cleanQ)) ||
+              (cleanQ && cleanHouse.includes(cleanQ)) ||
+              String(r.admissionNo || '').toLowerCase().includes(q) ||
+              String(r.participantName || '').toLowerCase().includes(q) ||
+              String(r.chestNo || '').toLowerCase().includes(q) ||
+              String(house?.name || '').toLowerCase().includes(q)
+            );
+          }
         );
 
       const matchesCat = selectedCategory === 'All' || prog.category === selectedCategory;
       const matchesStatus =
         selectedProgramFilter === 'All' ||
-        (selectedProgramFilter === 'Published' && prog.publishStatus === 'Published') ||
+        (selectedProgramFilter === 'Published' && (prog.publishStatus === 'Published' || (prog.results && prog.results.length > 0))) ||
         (selectedProgramFilter === 'Draft' && prog.publishStatus === 'Draft') ||
         (selectedProgramFilter === 'Completed' && prog.status === 'COMPLETED');
 
       return matchesQuery && matchesCat && matchesStatus;
     });
-  }, [artsPrograms, q, selectedCategory, selectedProgramFilter]);
+  }, [artsPrograms, q, selectedCategory, selectedProgramFilter, teams]);
 
   // Quick sample admission numbers
   const quickAdmissionNumbers = useMemo(() => {

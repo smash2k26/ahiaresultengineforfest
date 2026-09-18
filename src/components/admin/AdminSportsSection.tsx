@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Activity02Icon as Activity, Add01Icon as Plus, Delete01Icon as Trash2, Edit02Icon as Edit2, Search01Icon as Search, Tick01Icon as CheckCircle2, Clock01Icon as Clock, Award01Icon as Trophy, Cancel01Icon as X, PlayIcon as Play, ReloadIcon as RotateCcw, Upload01Icon as Upload } from 'hugeicons-react';
 import { useFestival } from '../../context/FestivalContext';
-import { SportsMatch, SportType, CategoryType, EventStatus } from '../../types/festival';
+import { SportsMatch, SportType, CategoryType, EventStatus, ArtsProgram } from '../../types/festival';
 import { AdminBulkDataModal } from './AdminBulkDataModal';
 import { TeamLogo } from '../ui/TeamLogo';
+import { isSportsProgram } from '../../utils/programHelpers';
+import { ResultPodiumModal } from './ResultPodiumModal';
 
 export const AdminSportsSection: React.FC = () => {
   const {
     sportsMatches,
+    artsPrograms,
+    participants,
     teams,
     addSportsMatch,
     editSportsMatch,
@@ -20,6 +24,11 @@ export const AdminSportsSection: React.FC = () => {
   const [sportFilter, setSportFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [isBulkCsvOpen, setIsBulkCsvOpen] = useState(false);
+  const [sportsViewTab, setSportsViewTab] = useState<'all' | 'athletics' | 'fixtures'>('all');
+
+  // Podium Modal state for Athletics / Relay sports events
+  const [isPodiumOpen, setIsPodiumOpen] = useState(false);
+  const [selectedPodiumProgId, setSelectedPodiumProgId] = useState('');
 
   // New Match Modal
   const [isNewMatchOpen, setIsNewMatchOpen] = useState(false);
@@ -94,6 +103,25 @@ export const AdminSportsSection: React.FC = () => {
 
     return matchesQuery && matchesSport && matchesStatus;
   });
+
+  const filteredAthleticsPrograms = useMemo(() => {
+    const q = (search || '').toLowerCase();
+    return (artsPrograms || []).filter((p) => {
+      if (!isSportsProgram(p)) return false;
+      const matchesQuery =
+        !q ||
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.code || '').toLowerCase().includes(q) ||
+        (p.category || '').toLowerCase().includes(q) ||
+        (p.venue || '').toLowerCase().includes(q);
+      const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
+      const matchesCategory =
+        sportFilter === 'All' ||
+        p.category === sportFilter ||
+        (p.name || '').toLowerCase().includes(sportFilter.toLowerCase());
+      return matchesQuery && matchesStatus && matchesCategory;
+    });
+  }, [artsPrograms, search, statusFilter, sportFilter]);
 
   const handleCreateMatch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,8 +250,231 @@ export const AdminSportsSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Matches Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Sub-Tab Navigation for Sports Types */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <button
+          type="button"
+          onClick={() => setSportsViewTab('all')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            sportsViewTab === 'all'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          All Sports ({filteredAthleticsPrograms.length + filteredMatches.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSportsViewTab('athletics')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            sportsViewTab === 'athletics'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <span>🏃 Athletics &amp; Relay Events</span>
+          <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
+            {filteredAthleticsPrograms.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSportsViewTab('fixtures')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            sportsViewTab === 'fixtures'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <span>⚽ Match Fixtures</span>
+          <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
+            {filteredMatches.length}
+          </span>
+        </button>
+      </div>
+
+      {/* Podium Results Modal for Athletics Events */}
+      <ResultPodiumModal
+        isOpen={isPodiumOpen}
+        onClose={() => setIsPodiumOpen(false)}
+        initialProgramId={selectedPodiumProgId}
+      />
+
+      {/* SECTION A: ATHLETICS & RELAY SPORTS PROGRAMS */}
+      {(sportsViewTab === 'all' || sportsViewTab === 'athletics') && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span>Athletics &amp; Relay Programs ({filteredAthleticsPrograms.length})</span>
+            </h3>
+            <span className="text-xs text-slate-500">
+              Includes Relay Junior, Sprints, Jumps, and Track events
+            </span>
+          </div>
+
+          {filteredAthleticsPrograms.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-xl p-6 text-center text-slate-400 text-xs">
+              No athletics or relay programs match the current filter.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {filteredAthleticsPrograms.map((p) => {
+                const results = p.results || [];
+                const hasResults = results.length > 0;
+                const r1 = results.find((r) => r.rank === 1 || r.position?.includes('1st'));
+                const r2 = results.find((r) => r.rank === 2 || r.position?.includes('2nd'));
+                const r3 = results.find((r) => r.rank === 3 || r.position?.includes('3rd'));
+
+                const getWinnerHouse = (res?: typeof r1) => {
+                  if (!res) return null;
+                  return (
+                    teams.find((t) => t.id === res.teamId || t.id === res.participantId) ||
+                    teams.find((t) => {
+                      const pt = participants.find((part) => part.id === res.participantId);
+                      return pt && pt.teamId === t.id;
+                    })
+                  );
+                };
+
+                const h1 = getWinnerHouse(r1);
+                const h2 = getWinnerHouse(r2);
+                const h3 = getWinnerHouse(r3);
+
+                return (
+                  <div
+                    key={`ath-prog-${p.id}`}
+                    className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-indigo-300 transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <span className="text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                            {p.code || 'EV-SP'}
+                          </span>
+                          <h4 className="text-sm font-bold text-slate-900 mt-1">{p.name}</h4>
+                          <span className="text-xs text-slate-500">
+                            {p.category || 'General'} • {p.venue || 'Stadium'}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                            p.status === 'LIVE'
+                              ? 'bg-rose-50 text-rose-700 border-rose-200 animate-pulse'
+                              : p.status === 'COMPLETED'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-slate-50 text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          {p.status}
+                        </span>
+                      </div>
+
+                      {/* Winners Podium Display */}
+                      <div className="bg-slate-50 rounded-lg p-2.5 space-y-1.5 my-2 border border-slate-100 text-xs">
+                        {hasResults ? (
+                          <>
+                            {r1 && (
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 truncate">
+                                  <span className="text-sm">🥇</span>
+                                  <span
+                                    className="w-2 h-2 rounded-full shrink-0"
+                                    style={{ backgroundColor: h1?.color || '#e11d48' }}
+                                  />
+                                  <span className="font-semibold text-slate-900 truncate">
+                                    {r1.participantName || h1?.name || '1st Place'}
+                                  </span>
+                                </div>
+                                <span className="text-[11px] font-bold text-slate-700 font-mono">
+                                  +{r1.pointsAwarded} pts
+                                </span>
+                              </div>
+                            )}
+
+                            {r2 && (
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 truncate">
+                                  <span className="text-sm">🥈</span>
+                                  <span
+                                    className="w-2 h-2 rounded-full shrink-0"
+                                    style={{ backgroundColor: h2?.color || '#2563eb' }}
+                                  />
+                                  <span className="font-semibold text-slate-800 truncate">
+                                    {r2.participantName || h2?.name || '2nd Place'}
+                                  </span>
+                                </div>
+                                <span className="text-[11px] font-bold text-slate-600 font-mono">
+                                  +{r2.pointsAwarded} pts
+                                </span>
+                              </div>
+                            )}
+
+                            {r3 && (
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 truncate">
+                                  <span className="text-sm">🥉</span>
+                                  <span
+                                    className="w-2 h-2 rounded-full shrink-0"
+                                    style={{ backgroundColor: h3?.color || '#eab308' }}
+                                  />
+                                  <span className="font-semibold text-slate-800 truncate">
+                                    {r3.participantName || h3?.name || '3rd Place'}
+                                  </span>
+                                </div>
+                                <span className="text-[11px] font-bold text-slate-600 font-mono">
+                                  +{r3.pointsAwarded} pts
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-center py-2 text-slate-400 italic text-[11px]">
+                            No podium results entered yet
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPodiumProgId(p.id);
+                        setIsPodiumOpen(true);
+                      }}
+                      className={`w-full mt-2 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                        hasResults
+                          ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
+                          : 'bg-amber-500 hover:bg-amber-600 text-white shadow-2xs'
+                      }`}
+                    >
+                      <Trophy className="w-3.5 h-3.5" />
+                      <span>{hasResults ? 'Edit Podium Results' : 'Enter Podium Results'}</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SECTION B: HEAD-TO-HEAD MATCH FIXTURES */}
+      {(sportsViewTab === 'all' || sportsViewTab === 'fixtures') && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-indigo-600" />
+              <span>Head-to-Head Match Fixtures ({filteredMatches.length})</span>
+            </h3>
+            <span className="text-xs text-slate-500">
+              Football, Cricket, Volleyball, Badminton, etc.
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredMatches.map((m, idx) => {
           const teamA = teams.find((t) => t.id === m.teamAId);
           const teamB = teams.find((t) => t.id === m.teamBId);
@@ -329,6 +580,8 @@ export const AdminSportsSection: React.FC = () => {
           <Activity className="w-10 h-10 text-slate-300 mx-auto mb-2" />
           <h3 className="text-base font-bold text-slate-900">No Sports Matches Found</h3>
           <p className="text-xs text-slate-500 mt-1">Click &quot;Add New Fixture&quot; to schedule an athletic or game event.</p>
+        </div>
+      )}
         </div>
       )}
 

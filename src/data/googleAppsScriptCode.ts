@@ -255,13 +255,64 @@ function doGet(e) {
     var announcements = readSheetData(ss.getSheetByName("Announcements"));
     var certificates = readSheetData(ss.getSheetByName("Certificates"));
     var documents = readSheetData(ss.getSheetByName("Documents"));
+    var resultsMarks = readSheetData(ss.getSheetByName("ResultsMarks"));
     var scoringRules = readScoringRules(ss.getSheetByName("ScoringRules"));
 
-    // Parse JSON columns safely
+    // Index results marks by program code and name
+    var marksByProgCode = {};
+    if (Array.isArray(resultsMarks)) {
+      resultsMarks.forEach(function(rm) {
+        if (!rm) return;
+        var pCode = String(rm.programCode || "").trim().toLowerCase();
+        var pName = String(rm.programName || "").trim().toLowerCase();
+        if (pCode) {
+          if (!marksByProgCode[pCode]) marksByProgCode[pCode] = [];
+          marksByProgCode[pCode].push(rm);
+        }
+        if (pName && pName !== pCode) {
+          if (!marksByProgCode[pName]) marksByProgCode[pName] = [];
+          marksByProgCode[pName].push(rm);
+        }
+      });
+    }
+
+    // Parse JSON columns safely and restore results if missing from Programs sheet
     artsPrograms = artsPrograms.map(function(p) {
       if (typeof p.results === "string" && p.results.trim()) {
         try { p.results = JSON.parse(p.results); } catch (err) { p.results = []; }
+      } else if (!p.results) {
+        p.results = [];
       }
+
+      // If program results cell is empty but ResultsMarks sheet has data, restore it
+      if ((!p.results || p.results.length === 0) && marksByProgCode) {
+        var pCodeKey = String(p.code || p.id || "").trim().toLowerCase();
+        var pNameKey = String(p.name || "").trim().toLowerCase();
+        var extra = marksByProgCode[pCodeKey] || marksByProgCode[pNameKey] || [];
+        if (extra.length > 0) {
+          p.results = extra.map(function(rm, idx) {
+            return {
+              id: "res-" + (p.id || p.code || "p") + "-" + (rm.chestNo || idx) + "-" + Date.now(),
+              programId: String(p.id || p.code),
+              programCode: p.code || "",
+              programName: p.name || "",
+              participantName: rm.participantName || "",
+              chestNo: rm.chestNo || "",
+              teamId: rm.teamId || "",
+              marks: Number(rm.marks) || 0,
+              grade: rm.grade || "-",
+              rank: rm.rank ? Number(rm.rank) : (rm.position && String(rm.position).indexOf("1") !== -1 ? 1 : rm.position && String(rm.position).indexOf("2") !== -1 ? 2 : rm.position && String(rm.position).indexOf("3") !== -1 ? 3 : 999),
+              position: rm.position || "-",
+              pointsAwarded: Number(rm.pointsAwarded) || 0,
+              status: rm.status || "Published",
+              publishedAt: rm.publishedAt || ""
+            };
+          });
+          p.publishStatus = "Published";
+          p.status = "COMPLETED";
+        }
+      }
+
       p.maxMarks = Number(p.maxMarks) || 100;
       if (p.disciplineType) {
         var dt = String(p.disciplineType).trim();
@@ -323,7 +374,8 @@ function doGet(e) {
       announcements: announcements,
       certificates: certificates,
       documents: documents,
-      scoringRules: scoringRules
+      scoringRules: scoringRules,
+      resultsMarks: resultsMarks
     };
 
     var outputStr = JSON.stringify(responsePayload);

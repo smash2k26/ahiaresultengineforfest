@@ -100,53 +100,83 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [isPodiumModalOpen, setIsPodiumModalOpen] = useState(false);
   const [podiumModalProgramId, setPodiumModalProgramId] = useState('');
 
-  // Aggregate all result entries across programs
+  // Aggregate all result entries across programs with rich participant & house fallback
   const allResultRecords = useMemo(() => {
     const list: Array<ArtsResultEntry & { programTitle: string; programCode: string; programObjId: string; programCategory: string }> = [];
     artsPrograms.forEach((p) => {
       (p.results || []).forEach((r) => {
+        const pt = participants.find((part) => part.id === r.participantId || (part.chestNo && r.chestNo && part.chestNo.toLowerCase() === r.chestNo.toLowerCase()));
+        const tm = teams.find((t) => t.id === r.teamId || t.id === r.participantId || (pt && t.id === pt.teamId));
         list.push({
           ...r,
+          participantName: r.participantName || pt?.name || tm?.name || 'Winner',
+          teamId: r.teamId || pt?.teamId || tm?.id || '',
+          chestNo: r.chestNo || pt?.chestNo || '',
+          admissionNo: r.admissionNo || pt?.admissionNo || '',
           programObjId: p.id,
           programTitle: p.name,
           programCode: p.code || 'EV-' + p.id.slice(-3),
-          programCategory: p.category || 'General',
+          programCategory: p.category || pt?.category || 'General',
         });
       });
     });
     return list;
-  }, [artsPrograms]);
+  }, [artsPrograms, participants, teams]);
 
   const filteredResults = useMemo(() => {
     const q = (resultsSearch || '').toLowerCase().trim();
     const cleanQ = q.replace(/[\s-_]/g, '');
     return allResultRecords.filter((r) => {
       const cleanAdm = String(r.admissionNo || '').toLowerCase().replace(/[\s-_]/g, '');
+      const cleanCode = String(r.programCode || '').toLowerCase().replace(/[\s-_]/g, '');
+      const cleanTitle = String(r.programTitle || '').toLowerCase().replace(/[\s-_]/g, '');
+      const cleanChest = String(r.chestNo || '').toLowerCase().replace(/[\s-_]/g, '');
+      const cleanName = String(r.participantName || '').toLowerCase().replace(/[\s-_]/g, '');
+      const cleanCat = String(r.programCategory || '').toLowerCase().replace(/[\s-_]/g, '');
+      const house = teams.find((t) => t.id === r.teamId);
+      const cleanHouse = String(house?.name || '').toLowerCase().replace(/[\s-_]/g, '');
+      const cleanPos = String(r.position || '').toLowerCase().replace(/[\s-_]/g, '');
+      const cleanGrade = String(r.grade || '').toLowerCase().replace(/[\s-_]/g, '');
+
       const matchQuery =
-        !cleanQ ||
-        cleanAdm.includes(cleanQ) ||
+        !q ||
+        (cleanQ && cleanAdm.includes(cleanQ)) ||
+        (cleanQ && cleanCode.includes(cleanQ)) ||
+        (cleanQ && cleanTitle.includes(cleanQ)) ||
+        (cleanQ && cleanChest.includes(cleanQ)) ||
+        (cleanQ && cleanName.includes(cleanQ)) ||
+        (cleanQ && cleanHouse.includes(cleanQ)) ||
+        (cleanQ && cleanCat.includes(cleanQ)) ||
+        (cleanQ && cleanPos.includes(cleanQ)) ||
+        (cleanQ && cleanGrade.includes(cleanQ)) ||
         String(r.programTitle || '').toLowerCase().includes(q) ||
         String(r.programCode || '').toLowerCase().includes(q) ||
         String(r.participantName || '').toLowerCase().includes(q) ||
+        String(r.chestNo || '').toLowerCase().includes(q) ||
+        String(house?.name || '').toLowerCase().includes(q) ||
         String(r.grade || '').toLowerCase().includes(q) ||
         String(r.position || '').toLowerCase().includes(q);
 
       const matchProgram =
         resultsProgramFilter === 'All' ||
         r.programObjId === resultsProgramFilter ||
-        r.programTitle === resultsProgramFilter;
+        r.programTitle === resultsProgramFilter ||
+        r.programCode === resultsProgramFilter ||
+        (r.programCode && resultsProgramFilter && r.programCode.toLowerCase() === resultsProgramFilter.toLowerCase());
 
       const matchCategory =
         resultsCategoryFilter === 'All' ||
-        r.programCategory === resultsCategoryFilter;
+        r.programCategory?.toLowerCase() === resultsCategoryFilter.toLowerCase() ||
+        (cleanCat && cleanCat === resultsCategoryFilter.toLowerCase().replace(/[\s-_]/g, ''));
 
       const matchHouse =
         resultsHouseFilter === 'All' ||
-        r.teamId === resultsHouseFilter;
+        r.teamId === resultsHouseFilter ||
+        (house && house.id === resultsHouseFilter);
 
       return matchQuery && matchProgram && matchCategory && matchHouse;
     });
-  }, [allResultRecords, resultsSearch, resultsProgramFilter, resultsCategoryFilter, resultsHouseFilter]);
+  }, [allResultRecords, resultsSearch, resultsProgramFilter, resultsCategoryFilter, resultsHouseFilter, teams]);
 
   const handleOpenNewMarkModal = () => {
     if (artsPrograms.length === 0) {

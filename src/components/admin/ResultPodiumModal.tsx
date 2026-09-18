@@ -290,6 +290,19 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
   const filteredPartsSlot2 = useMemo(() => filterParticipants(searchSlot2, slot2.participantId), [participants, searchSlot2, teams, activeProgram, filterByCategoryOnly, slot2.participantId]);
   const filteredPartsSlot3 = useMemo(() => filterParticipants(searchSlot3, slot3.participantId), [participants, searchSlot3, teams, activeProgram, filterByCategoryOnly, slot3.participantId]);
 
+  const isGroupOrRelay = useMemo(() => {
+    if (!activeProgram) return false;
+    const name = (activeProgram.name || '').toLowerCase();
+    const sec = (activeProgram.section || '').toLowerCase();
+    return (
+      sec.includes('group') ||
+      name.includes('relay') ||
+      name.includes('tug of war') ||
+      name.includes('tug-of-war') ||
+      name.includes('group')
+    );
+  }, [activeProgram]);
+
   if (!isOpen) return null;
 
   const handleGradeChange = (rank: 1 | 2 | 3, newGrade: string) => {
@@ -306,7 +319,20 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
       return;
     }
 
-    if (!slot1.participantId && !slot2.participantId && !slot3.participantId) {
+    let part1 = slot1.participantId;
+    if (!part1 && searchSlot1.trim() && filteredPartsSlot1.length > 0) {
+      part1 = filteredPartsSlot1[0].id;
+    }
+    let part2 = slot2.participantId;
+    if (!part2 && searchSlot2.trim() && filteredPartsSlot2.length > 0) {
+      part2 = filteredPartsSlot2[0].id;
+    }
+    let part3 = slot3.participantId;
+    if (!part3 && searchSlot3.trim() && filteredPartsSlot3.length > 0) {
+      part3 = filteredPartsSlot3[0].id;
+    }
+
+    if (!part1 && !part2 && !part3) {
       showToast('No Winners Assigned', 'Please assign at least 1st place or one winner slot.', 'warning');
       return;
     }
@@ -318,28 +344,28 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
       pointsAwarded: number;
     }> = [];
 
-    if (slot1.participantId) {
+    if (part1) {
       podiumSlots.push({
         rank: 1,
-        participantId: slot1.participantId,
+        participantId: part1,
         grade: slot1.grade,
         pointsAwarded: Number(slot1.points) || 0,
       });
     }
 
-    if (slot2.participantId) {
+    if (part2) {
       podiumSlots.push({
         rank: 2,
-        participantId: slot2.participantId,
+        participantId: part2,
         grade: slot2.grade,
         pointsAwarded: Number(slot2.points) || 0,
       });
     }
 
-    if (slot3.participantId) {
+    if (part3) {
       podiumSlots.push({
         rank: 3,
-        participantId: slot3.participantId,
+        participantId: part3,
         grade: slot3.grade,
         pointsAwarded: Number(slot3.points) || 0,
       });
@@ -367,13 +393,76 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
 
   const getParticipantObj = (idOrRef?: string) => {
     if (!idOrRef) return null;
-    return (
+    const direct =
       participants.find((p) => p.id === idOrRef) ||
       participants.find((p) => p.chestNo && p.chestNo.toLowerCase() === idOrRef.toLowerCase()) ||
       participants.find((p) => p.admissionNo && p.admissionNo.toLowerCase() === idOrRef.toLowerCase()) ||
-      participants.find((p) => p.name.toLowerCase() === idOrRef.toLowerCase()) ||
-      null
+      participants.find((p) => p.name.toLowerCase() === idOrRef.toLowerCase());
+    if (direct) return direct;
+
+    // Check if idOrRef is a team / house (e.g. team-1, team-2, team-3)
+    const matchingTeam = teams.find(
+      (t) =>
+        t.id === idOrRef ||
+        t.name.toLowerCase() === idOrRef.toLowerCase() ||
+        (t.shortCode && t.shortCode.toLowerCase() === idOrRef.toLowerCase())
     );
+    if (matchingTeam) {
+      const groupPt = participants.find(
+        (p) =>
+          p.teamId === matchingTeam.id &&
+          ((activeProgram?.category && p.category && p.category.toLowerCase() === activeProgram.category.toLowerCase()) ||
+            (p.yearClass && p.yearClass.toLowerCase().includes('group')) ||
+            p.name.toLowerCase().includes(matchingTeam.name.toLowerCase()))
+      );
+      if (groupPt) return groupPt;
+      return {
+        id: matchingTeam.id,
+        name: matchingTeam.name,
+        chestNo: matchingTeam.shortCode || matchingTeam.name.slice(0, 3).toUpperCase(),
+        admissionNo: '',
+        teamId: matchingTeam.id,
+        category: activeProgram?.category || 'General',
+        section: activeProgram?.section || 'General',
+        yearClass: `${activeProgram?.category || ''} Group`,
+        photo: '',
+        totalPoints: 0,
+        golds: 0,
+        silvers: 0,
+        bronzes: 0,
+        overallRank: 0,
+        participatedPrograms: [activeProgram?.code || activeProgram?.name || ''],
+      } as any;
+    }
+
+    // Fallback: check if the winner was recorded in activeProgram.results
+    if (activeProgram && activeProgram.results) {
+      const match = activeProgram.results.find(
+        (r) =>
+          r.participantId === idOrRef ||
+          (r.chestNo && r.chestNo.toLowerCase() === idOrRef.toLowerCase()) ||
+          (r.participantName && r.participantName.toLowerCase() === idOrRef.toLowerCase())
+      );
+      if (match) {
+        return {
+          id: match.participantId || idOrRef,
+          name: match.participantName || 'Student Winner',
+          chestNo: match.chestNo || '',
+          admissionNo: match.admissionNo || '',
+          teamId: match.teamId || '',
+          category: activeProgram.category || 'General',
+          section: activeProgram.section || '',
+          yearClass: '',
+          photo: '',
+          totalPoints: match.pointsAwarded || 0,
+          golds: match.rank === 1 ? 1 : 0,
+          silvers: match.rank === 2 ? 1 : 0,
+          bronzes: match.rank === 3 ? 1 : 0,
+          participatedPrograms: [activeProgram.id],
+        } as any;
+      }
+    }
+    return null;
   };
   const getHouseObj = (teamId?: string) => teams.find((t) => t.id === teamId);
 
@@ -646,12 +735,76 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
                             autoFocus
                             value={searchSlot1}
                             onChange={(e) => setSearchSlot1(e.target.value)}
-                            placeholder={`Search ${activeProgram?.category || ''} students by name, chest no, admission no...`}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (filteredPartsSlot1.length > 0) {
+                                  setSlot1((prev) => ({ ...prev, participantId: filteredPartsSlot1[0].id }));
+                                  setIsDropdownSlot1(false);
+                                  setSearchSlot1('');
+                                }
+                              }
+                            }}
+                            placeholder={`Search ${activeProgram?.category || ''} students by name, chest no, house...`}
                             className="w-full pl-8 pr-2 py-1 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
                           />
                         </div>
                       </div>
-                      <div className="max-h-48 overflow-y-auto divide-y divide-slate-100">
+                      <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
+                        {/* If Group or Relay, show House Teams prominently */}
+                        {isGroupOrRelay && teams.length > 0 && (
+                          <div className="bg-amber-50/50 p-2 border-b border-amber-100">
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800 mb-1 px-1">
+                              👑 House / Team Entries (Relay &amp; Group)
+                            </div>
+                            <div className="grid grid-cols-1 gap-1">
+                              {teams
+                                .filter((tm) => !searchSlot1.trim() || tm.name.toLowerCase().includes(searchSlot1.toLowerCase().trim()) || (tm.shortCode && tm.shortCode.toLowerCase().includes(searchSlot1.toLowerCase().trim())))
+                                .map((tm) => {
+                                const grpPt = participants.find(
+                                  (p) =>
+                                    p.teamId === tm.id &&
+                                    ((activeProgram?.category && p.category && p.category.toLowerCase() === activeProgram.category.toLowerCase()) ||
+                                      (p.yearClass && p.yearClass.toLowerCase().includes('group')) ||
+                                      p.name.toLowerCase().includes(tm.name.toLowerCase()))
+                                );
+                                const targetId = grpPt ? grpPt.id : tm.id;
+                                const isSelected = targetId === slot1.participantId || tm.id === slot1.participantId;
+                                return (
+                                  <button
+                                    key={`tm-btn-slot1-${tm.id}`}
+                                    type="button"
+                                    onClick={() => {
+                                      setSlot1((prev) => ({ ...prev, participantId: targetId }));
+                                      setIsDropdownSlot1(false);
+                                      setSearchSlot1('');
+                                    }}
+                                    className={`flex items-center justify-between w-full p-1.5 rounded-lg text-left transition-colors cursor-pointer ${
+                                      isSelected ? 'bg-amber-200/80 font-bold' : 'hover:bg-amber-100/70'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="w-3 h-3 rounded-full shrink-0 border border-white"
+                                        style={{ backgroundColor: tm.color || '#e11d48' }}
+                                      />
+                                      <span className="text-xs font-bold text-slate-900">{tm.name}</span>
+                                      {grpPt?.chestNo && (
+                                        <span className="text-[11px] font-mono text-slate-600">#{grpPt.chestNo}</span>
+                                      )}
+                                    </div>
+                                    <span
+                                      className="text-[10px] px-1.5 py-0.5 rounded text-white font-semibold"
+                                      style={{ backgroundColor: tm.color || '#e11d48' }}
+                                    >
+                                      House Team
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                         {filteredPartsSlot1.length === 0 ? (
                           <div className="p-3 text-center text-xs text-slate-400">
                             No {activeProgram?.category || ''} participants found
@@ -822,12 +975,76 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
                             autoFocus
                             value={searchSlot2}
                             onChange={(e) => setSearchSlot2(e.target.value)}
-                            placeholder={`Search ${activeProgram?.category || ''} students by name, chest no, admission no...`}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (filteredPartsSlot2.length > 0) {
+                                  setSlot2((prev) => ({ ...prev, participantId: filteredPartsSlot2[0].id }));
+                                  setIsDropdownSlot2(false);
+                                  setSearchSlot2('');
+                                }
+                              }
+                            }}
+                            placeholder={`Search ${activeProgram?.category || ''} students by name, chest no, house...`}
                             className="w-full pl-8 pr-2 py-1 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-500 focus:outline-none"
                           />
                         </div>
                       </div>
-                      <div className="max-h-48 overflow-y-auto divide-y divide-slate-100">
+                      <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
+                        {/* If Group or Relay, show House Teams prominently */}
+                        {isGroupOrRelay && teams.length > 0 && (
+                          <div className="bg-slate-100/70 p-2 border-b border-slate-200">
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-700 mb-1 px-1">
+                              👑 House / Team Entries (Relay &amp; Group)
+                            </div>
+                            <div className="grid grid-cols-1 gap-1">
+                              {teams
+                                .filter((tm) => !searchSlot2.trim() || tm.name.toLowerCase().includes(searchSlot2.toLowerCase().trim()) || (tm.shortCode && tm.shortCode.toLowerCase().includes(searchSlot2.toLowerCase().trim())))
+                                .map((tm) => {
+                                const grpPt = participants.find(
+                                  (p) =>
+                                    p.teamId === tm.id &&
+                                    ((activeProgram?.category && p.category && p.category.toLowerCase() === activeProgram.category.toLowerCase()) ||
+                                      (p.yearClass && p.yearClass.toLowerCase().includes('group')) ||
+                                      p.name.toLowerCase().includes(tm.name.toLowerCase()))
+                                );
+                                const targetId = grpPt ? grpPt.id : tm.id;
+                                const isSelected = targetId === slot2.participantId || tm.id === slot2.participantId;
+                                return (
+                                  <button
+                                    key={`tm-btn-slot2-${tm.id}`}
+                                    type="button"
+                                    onClick={() => {
+                                      setSlot2((prev) => ({ ...prev, participantId: targetId }));
+                                      setIsDropdownSlot2(false);
+                                      setSearchSlot2('');
+                                    }}
+                                    className={`flex items-center justify-between w-full p-1.5 rounded-lg text-left transition-colors cursor-pointer ${
+                                      isSelected ? 'bg-slate-200 font-bold' : 'hover:bg-slate-200/60'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="w-3 h-3 rounded-full shrink-0 border border-white"
+                                        style={{ backgroundColor: tm.color || '#e11d48' }}
+                                      />
+                                      <span className="text-xs font-bold text-slate-900">{tm.name}</span>
+                                      {grpPt?.chestNo && (
+                                        <span className="text-[11px] font-mono text-slate-600">#{grpPt.chestNo}</span>
+                                      )}
+                                    </div>
+                                    <span
+                                      className="text-[10px] px-1.5 py-0.5 rounded text-white font-semibold"
+                                      style={{ backgroundColor: tm.color || '#e11d48' }}
+                                    >
+                                      House Team
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                         {filteredPartsSlot2.length === 0 ? (
                           <div className="p-3 text-center text-xs text-slate-400">
                             No {activeProgram?.category || ''} participants found
@@ -998,12 +1215,76 @@ export const ResultPodiumModal: React.FC<ResultPodiumModalProps> = ({
                             autoFocus
                             value={searchSlot3}
                             onChange={(e) => setSearchSlot3(e.target.value)}
-                            placeholder={`Search ${activeProgram?.category || ''} students by name, chest no, admission no...`}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (filteredPartsSlot3.length > 0) {
+                                  setSlot3((prev) => ({ ...prev, participantId: filteredPartsSlot3[0].id }));
+                                  setIsDropdownSlot3(false);
+                                  setSearchSlot3('');
+                                }
+                              }
+                            }}
+                            placeholder={`Search ${activeProgram?.category || ''} students by name, chest no, house...`}
                             className="w-full pl-8 pr-2 py-1 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
                           />
                         </div>
                       </div>
-                      <div className="max-h-48 overflow-y-auto divide-y divide-slate-100">
+                      <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
+                        {/* If Group or Relay, show House Teams prominently */}
+                        {isGroupOrRelay && teams.length > 0 && (
+                          <div className="bg-orange-50/50 p-2 border-b border-orange-100">
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-orange-800 mb-1 px-1">
+                              👑 House / Team Entries (Relay &amp; Group)
+                            </div>
+                            <div className="grid grid-cols-1 gap-1">
+                              {teams
+                                .filter((tm) => !searchSlot3.trim() || tm.name.toLowerCase().includes(searchSlot3.toLowerCase().trim()) || (tm.shortCode && tm.shortCode.toLowerCase().includes(searchSlot3.toLowerCase().trim())))
+                                .map((tm) => {
+                                const grpPt = participants.find(
+                                  (p) =>
+                                    p.teamId === tm.id &&
+                                    ((activeProgram?.category && p.category && p.category.toLowerCase() === activeProgram.category.toLowerCase()) ||
+                                      (p.yearClass && p.yearClass.toLowerCase().includes('group')) ||
+                                      p.name.toLowerCase().includes(tm.name.toLowerCase()))
+                                );
+                                const targetId = grpPt ? grpPt.id : tm.id;
+                                const isSelected = targetId === slot3.participantId || tm.id === slot3.participantId;
+                                return (
+                                  <button
+                                    key={`tm-btn-slot3-${tm.id}`}
+                                    type="button"
+                                    onClick={() => {
+                                      setSlot3((prev) => ({ ...prev, participantId: targetId }));
+                                      setIsDropdownSlot3(false);
+                                      setSearchSlot3('');
+                                    }}
+                                    className={`flex items-center justify-between w-full p-1.5 rounded-lg text-left transition-colors cursor-pointer ${
+                                      isSelected ? 'bg-orange-200/80 font-bold' : 'hover:bg-orange-100/70'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="w-3 h-3 rounded-full shrink-0 border border-white"
+                                        style={{ backgroundColor: tm.color || '#e11d48' }}
+                                      />
+                                      <span className="text-xs font-bold text-slate-900">{tm.name}</span>
+                                      {grpPt?.chestNo && (
+                                        <span className="text-[11px] font-mono text-slate-600">#{grpPt.chestNo}</span>
+                                      )}
+                                    </div>
+                                    <span
+                                      className="text-[10px] px-1.5 py-0.5 rounded text-white font-semibold"
+                                      style={{ backgroundColor: tm.color || '#e11d48' }}
+                                    >
+                                      House Team
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                         {filteredPartsSlot3.length === 0 ? (
                           <div className="p-3 text-center text-xs text-slate-400">
                             No {activeProgram?.category || ''} participants found

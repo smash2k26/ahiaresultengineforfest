@@ -2,51 +2,65 @@
  * GOOGLE APPS SCRIPT WEB APP BACKEND & DATABASE ENGINE
  * AHIA FEST 2026 - ARTS & SPORTS RESULT ENGINE
  *
- * Full Two-Way Synchronization with Non-Destructive Data Protection & In-Place Updates
+ * Full Two-Way Synchronization with Non-Destructive Data Protection, In-Place Updates & Anti-Duplication
  */
 
 export const GOOGLE_APPS_SCRIPT_CODE = `/**
  * =========================================================================
- * AHIA FEST 2026 - REFINED GOOGLE APPS SCRIPT DATABASE ENGINE & API
+ * AHIA FEST 2026 - REFINED HIGH-SPEED GOOGLE APPS SCRIPT DATABASE ENGINE
  * =========================================================================
  * 
  * FEATURES:
- *  1. Non-Destructive Live Sync: Never wipes sheets or resets page; writes data smoothly in-place.
- *  2. No-Flicker Architecture: Eliminates sheet.clear() so viewers in Google Sheets never see tabs flash.
- *  3. Smart Upsert & Safe Merging: Preserves all added teams, participants, marks, matches & schedule.
- *  4. Instant Live Updates: Syncs changes between Web App & Sheets silently without refreshing browser.
- *  5. Custom Branded Styling: Color-coded tabs, bold headers, zebra striping, and auto-column widths.
+ *  1. High-Speed Data Engine: ScriptCache caching for ultra-fast reads (<150ms).
+ *  2. Anti-Duplication Engine: Automatic deduplication of results & marks across all programs.
+ *  3. Non-Destructive Live Sync: Never wipes sheets; writes data in-place smoothly.
+ *  4. No-Flicker Architecture: Eliminates sheet.clear() so viewers never see tabs flash.
+ *  5. Full Collection Coverage: Teams (w/ artsMinusPoints & sportsMinusPoints),
+ *     TeamMinuses (w/ scope), Participants, Programs, ResultsMarks, SportsMatches,
+ *     Schedule, Announcements, Certificates, Documents, ScoringRules &
+ *     SiteSettings (w/ Arts, Sports & Master penalty toggles).
+ *  6. Auto Cache Invalidation: Automatically purges cache on any write/update.
+ *  7. Cross-Origin Support: Handles GET, POST, and OPTIONS requests seamlessly.
  * =========================================================================
  */
 
-// Master sheet configurations: Names, Tab Colors, Header Colors, Widths, and Alignments
 var FEST_SHEETS_CONFIG = {
   SiteSettings: {
     tabColor: "#1E1B4B",
-    headerColor: "#312E81",
-    headers: ["Setting Key", "Parameter Name", "Configured Value", "Description & Guidance"],
+    headerColor: "#1E1B4B", // Midnight Indigo Header
+    headers: ["Setting Key", "Setting Label", "Value", "Description"],
     colAlignments: ["center", "left", "left", "left"],
-    colWidths: [180, 220, 360, 420]
+    colWidths: [180, 240, 360, 420]
   },
   Teams: {
-    tabColor: "#1E3A8A",
-    headerColor: "#1E3A8A", // Deep Royal Blue Header
+    tabColor: "#1E40AF",
+    headerColor: "#1E40AF", // Deep Cobalt Header
     headers: [
-      "id", "name", "shortCode", "color", "accentColor", "logo", "captain", "viceCaptain", 
-      "staffAdvisor", "slogan", "description", "artsPoints", "sportsPoints", "artsMinusPoints", "sportsMinusPoints", "minusPoints", "totalPoints", 
-      "golds", "silvers", "bronzes", "totalWins", "rank", "previousRank", "trend", "membersCount"
+      "id", "name", "shortCode", "color", "accentColor", "logo", 
+      "captain", "viceCaptain", "staffAdvisor", "slogan", "description",
+      "artsPoints", "sportsPoints", "artsMinusPoints", "sportsMinusPoints", 
+      "minusPoints", "totalPoints", "golds", "silvers", "bronzes", 
+      "totalWins", "rank", "membersCount"
     ],
     colAlignments: [
-      "center", "left", "center", "center", "center", "center", "left", "left",
-      "left", "left", "left", "right", "right", "right", "right", "right", "right",
-      "right", "right", "right", "right", "center", "center", "center", "right"
+      "center", "left", "center", "center", "center", "center",
+      "left", "left", "left", "left", "left",
+      "right", "right", "right", "right",
+      "right", "right", "right", "right", "right",
+      "right", "center", "right"
     ],
-    colWidths: [100, 190, 90, 100, 100, 80, 140, 140, 150, 180, 220, 100, 100, 100, 100, 100, 110, 75, 75, 75, 85, 70, 70, 70, 100]
+    colWidths: [
+      100, 180, 90, 90, 90, 100,
+      140, 140, 140, 200, 220,
+      95, 95, 110, 110,
+      95, 100, 75, 75, 75,
+      85, 70, 100
+    ]
   },
   TeamMinuses: {
     tabColor: "#991B1B",
-    headerColor: "#991B1B", // Dark Crimson Header for Penalties
-    headers: ["id", "teamId", "teamName", "pointsDeducted", "reason", "scope", "category", "registeredBy", "timestamp", "notes"],
+    headerColor: "#991B1B", // Ruby Crimson Header
+    headers: ["id", "teamId", "teamName", "points", "reason", "category", "scope", "addedBy", "date", "notes"],
     colAlignments: ["center", "center", "left", "right", "left", "center", "center", "left", "center", "left"],
     colWidths: [100, 100, 160, 110, 240, 90, 130, 140, 130, 240]
   },
@@ -139,55 +153,92 @@ var FEST_SHEETS_CONFIG = {
       "left", "center", "center", "center", "center",
       "center", "center"
     ],
-    colWidths: [150, 190, 90, 100, 140, 180, 90, 100, 90, 120, 120, 170]
-  },
-  ScoringRules: {
-    tabColor: "#4C1D95",
-    headerColor: "#4C1D95", // Ruleset Violet Header
-    headers: ["ruleKey", "ruleName", "pointsValue"],
-    colAlignments: ["center", "left", "right"],
-    colWidths: [180, 260, 110]
+    colWidths: [100, 180, 90, 110, 150, 200, 90, 100, 80, 120, 110, 140]
   },
   Documents: {
-    tabColor: "#1E293B",
-    headerColor: "#1E293B", // Archive Slate Header
-    headers: ["id", "title", "category", "fileUrl", "summary", "updatedAt"],
-    colAlignments: ["center", "left", "center", "left", "left", "center"],
-    colWidths: [100, 220, 120, 260, 320, 140]
+    tabColor: "#334155",
+    headerColor: "#334155", // Slate Charcoal Header
+    headers: ["id", "title", "category", "description", "issueDate", "fileUrl", "fileSize", "status", "isPublic"],
+    colAlignments: ["center", "left", "center", "left", "center", "left", "center", "center", "center"],
+    colWidths: [90, 220, 130, 260, 110, 280, 100, 90, 90]
+  },
+  ScoringRules: {
+    tabColor: "#4338CA",
+    headerColor: "#4338CA", // Deep Indigo Header
+    headers: ["ruleKey", "ruleLabel", "category", "firstPoints", "secondPoints", "thirdPoints", "description"],
+    colAlignments: ["center", "left", "center", "right", "right", "right", "left"],
+    colWidths: [140, 220, 120, 90, 90, 90, 300]
   }
 };
 
 /**
- * 1. ONE-CLICK INITIALIZATION & SETUP
- * Safe and non-destructive: Preserves all existing data.
+ * Deduplicate program results to prevent repeated or duplicate winner rows
  */
+function deduplicateResults(results) {
+  if (!Array.isArray(results)) return [];
+  var seenParticipants = {};
+  var seenRanks = {};
+  var clean = [];
+
+  for (var i = 0; i < results.length; i++) {
+    var r = results[i];
+    if (!r) continue;
+
+    var partKey = String(r.participantId || r.chestNo || r.admissionNo || r.id || "").trim().toLowerCase();
+    var rankNum = Number(r.rank) || 999;
+
+    // Skip if participant is already recorded in this program
+    if (partKey && seenParticipants[partKey]) continue;
+    
+    // Skip if podium rank 1, 2, or 3 is already taken
+    if (rankNum <= 3 && seenRanks[rankNum]) continue;
+
+    if (partKey) seenParticipants[partKey] = true;
+    if (rankNum <= 3) seenRanks[rankNum] = true;
+
+    clean.push(r);
+  }
+
+  // Sort results by rank ascending, then marks descending
+  clean.sort(function(a, b) {
+    var rA = Number(a.rank) || 999;
+    var rB = Number(b.rank) || 999;
+    if (rA !== rB) return rA - rB;
+    var mA = Number(a.marks) || 0;
+    var mB = Number(b.marks) || 0;
+    return mB - mA;
+  });
+
+  return clean;
+}
+
+function doOptions(e) {
+  return ContentService.createTextOutput("")
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
 function setupFestivalSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // Setup SiteSettings Tab
-  var settingsSheet = ss.getSheetByName("SiteSettings");
-  if (!settingsSheet) {
-    settingsSheet = ss.insertSheet("SiteSettings", 0);
-  }
+  var settingsSheet = ss.getSheetByName("SiteSettings") || ss.insertSheet("SiteSettings", 0);
   initSiteSettingsSheet(settingsSheet, {
-    festivalName: "AHIA FEST 2026",
+    festivalName: "smash 2026",
     year: "2026",
+    edition: "Annual Championship Edition",
     statusBanner: "LIVE",
     tagline: "Annual Inter-House Arts & Athletics Fest",
-    logoUrl: "https://images.unsplash.com/photo-1511525258028-df0c67b3ff2d?w=350&auto=format&fit=crop&q=80",
-    adminPassword: "hudaahiasmash20262027",
-    adminUsername: "smash2k26",
-    podiumCategory: "arts",
-    accentColor: "#4F46E5",
-    accentPreset: "indigo",
-    enableLiveTicker: "TRUE",
-    announcementTickerSpeed: "normal",
-    copyrightText: "© 2026 AHIA FEST • Hidaya Union Devoted Activities (HUDA). All Rights Reserved.",
-    lastSyncedAt: new Date().toISOString()
+    theme: "Where talent meets competition.",
+    motto: "Ignite the Spirit of Excellence",
+    venue: "Grand Central Stage & Main Athletic Arena",
+    organizedBy: "Student Union & Fest Council",
+    chiefGuest: "Eminent Dignitaries & Academic Directors",
+    applyPenaltiesToPodium: "true",
+    applyArtsPenalties: "true",
+    applySportsPenalties: "true"
   });
 
-  // Setup All Other Data Tabs
-  Object.keys(FEST_SHEETS_CONFIG).forEach(function(tabName) {
+  var tabNames = Object.keys(FEST_SHEETS_CONFIG);
+  tabNames.forEach(function(tabName) {
     if (tabName === "SiteSettings") return;
     var cfg = FEST_SHEETS_CONFIG[tabName];
     var sheet = ss.getSheetByName(tabName) || ss.insertSheet(tabName);
@@ -198,7 +249,6 @@ function setupFestivalSheets() {
       }
     } catch (e) {}
 
-    // Only write headers if sheet is empty to prevent overwriting existing data
     if (sheet.getLastRow() === 0) {
       writeDecoratedSheetData(sheet, [], cfg);
     } else {
@@ -206,20 +256,16 @@ function setupFestivalSheets() {
     }
   });
 
-  return "All 10 Festival sheets initialized with non-destructive preservation and custom styling!";
+  return "All " + tabNames.length + " Festival sheets initialized with non-destructive preservation and custom styling!";
 }
 
-/**
- * 2. GET REQUEST HANDLER (Web App pulls live data from Google Sheets with High-Speed Cache)
- */
 function doGet(e) {
   try {
     var forceFresh = e && e.parameter && (e.parameter.fresh === "1" || e.parameter.action === "fresh" || e.parameter.nocache === "1");
     var cache = CacheService.getScriptCache();
     
-    // High-speed cached response for ultra-fast rendering (<150ms)
     if (!forceFresh) {
-      var cachedJson = cache.get("ahia_fest_live_data_v3");
+      var cachedJson = cache.get("ahia_fest_live_data_v4");
       if (cachedJson) {
         return ContentService.createTextOutput(cachedJson).setMimeType(ContentService.MimeType.JSON);
       }
@@ -227,7 +273,6 @@ function doGet(e) {
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // Ping or direct setup
     if (e && e.parameter && (e.parameter.action === "setup" || e.parameter.setup === "1")) {
       var setupResult = setupFestivalSheets();
       return jsonResponse({
@@ -238,7 +283,6 @@ function doGet(e) {
       });
     }
 
-    // Verify SiteSettings exists
     var settingsSheet = ss.getSheetByName("SiteSettings");
     if (!settingsSheet) {
       setupFestivalSheets();
@@ -258,36 +302,25 @@ function doGet(e) {
     var resultsMarks = readSheetData(ss.getSheetByName("ResultsMarks"));
     var scoringRules = readScoringRules(ss.getSheetByName("ScoringRules"));
 
-    // Index results marks by program code and name (with sanitized keys for 100% match)
     var marksByProgCode = {};
     if (Array.isArray(resultsMarks)) {
       resultsMarks.forEach(function(rm) {
         if (!rm) return;
         var pCode = String(rm.programCode || "").trim().toLowerCase();
-        var pName = String(rm.programName || "").trim().toLowerCase();
-        var pCodeClean = pCode.replace(/[^a-z0-9]/g, "");
-        var pNameClean = pName.replace(/[^a-z0-9]/g, "");
+        if (!pCode) return;
 
-        if (pCode) {
-          if (!marksByProgCode[pCode]) marksByProgCode[pCode] = [];
+        if (!marksByProgCode[pCode]) marksByProgCode[pCode] = [];
+        // Avoid duplicate marks entry
+        var alreadyExists = marksByProgCode[pCode].some(function(existing) {
+          return String(existing.chestNo || "").trim().toLowerCase() === String(rm.chestNo || "").trim().toLowerCase() &&
+                 String(existing.participantName || "").trim().toLowerCase() === String(rm.participantName || "").trim().toLowerCase();
+        });
+        if (!alreadyExists) {
           marksByProgCode[pCode].push(rm);
-        }
-        if (pCodeClean && pCodeClean !== pCode) {
-          if (!marksByProgCode[pCodeClean]) marksByProgCode[pCodeClean] = [];
-          marksByProgCode[pCodeClean].push(rm);
-        }
-        if (pName && pName !== pCode) {
-          if (!marksByProgCode[pName]) marksByProgCode[pName] = [];
-          marksByProgCode[pName].push(rm);
-        }
-        if (pNameClean && pNameClean !== pName) {
-          if (!marksByProgCode[pNameClean]) marksByProgCode[pNameClean] = [];
-          marksByProgCode[pNameClean].push(rm);
         }
       });
     }
 
-    // Parse JSON columns safely and restore results if missing from Programs sheet
     artsPrograms = artsPrograms.map(function(p) {
       if (typeof p.results === "string" && p.results.trim()) {
         try { p.results = JSON.parse(p.results); } catch (err) { p.results = []; }
@@ -295,18 +328,13 @@ function doGet(e) {
         p.results = [];
       }
 
-      // If program results cell is empty but ResultsMarks sheet has data, restore it
       if ((!p.results || p.results.length === 0) && marksByProgCode) {
         var pCodeKey = String(p.code || p.id || "").trim().toLowerCase();
-        var pNameKey = String(p.name || "").trim().toLowerCase();
-        var pCodeClean = pCodeKey.replace(/[^a-z0-9]/g, "");
-        var pNameClean = pNameKey.replace(/[^a-z0-9]/g, "");
-
-        var extra = marksByProgCode[pCodeKey] || marksByProgCode[pCodeClean] || marksByProgCode[pNameKey] || marksByProgCode[pNameClean] || [];
+        var extra = marksByProgCode[pCodeKey] || [];
         if (extra.length > 0) {
           p.results = extra.map(function(rm, idx) {
             return {
-              id: "res-" + (p.id || p.code || "p") + "-" + (rm.chestNo || idx) + "-" + Date.now(),
+              id: "res-" + (p.id || p.code || "p") + "-" + (rm.chestNo || idx) + "-" + (rm.rank || idx + 1),
               programId: String(p.id || p.code),
               programCode: p.code || "",
               programName: p.name || "",
@@ -327,6 +355,7 @@ function doGet(e) {
         }
       }
 
+      p.results = deduplicateResults(p.results || []);
       p.maxMarks = Number(p.maxMarks) || 100;
       if (p.disciplineType) {
         var dt = String(p.disciplineType).trim();
@@ -342,40 +371,8 @@ function doGet(e) {
       return m;
     });
 
-    participants = participants.map(function(p) {
-      if (typeof p.participatedPrograms === "string" && p.participatedPrograms.trim()) {
-        try { p.participatedPrograms = JSON.parse(p.participatedPrograms); } catch (err) { p.participatedPrograms = []; }
-      }
-      p.totalPoints = Number(p.totalPoints) || 0;
-      p.golds = Number(p.golds) || 0;
-      p.silvers = Number(p.silvers) || 0;
-      p.bronzes = Number(p.bronzes) || 0;
-      return p;
-    });
-
-    teams = teams.map(function(t) {
-      t.artsPoints = Number(t.artsPoints) || 0;
-      t.sportsPoints = Number(t.sportsPoints) || 0;
-      t.artsMinusPoints = Number(t.artsMinusPoints) || 0;
-      t.sportsMinusPoints = Number(t.sportsMinusPoints) || 0;
-      t.minusPoints = Number(t.minusPoints) || 0;
-      t.totalPoints = Number(t.totalPoints) || 0;
-      t.golds = Number(t.golds) || 0;
-      t.silvers = Number(t.silvers) || 0;
-      t.bronzes = Number(t.bronzes) || 0;
-      t.totalWins = Number(t.totalWins) || 0;
-      t.rank = Number(t.rank) || 1;
-      return t;
-    });
-
-    teamMinuses = teamMinuses.map(function(m) {
-      m.pointsDeducted = Number(m.pointsDeducted) || 0;
-      return m;
-    });
-
     var responsePayload = {
       status: "success",
-      version: "3.6-fast-sync",
       timestamp: new Date().toISOString(),
       festConfig: festConfig,
       siteSettings: festConfig,
@@ -383,22 +380,25 @@ function doGet(e) {
       teamMinuses: teamMinuses,
       participants: participants,
       artsPrograms: artsPrograms,
+      programs: artsPrograms,
       sportsMatches: sportsMatches,
       schedule: schedule,
       announcements: announcements,
       certificates: certificates,
       documents: documents,
-      scoringRules: scoringRules,
-      resultsMarks: resultsMarks
+      resultsMarks: resultsMarks,
+      scoringRules: scoringRules
     };
 
-    var outputStr = JSON.stringify(responsePayload);
-    // Cache for 10 minutes (600s). Will be automatically cleared on any doPost update.
-    try {
-      cache.put("ahia_fest_live_data_v3", outputStr, 600);
-    } catch (cErr) {}
+    var outputJson = JSON.stringify(responsePayload);
+    // Google Apps Script CacheService has a 100KB per item limit
+    if (outputJson.length < 95000) {
+      try {
+        cache.put("ahia_fest_live_data_v4", outputJson, 20);
+      } catch (cacheErr) {}
+    }
 
-    return ContentService.createTextOutput(outputStr).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(outputJson).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return jsonResponse({
       status: "error",
@@ -407,73 +407,87 @@ function doGet(e) {
   }
 }
 
-/**
- * 3. POST REQUEST HANDLER (Web App updates data in Google Sheets in-place)
- */
 function doPost(e) {
   try {
-    // Invalidate high-speed cache so next read returns freshest live data
     try {
-      CacheService.getScriptCache().remove("ahia_fest_live_data_v3");
+      CacheService.getScriptCache().remove("ahia_fest_live_data_v4");
     } catch (cErr) {}
 
-    var raw = e.postData && e.postData.contents ? e.postData.contents : "{}";
-    var payload = JSON.parse(raw);
-    var action = payload.action || "syncData";
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var postData = e.postData.contents;
+    var payload = JSON.parse(postData);
 
-    // 1. Update Site Settings (In-place non-destructive update)
-    var siteConfig = payload.festConfig || payload.siteSettings || null;
-    if (siteConfig || payload.festival) {
-      var settingsSheet = ss.getSheetByName("SiteSettings") || ss.insertSheet("SiteSettings", 0);
-      var currentCfg = readSiteSettings(settingsSheet) || {};
-      var mergedCfg = {
-        festivalName: (siteConfig && (siteConfig.festivalName !== undefined && siteConfig.festivalName !== "" ? siteConfig.festivalName : (siteConfig.name !== undefined ? siteConfig.name : undefined))) || payload.festival || currentCfg.festivalName || "smash 2026",
-        year: (siteConfig && siteConfig.year !== undefined && siteConfig.year !== "") ? siteConfig.year : (currentCfg.year || "2026"),
-        edition: (siteConfig && siteConfig.edition !== undefined) ? siteConfig.edition : (currentCfg.edition || "Annual Championship Edition"),
-        statusBanner: (siteConfig && siteConfig.statusBanner !== undefined) ? siteConfig.statusBanner : (currentCfg.statusBanner || "LIVE"),
-        tagline: (siteConfig && siteConfig.tagline !== undefined) ? siteConfig.tagline : (currentCfg.tagline || "Annual Inter-House Arts & Athletics Fest"),
-        theme: (siteConfig && siteConfig.theme !== undefined) ? siteConfig.theme : (currentCfg.theme || "Where talent meets competition."),
-        motto: (siteConfig && siteConfig.motto !== undefined) ? siteConfig.motto : (currentCfg.motto || "Ignite the Spirit of Excellence"),
-        dates: (siteConfig && siteConfig.dates !== undefined) ? siteConfig.dates : (currentCfg.dates || "March 15 - 18, 2026"),
-        currentDay: (siteConfig && siteConfig.currentDay !== undefined) ? siteConfig.currentDay : (currentCfg.currentDay || "Day 1 of 3"),
-        venue: (siteConfig && siteConfig.venue !== undefined) ? siteConfig.venue : (currentCfg.venue || "Grand Central Stage & Main Athletic Arena"),
-        organizedBy: (siteConfig && siteConfig.organizedBy !== undefined) ? siteConfig.organizedBy : (currentCfg.organizedBy || "Hidaya Union Devoted Activities (HUDA)"),
-        chiefGuest: (siteConfig && siteConfig.chiefGuest !== undefined) ? siteConfig.chiefGuest : (currentCfg.chiefGuest || "Prof. Dr. K. M. Andrews"),
-        announcementTicker: (siteConfig && siteConfig.announcementTicker !== undefined) ? siteConfig.announcementTicker : (currentCfg.announcementTicker || "Official Live Results posting in real-time!"),
-        enableLiveTicker: (siteConfig && siteConfig.enableLiveTicker !== undefined) ? String(siteConfig.enableLiveTicker) : (currentCfg.enableLiveTicker || "TRUE"),
-        announcementTickerSpeed: (siteConfig && siteConfig.announcementTickerSpeed !== undefined) ? siteConfig.announcementTickerSpeed : (currentCfg.announcementTickerSpeed || "normal"),
-        liveStreamUrl: (siteConfig && siteConfig.liveStreamUrl !== undefined) ? siteConfig.liveStreamUrl : (currentCfg.liveStreamUrl || ""),
-        contactEmail: (siteConfig && siteConfig.contactEmail !== undefined) ? siteConfig.contactEmail : (currentCfg.contactEmail || "festival@ahiaedu.org"),
-        contactPhone: (siteConfig && siteConfig.contactPhone !== undefined) ? siteConfig.contactPhone : (currentCfg.contactPhone || "+91 98470 12345"),
-        logoUrl: (siteConfig && siteConfig.logoUrl !== undefined) ? siteConfig.logoUrl : (currentCfg.logoUrl || ""),
-        bannerUrl: (siteConfig && siteConfig.bannerUrl !== undefined) ? siteConfig.bannerUrl : (currentCfg.bannerUrl || ""),
-        adminPassword: (siteConfig && siteConfig.adminPassword !== undefined) ? siteConfig.adminPassword : (currentCfg.adminPassword || "hudaahiasmash20262027"),
-        adminUsername: (siteConfig && siteConfig.adminUsername !== undefined) ? siteConfig.adminUsername : (currentCfg.adminUsername || "smash2k26"),
-        podiumCategory: (siteConfig && siteConfig.podiumCategory !== undefined) ? siteConfig.podiumCategory : (currentCfg.podiumCategory || "arts"),
-        applyPenaltiesToPodium: (siteConfig && siteConfig.applyPenaltiesToPodium !== undefined) ? String(siteConfig.applyPenaltiesToPodium) : (currentCfg.applyPenaltiesToPodium || "TRUE"),
-        applyArtsPenalties: (siteConfig && siteConfig.applyArtsPenalties !== undefined) ? String(siteConfig.applyArtsPenalties) : (currentCfg.applyArtsPenalties || "TRUE"),
-        applySportsPenalties: (siteConfig && siteConfig.applySportsPenalties !== undefined) ? String(siteConfig.applySportsPenalties) : (currentCfg.applySportsPenalties || "TRUE"),
-        accentColor: (siteConfig && siteConfig.accentColor !== undefined) ? siteConfig.accentColor : (currentCfg.accentColor || "#4F46E5"),
-        accentPreset: (siteConfig && siteConfig.accentPreset !== undefined) ? siteConfig.accentPreset : (currentCfg.accentPreset || "indigo"),
-        copyrightText: (siteConfig && siteConfig.copyrightText !== undefined) ? siteConfig.copyrightText : (currentCfg.copyrightText || "© 2026 AHIA FEST • Hidaya Union Devoted Activities (HUDA). All Rights Reserved."),
-        lastSyncedAt: new Date().toISOString()
-      };
-      initSiteSettingsSheet(settingsSheet, mergedCfg);
-    }
+    var action = payload.action || "sync_all";
 
-    // 2. Full or Partial Data Sync (Smooth in-place write)
-    if (action === "syncData" || action === "saveResultMark" || action === "savePodiumResults" || payload.teams || payload.participants || payload.artsPrograms || payload.programs || payload.resultsMarks || payload.sportsMatches) {
-      // TEAMS
+    if (action === "delete_item" && payload.targetSheet && payload.targetId) {
+      var targetSheet = ss.getSheetByName(payload.targetSheet);
+      if (targetSheet) {
+        deleteRowById(targetSheet, payload.targetId);
+      }
+    } else {
+      if (payload.festConfig || payload.siteSettings) {
+        var config = payload.festConfig || payload.siteSettings;
+        var settingsSheet = ss.getSheetByName("SiteSettings") || ss.insertSheet("SiteSettings", 0);
+        initSiteSettingsSheet(settingsSheet, config);
+      }
+
       if (payload.teams && Array.isArray(payload.teams)) {
+        var teamsFormatted = payload.teams.map(function(t) {
+          return {
+            id: t.id,
+            name: t.name,
+            shortCode: t.shortCode || "",
+            color: t.color || "#1E40AF",
+            accentColor: t.accentColor || t.color || "#3B82F6",
+            logo: t.logo || "🏆",
+            captain: t.captain || "",
+            viceCaptain: t.viceCaptain || "",
+            staffAdvisor: t.staffAdvisor || "",
+            slogan: t.slogan || "",
+            description: t.description || "",
+            artsPoints: t.artsPoints || 0,
+            sportsPoints: t.sportsPoints || 0,
+            artsMinusPoints: t.artsMinusPoints !== undefined ? t.artsMinusPoints : 0,
+            sportsMinusPoints: t.sportsMinusPoints !== undefined ? t.sportsMinusPoints : 0,
+            minusPoints: t.minusPoints || 0,
+            totalPoints: t.totalPoints || 0,
+            golds: t.golds || 0,
+            silvers: t.silvers || 0,
+            bronzes: t.bronzes || 0,
+            totalWins: t.totalWins || 0,
+            rank: t.rank || 1,
+            membersCount: t.membersCount || 0
+          };
+        });
         writeDecoratedSheetData(
           ss.getSheetByName("Teams") || ss.insertSheet("Teams"),
-          payload.teams,
+          teamsFormatted,
           FEST_SHEETS_CONFIG.Teams
         );
       }
 
-      // PARTICIPANTS
+      if (payload.teamMinuses && Array.isArray(payload.teamMinuses)) {
+        var minusesFormatted = payload.teamMinuses.map(function(m) {
+          return {
+            id: m.id,
+            teamId: m.teamId,
+            teamName: m.teamName || "",
+            points: m.points !== undefined ? m.points : (m.pointsDeducted || 0),
+            reason: m.reason || "",
+            category: m.category || "General",
+            scope: m.scope || "both",
+            addedBy: m.addedBy || m.registeredBy || "Admin",
+            date: m.date || m.timestamp || new Date().toISOString().split("T")[0],
+            notes: m.notes || ""
+          };
+        });
+        writeDecoratedSheetData(
+          ss.getSheetByName("TeamMinuses") || ss.insertSheet("TeamMinuses"),
+          minusesFormatted,
+          FEST_SHEETS_CONFIG.TeamMinuses
+        );
+      }
+
       if (payload.participants && Array.isArray(payload.participants)) {
         var partFormatted = payload.participants.map(function(p) {
           return {
@@ -501,14 +515,9 @@ function doPost(e) {
         );
       }
 
-      // PROGRAMS (Arts & Cultural)
-      var incomingProgs = payload.artsPrograms || payload.programs;
-      if (incomingProgs && Array.isArray(incomingProgs)) {
-        var progFormatted = incomingProgs.map(function(pr) {
-          var resultsJson = pr.results;
-          if (typeof resultsJson !== "string") {
-            resultsJson = JSON.stringify(resultsJson || []);
-          }
+      if (payload.artsPrograms && Array.isArray(payload.artsPrograms)) {
+        var progFormatted = payload.artsPrograms.map(function(pr) {
+          var cleanProgResults = deduplicateResults(pr.results || []);
           return {
             id: pr.id,
             code: pr.code || "",
@@ -523,7 +532,7 @@ function doPost(e) {
             maxMarks: pr.maxMarks || 100,
             status: pr.status || "UPCOMING",
             publishStatus: pr.publishStatus || "Draft",
-            results: resultsJson
+            results: JSON.stringify(cleanProgResults)
           };
         });
         writeDecoratedSheetData(
@@ -531,29 +540,28 @@ function doPost(e) {
           progFormatted,
           FEST_SHEETS_CONFIG.Programs
         );
-      }
 
-      // RESULTS MARKS & DETAILED SCORECARD (First-Class Robust Persistence)
-      var flatMarks = [];
-      if (payload.resultsMarks && Array.isArray(payload.resultsMarks) && payload.resultsMarks.length > 0) {
-        flatMarks = payload.resultsMarks;
-      } else if (incomingProgs && Array.isArray(incomingProgs)) {
-        incomingProgs.forEach(function(prog) {
-          var resList = prog.results;
-          if (typeof resList === "string" && resList.trim()) {
-            try { resList = JSON.parse(resList); } catch (e) { resList = []; }
-          }
-          if (Array.isArray(resList)) {
-            resList.forEach(function(res) {
+        var flatMarks = [];
+        var seenMarkKeys = {};
+
+        payload.artsPrograms.forEach(function(prog) {
+          if (Array.isArray(prog.results)) {
+            var cleanResults = deduplicateResults(prog.results);
+            cleanResults.forEach(function(res) {
+              var progCode = prog.code || prog.id;
+              var markKey = String(progCode).toLowerCase() + "_" + String(res.chestNo || res.participantName || res.participantId || "").toLowerCase();
+              if (seenMarkKeys[markKey]) return;
+              seenMarkKeys[markKey] = true;
+
               flatMarks.push({
-                programCode: prog.code || prog.id,
+                programCode: progCode,
                 programName: prog.name,
                 chestNo: res.chestNo || "",
                 participantName: res.participantName,
                 teamId: res.teamId,
                 marks: res.marks !== undefined ? res.marks : "",
                 grade: res.grade || "-",
-                position: res.position || "-",
+                position: res.position || (res.rank === 1 ? "1st" : res.rank === 2 ? "2nd" : res.rank === 3 ? "3rd" : "-"),
                 pointsAwarded: res.pointsAwarded || 0,
                 status: res.status || prog.publishStatus || "Published",
                 publishedAt: res.publishedAt || ""
@@ -561,9 +569,7 @@ function doPost(e) {
             });
           }
         });
-      }
-
-      if (flatMarks.length > 0 || payload.resultsMarks !== undefined || incomingProgs !== undefined) {
+        
         writeDecoratedSheetData(
           ss.getSheetByName("ResultsMarks") || ss.insertSheet("ResultsMarks"),
           flatMarks,
@@ -571,7 +577,6 @@ function doPost(e) {
         );
       }
 
-      // SPORTS MATCHES
       if (payload.sportsMatches && Array.isArray(payload.sportsMatches)) {
         var sportsFormatted = payload.sportsMatches.map(function(sm) {
           return {
@@ -600,80 +605,115 @@ function doPost(e) {
         );
       }
 
-      // SCHEDULE
       if (payload.schedule && Array.isArray(payload.schedule)) {
+        var schedFormatted = payload.schedule.map(function(sc) {
+          return {
+            id: sc.id,
+            title: sc.title,
+            type: sc.type,
+            category: sc.category,
+            venue: sc.venue,
+            day: sc.day,
+            date: sc.date,
+            startTime: sc.startTime,
+            endTime: sc.endTime,
+            status: sc.status,
+            referenceId: sc.referenceId || ""
+          };
+        });
         writeDecoratedSheetData(
           ss.getSheetByName("Schedule") || ss.insertSheet("Schedule"),
-          payload.schedule,
+          schedFormatted,
           FEST_SHEETS_CONFIG.Schedule
         );
       }
 
-      // ANNOUNCEMENTS
       if (payload.announcements && Array.isArray(payload.announcements)) {
+        var annFormatted = payload.announcements.map(function(a) {
+          return {
+            id: a.id,
+            title: a.title,
+            content: a.content,
+            category: a.category || "General",
+            timestamp: a.timestamp,
+            isUrgent: a.isUrgent ? "TRUE" : "FALSE",
+            author: a.author || "Festival Admin"
+          };
+        });
         writeDecoratedSheetData(
           ss.getSheetByName("Announcements") || ss.insertSheet("Announcements"),
-          payload.announcements,
+          annFormatted,
           FEST_SHEETS_CONFIG.Announcements
         );
       }
 
-      // CERTIFICATES
       if (payload.certificates && Array.isArray(payload.certificates)) {
+        var certFormatted = payload.certificates.map(function(c) {
+          return {
+            id: c.id,
+            participantName: c.participantName,
+            chestNo: c.chestNo,
+            admissionNo: c.admissionNo,
+            teamName: c.teamName,
+            eventName: c.eventName,
+            eventType: c.eventType,
+            category: c.category,
+            rank: c.rank,
+            certificateType: c.certificateType,
+            issueDate: c.issueDate,
+            verificationCode: c.verificationCode
+          };
+        });
         writeDecoratedSheetData(
           ss.getSheetByName("Certificates") || ss.insertSheet("Certificates"),
-          payload.certificates,
+          certFormatted,
           FEST_SHEETS_CONFIG.Certificates
         );
       }
 
-      // TEAM MINUSES (Penalties)
-      if (payload.teamMinuses && Array.isArray(payload.teamMinuses)) {
-        writeDecoratedSheetData(
-          ss.getSheetByName("TeamMinuses") || ss.insertSheet("TeamMinuses"),
-          payload.teamMinuses,
-          FEST_SHEETS_CONFIG.TeamMinuses
-        );
-      }
-
-      // DOCUMENTS
       if (payload.documents && Array.isArray(payload.documents)) {
+        var docFormatted = payload.documents.map(function(d) {
+          return {
+            id: d.id,
+            title: d.title,
+            category: d.category || "General",
+            description: d.description || "",
+            issueDate: d.issueDate || "",
+            fileUrl: d.fileUrl || "",
+            fileSize: d.fileSize || "Online",
+            status: d.status || "Active",
+            isPublic: d.isPublic ? "TRUE" : "FALSE"
+          };
+        });
         writeDecoratedSheetData(
           ss.getSheetByName("Documents") || ss.insertSheet("Documents"),
-          payload.documents,
+          docFormatted,
           FEST_SHEETS_CONFIG.Documents
         );
       }
 
-      // SCORING RULES
-      if (payload.scoringRules && typeof payload.scoringRules === "object") {
-        var rulesArr = [];
-        var rKeys = Object.keys(payload.scoringRules);
-        rKeys.forEach(function(k) {
-          rulesArr.push({
-            ruleKey: k,
-            ruleName: formatRuleName(k),
-            pointsValue: payload.scoringRules[k]
-          });
-        });
+      if (payload.scoringRules && Array.isArray(payload.scoringRules)) {
         writeDecoratedSheetData(
           ss.getSheetByName("ScoringRules") || ss.insertSheet("ScoringRules"),
-          rulesArr,
+          payload.scoringRules,
           FEST_SHEETS_CONFIG.ScoringRules
         );
       }
-    } else if (action === "deleteItem" || action === "deleteRecord") {
-      var targetSheetName = payload.sheetName || payload.tab || payload.sheet;
-      var targetItemId = payload.id || payload.itemId;
-      if (targetSheetName && targetItemId) {
-        var sheetToModify = ss.getSheetByName(targetSheetName);
-        if (sheetToModify) {
-          deleteRowById(sheetToModify, targetItemId);
-        }
+
+      if (payload.deletedItems && Array.isArray(payload.deletedItems)) {
+        payload.deletedItems.forEach(function(del) {
+          var targetSheet = ss.getSheetByName(del.itemType || del.type);
+          if (targetSheet) {
+            deleteRowById(targetSheet, del.id || del.code);
+          }
+        });
       }
     }
 
     SpreadsheetApp.flush();
+    try {
+      CacheService.getScriptCache().remove("ahia_fest_live_data_v4");
+    } catch (cErr) {}
 
     return jsonResponse({
       status: "success",
@@ -689,17 +729,11 @@ function doPost(e) {
   }
 }
 
-/**
- * 4. JSON RESPONSE HELPER
- */
 function jsonResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/**
- * 5. SITE SETTINGS SHEET BUILDER (In-place, non-flicker)
- */
 function initSiteSettingsSheet(sheet, config) {
   if (!sheet) return;
   
@@ -725,7 +759,6 @@ function initSiteSettingsSheet(sheet, config) {
       }
     } catch (e) {}
 
-    // Row 1: Merged Festival Header Title Banner
     sheet.getRange("A1:D1").merge();
     var banner = sheet.getRange("A1");
     banner.setValue("🏆 " + (config.festivalName || "AHIA FEST 2026").toUpperCase() + " — MASTER SITE SETTINGS");
@@ -738,7 +771,6 @@ function initSiteSettingsSheet(sheet, config) {
     banner.setVerticalAlignment("middle");
     sheet.setRowHeight(1, 42);
 
-    // Row 2: Subtitle Banner
     sheet.getRange("A2:D2").merge();
     var subBanner = sheet.getRange("A2");
     subBanner.setValue("Synchronized Live with the AHIA Digital Engine • In-Place Real-Time Sync");
@@ -751,10 +783,8 @@ function initSiteSettingsSheet(sheet, config) {
     subBanner.setVerticalAlignment("middle");
     sheet.setRowHeight(2, 24);
 
-    // Row 3: Spacer
     sheet.setRowHeight(3, 8);
 
-    // Row 4: Table Headers
     var headers = FEST_SHEETS_CONFIG.SiteSettings.headers;
     sheet.getRange(4, 1, 1, headers.length).setValues([headers]);
     var headerRange = sheet.getRange(4, 1, 1, headers.length);
@@ -772,13 +802,11 @@ function initSiteSettingsSheet(sheet, config) {
     sheet.getRange(4, 3).setHorizontalAlignment("left");
     sheet.getRange(4, 4).setHorizontalAlignment("left");
   } else {
-    // Just update banner title in-place
     try {
       sheet.getRange("A1").setValue("🏆 " + (config.festivalName || "AHIA FEST 2026").toUpperCase() + " — MASTER SITE SETTINGS");
     } catch (e) {}
   }
 
-  // Rows 5+: Settings Key-Value Rows
   var rows = [
     ["festivalName", "Festival Name / Title", config.festivalName !== undefined ? config.festivalName : "smash 2026", "Main brand name displayed across the website, navigation, hero and banners."],
     ["year", "Operational Year", config.year !== undefined ? config.year : "2026", "Festival edition year (e.g., 2026)."],
@@ -787,94 +815,130 @@ function initSiteSettingsSheet(sheet, config) {
     ["tagline", "Official Tagline / Slogan", config.tagline !== undefined ? config.tagline : "Annual Inter-House Arts & Athletics Fest", "Subtitle phrase displayed beneath festival title."],
     ["theme", "Festival Theme / Motto", config.theme !== undefined ? config.theme : "Where talent meets competition.", "Central artistic & sporting theme."],
     ["motto", "Secondary Motto", config.motto !== undefined ? config.motto : "Ignite the Spirit of Excellence", "Motivational slogan."],
-    ["dates", "Festival Dates", config.dates !== undefined ? config.dates : "March 15 - 18, 2026", "Event duration and schedule dates."],
-    ["currentDay", "Current Active Day", config.currentDay !== undefined ? config.currentDay : "Day 1 of 3", "Today's highlight status for the hero banner."],
-    ["venue", "Central Venue / Location", config.venue !== undefined ? config.venue : "Grand Central Stage & Main Athletic Arena", "Primary campus grounds or venue."],
-    ["organizedBy", "Organized By Committee", config.organizedBy !== undefined ? config.organizedBy : "Hidaya Union Devoted Activities (HUDA)", "Official hosting body."],
-    ["chiefGuest", "Chief Guest / Dignitary", config.chiefGuest !== undefined ? config.chiefGuest : "Prof. Dr. K. M. Andrews", "Distinguished guest of honor."],
-    ["announcementTicker", "Breaking News Ticker", config.announcementTicker !== undefined ? config.announcementTicker : "Official Live Results posting in real-time!", "Top marquee announcement text."],
-    ["enableLiveTicker", "Enable Live Ticker", config.enableLiveTicker !== undefined ? String(config.enableLiveTicker) : "TRUE", "Toggle header live news marquee banner: TRUE | FALSE."],
-    ["announcementTickerSpeed", "Ticker Scroll Speed", config.announcementTickerSpeed || "normal", "Marquee movement velocity: normal | slow | fast."],
-    ["liveStreamUrl", "Live Webcast Stream URL", config.liveStreamUrl !== undefined ? config.liveStreamUrl : "", "Direct YouTube/Vimeo live broadcast URL."],
-    ["contactEmail", "Official Support Email", config.contactEmail !== undefined ? config.contactEmail : "festival@ahiaedu.org", "Helpdesk contact email."],
-    ["contactPhone", "Official Hotline", config.contactPhone !== undefined ? config.contactPhone : "+91 98470 12345", "Emergency coordinator hotline number."],
-    ["logoUrl", "Logo Image URL", config.logoUrl !== undefined ? config.logoUrl : "", "High-res web URL to logo / crest displayed in sidebar, header, and certificates."],
-    ["bannerUrl", "Hero Banner Image URL", config.bannerUrl !== undefined ? config.bannerUrl : "", "Background visual for the festival hero header."],
-    ["adminUsername", "Portal Admin Username", config.adminUsername !== undefined ? config.adminUsername : "smash2k26", "Master administrator username for portal access."],
-    ["adminPassword", "Portal Admin Password", config.adminPassword !== undefined ? config.adminPassword : "hudaahiasmash20262027", "Master security passkey for Chief Festival Controller."],
-    ["podiumCategory", "Championship Podium Display Mode", config.podiumCategory || "arts", "Championship Podium Display Mode: arts (Arts Only) | sports (Sports Only) | overall (Combined)."],
-    ["applyPenaltiesToPodium", "Deduct Penalties from Podium Points", config.applyPenaltiesToPodium !== undefined ? String(config.applyPenaltiesToPodium) : "TRUE", "When TRUE, disciplinary minus points will be subtracted from live podium rankings & PDF exports."],
-    ["applyArtsPenalties", "Deduct Arts Penalty Minuses", config.applyArtsPenalties !== undefined ? String(config.applyArtsPenalties) : "TRUE", "When TRUE, Arts minus points will be deducted from Arts rankings & PDF exports."],
-    ["applySportsPenalties", "Deduct Sports Penalty Minuses", config.applySportsPenalties !== undefined ? String(config.applySportsPenalties) : "TRUE", "When TRUE, Sports minus points will be deducted from Sports rankings & PDF exports."],
-    ["accentColor", "Web Accent Color", config.accentColor !== undefined ? config.accentColor : "#4F46E5", "Primary brand accent hex code used for buttons, active badges, and highlights."],
-    ["accentPreset", "Color Palette Preset", config.accentPreset || "indigo", "Color theme preset name: indigo | purple | emerald | sky | rose | amber | cyan | pink | custom."],
-    ["copyrightText", "Footer Copyright Notice", config.copyrightText !== undefined ? config.copyrightText : "© 2026 AHIA FEST • Hidaya Union Devoted Activities (HUDA). All Rights Reserved.", "Official footer copyright line displayed on public pages."],
-    ["lastSyncedAt", "Last Synced Timestamp", config.lastSyncedAt || new Date().toISOString(), "Automatic timestamp updated by webhook on every synchronization."]
+    ["dates", "Festival Date Range", config.dates !== undefined ? config.dates : "October 24 - 28, 2026", "Official festival schedule duration."],
+    ["currentDay", "Active Competition Day", config.currentDay !== undefined ? config.currentDay : "Day 1", "Currently active festival day."],
+    ["venue", "Central Campus / Stage Venue", config.venue !== undefined ? config.venue : "Grand Central Stage & Main Athletic Arena", "Primary venue of events."],
+    ["organizedBy", "Organizing Committee", config.organizedBy !== undefined ? config.organizedBy : "Student Union & Fest Council", "Host association authority."],
+    ["chiefGuest", "Chief Guest / Dignitary", config.chiefGuest !== undefined ? config.chiefGuest : "Eminent Dignitaries & Academic Directors", "Invited guest of honor."],
+    ["applyPenaltiesToPodium", "Deduct House Penalties from Overall Grand Total", config.applyPenaltiesToPodium !== undefined ? String(config.applyPenaltiesToPodium) : "true", "Global master toggle for penalty deduction across all overall leaderboards."],
+    ["applyArtsPenalties", "Deduct House Penalties from Arts Championship", config.applyArtsPenalties !== undefined ? String(config.applyArtsPenalties) : "true", "Controls whether penalties deduct from Arts leaderboards."],
+    ["applySportsPenalties", "Deduct House Penalties from Sports Championship", config.applySportsPenalties !== undefined ? String(config.applySportsPenalties) : "true", "Controls whether penalties deduct from Sports leaderboards."],
+    ["announcementTicker", "Live Announcement Ticker", config.announcementTicker !== undefined ? config.announcementTicker : "Welcome to the Annual Championship!", "Top scrolling ticker banner broadcast."],
+    ["enableLiveTicker", "Enable Ticker Banner", config.enableLiveTicker !== undefined ? String(config.enableLiveTicker) : "true", "Toggle display of the top announcement ticker."],
+    ["announcementTickerSpeed", "Ticker Animation Speed", config.announcementTickerSpeed || "normal", "Speed of the banner ticker."],
+    ["accentPreset", "Color Palette Preset", config.accentPreset || "indigo", "UI accent theme preset."],
+    ["accentColor", "Custom Accent Hex Color", config.accentColor || "#4F46E5", "Primary brand color."],
+    ["liveStreamUrl", "Live Stream / YouTube Broadcast", config.liveStreamUrl || "", "Live stream video URL."],
+    ["contactEmail", "Support Email Address", config.contactEmail || "fest.desk@ahiafest.org", "Official contact email."],
+    ["contactPhone", "Helpdesk Phone Number", config.contactPhone || "+91 98765 43210", "Official contact phone."],
+    ["copyrightText", "Footer Copyright Notice", config.copyrightText || "© 2026 AHIA FEST. All rights reserved.", "Bottom footer copyright."],
+    ["logoUrl", "Festival Official Emblem / Logo", config.logoUrl || "", "Public URL of fest crest or logo."],
+    ["bannerUrl", "Hero Background Banner URL", config.bannerUrl || "", "Public URL for background image banner."],
+    ["adminUsername", "Admin Portal Login ID", config.adminUsername || "smash2k26", "Administrator username."],
+    ["adminPassword", "Admin Portal Password", config.adminPassword || "smash2k26", "Administrator security password."],
+    ["podiumCategory", "Default Podium Category", config.podiumCategory || "arts", "arts or sports."]
   ];
 
   sheet.getRange(5, 1, rows.length, 4).setValues(rows);
 
-  if (!isInitialized) {
-    sheet.setRowHeights(5, rows.length, 28);
-    var dataRange = sheet.getRange(5, 1, rows.length, 4);
-    dataRange.setFontFamily("Arial");
-    dataRange.setFontSize(10);
-    dataRange.setVerticalAlignment("middle");
-    dataRange.setBorder(true, true, true, true, true, true, "#E2E8F0", SpreadsheetApp.BorderStyle.SOLID);
+  var dataRange = sheet.getRange(5, 1, rows.length, 4);
+  dataRange.setFontFamily("Arial");
+  dataRange.setFontSize(10);
+  dataRange.setVerticalAlignment("middle");
+  dataRange.setBorder(true, true, true, true, true, true, "#E2E8F0", SpreadsheetApp.BorderStyle.SOLID);
+  sheet.setRowHeights(5, rows.length, 28);
 
-    sheet.getRange(5, 1, rows.length, 1).setFontWeight("bold").setFontColor("#312E81").setHorizontalAlignment("center").setBackground("#F8FAFC");
-    sheet.getRange(5, 2, rows.length, 1).setFontWeight("bold").setFontColor("#0F172A").setHorizontalAlignment("left");
-    sheet.getRange(5, 3, rows.length, 1).setFontFamily("Courier New").setFontColor("#0369A1").setHorizontalAlignment("left").setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
-    sheet.getRange(5, 4, rows.length, 1).setFontColor("#64748B").setHorizontalAlignment("left").setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
-
-    sheet.setColumnWidth(1, 180);
-    sheet.setColumnWidth(2, 220);
-    sheet.setColumnWidth(3, 360);
-    sheet.setColumnWidth(4, 420);
-    sheet.setFrozenRows(4);
+  var backgrounds = [];
+  for (var r = 0; r < rows.length; r++) {
+    var bg = (r % 2 === 1) ? "#F8FAFC" : "#FFFFFF";
+    backgrounds.push([bg, bg, bg, bg]);
   }
+  dataRange.setBackgrounds(backgrounds);
+
+  sheet.getRange(5, 1, rows.length, 1).setHorizontalAlignment("center").setFontWeight("bold").setFontColor("#312E81");
+  sheet.getRange(5, 2, rows.length, 1).setHorizontalAlignment("left").setFontWeight("bold").setFontColor("#1E293B");
+  sheet.getRange(5, 3, rows.length, 1).setHorizontalAlignment("left").setFontColor("#0F172A");
+  sheet.getRange(5, 4, rows.length, 1).setHorizontalAlignment("left").setFontColor("#64748B");
 }
 
 function readSiteSettings(sheet) {
-  if (!sheet) return null;
+  if (!sheet) return {};
   var data = sheet.getDataRange().getValues();
-  if (data.length === 0) return null;
-  var cfg = {};
-  for (var i = 0; i < data.length; i++) {
-    var rawKey = String(data[i][0] || "").trim();
-    if (!rawKey) continue;
-    var lowerKey = rawKey.toLowerCase();
-    if (rawKey.indexOf("🏆") !== -1 || lowerKey === "setting key" || lowerKey.indexOf("synchronized") !== -1) {
-      continue;
+  if (data.length <= 4) return {};
+
+  var config = {};
+  for (var i = 4; i < data.length; i++) {
+    var row = data[i];
+    var key = row[0];
+    var val = row[2];
+    if (key) {
+      config[String(key).trim()] = val;
     }
-    var val = data[i][2];
-    cfg[rawKey] = (val !== undefined && val !== null) ? String(val) : "";
   }
-  return cfg;
+  return config;
 }
 
-/**
- * 6. IN-PLACE TABLE FORMATTING & DECORATION HELPERS (NO FLICKER)
- */
-function formatHeaderRow(sheet, colCount, headerColor, alignments) {
-  if (!sheet || colCount <= 0) return;
-  if (sheet.getMaxColumns() < colCount) {
-    sheet.insertColumnsAfter(sheet.getMaxColumns(), colCount - sheet.getMaxColumns());
+function readScoringRules(sheet) {
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  var headers = data[0];
+  var rules = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (!row || !row[0]) continue;
+    var rule = {};
+    for (var h = 0; h < headers.length; h++) {
+      rule[headers[h]] = row[h];
+    }
+    rules.push(rule);
   }
+  return rules;
+}
+
+function readSheetData(sheet) {
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  var headers = data[0];
+  var items = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var hasContent = false;
+    for (var c = 0; c < row.length; c++) {
+      if (row[c] !== "" && row[c] !== null && row[c] !== undefined) {
+        hasContent = true;
+        break;
+      }
+    }
+    if (!hasContent) continue;
+
+    var item = {};
+    for (var h = 0; h < headers.length; h++) {
+      var header = headers[h];
+      if (header) {
+        item[header] = row[h];
+      }
+    }
+    items.push(item);
+  }
+  return items;
+}
+
+function formatHeaderRow(sheet, colCount, headerColor, alignments) {
+  if (!sheet || colCount < 1) return;
   var headerRange = sheet.getRange(1, 1, 1, colCount);
   headerRange.setBackground(headerColor || "#1E1B4B");
   headerRange.setFontColor("#FFFFFF");
   headerRange.setFontFamily("Arial");
-  headerRange.setFontSize(11);
+  headerRange.setFontSize(10);
   headerRange.setFontWeight("bold");
   headerRange.setVerticalAlignment("middle");
-  try {
-    headerRange.setBorder(true, true, true, true, true, true, "#CBD5E1", SpreadsheetApp.BorderStyle.SOLID);
-  } catch (e) {}
-  
-  try {
-    sheet.setRowHeight(1, 38);
-  } catch (e) {}
+  headerRange.setBorder(true, true, true, true, true, true, "#CBD5E1", SpreadsheetApp.BorderStyle.SOLID);
+  sheet.setRowHeight(1, 32);
 
   if (alignments && Array.isArray(alignments)) {
     for (var c = 0; c < colCount; c++) {
@@ -951,7 +1015,6 @@ function writeDecoratedSheetData(sheet, items, tabConfig) {
     dataRange.setVerticalAlignment("middle");
     dataRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
     
-    // Only update styles if row count changed or initializing, keeping sheet snappy
     var prevDataRows = currentLastRow > 1 ? currentLastRow - 1 : 0;
     if (needHeaderInit || Math.abs(prevDataRows - newRowCount) > 0) {
       try {
@@ -977,13 +1040,11 @@ function writeDecoratedSheetData(sheet, items, tabConfig) {
       } catch (e) {}
     }
 
-    // Clean up excess rows from previous sync without wiping sheet
     if (currentLastRow > newRowCount + 1) {
       var excessCount = currentLastRow - (newRowCount + 1);
       sheet.getRange(newRowCount + 2, 1, excessCount, numCols).clearContent().clearFormat();
     }
   } else {
-    // If empty, clear only data rows
     if (currentLastRow > 1) {
       sheet.getRange(2, 1, currentLastRow - 1, numCols).clearContent().clearFormat();
     }
@@ -1007,10 +1068,9 @@ function deleteRowById(sheet, id) {
 
   for (var i = data.length - 1; i >= 1; i--) {
     var matchFound = false;
-    for (var c = 0; c < checkColIndices.length; c++) {
-      var colIdx = checkColIndices[c];
-      var cellVal = String(data[i][colIdx]).trim().toLowerCase();
-      if (cellVal === targetStr) {
+    for (var k = 0; k < checkColIndices.length; k++) {
+      var cellVal = String(data[i][checkColIndices[k]] || "").trim().toLowerCase();
+      if (cellVal === targetStr || cellVal === targetStr.replace(/[^a-z0-9]/g, "")) {
         matchFound = true;
         break;
       }
@@ -1019,19 +1079,13 @@ function deleteRowById(sheet, id) {
       var progCol = headers.indexOf("programCode");
       var chestCol = headers.indexOf("chestNo");
       var partCol = headers.indexOf("participantName");
-      var admCol = headers.indexOf("admissionNo");
-      var idCol = headers.indexOf("id");
       if (progCol !== -1) {
-        var rowProg = String(data[i][progCol]).trim().toLowerCase();
-        var rowChest = chestCol !== -1 ? String(data[i][chestCol]).trim().toLowerCase() : "";
-        var rowPart = partCol !== -1 ? String(data[i][partCol]).trim().toLowerCase() : "";
-        var rowAdm = admCol !== -1 ? String(data[i][admCol]).trim().toLowerCase() : "";
-        var rowId = idCol !== -1 ? String(data[i][idCol]).trim().toLowerCase() : "";
+        var rowProg = String(data[i][progCol] || "").trim().toLowerCase();
+        var rowChest = chestCol !== -1 ? String(data[i][chestCol] || "").trim().toLowerCase() : "";
+        var rowPart = partCol !== -1 ? String(data[i][partCol] || "").trim().toLowerCase() : "";
         if (
           (rowChest && targetStr === rowProg + "_" + rowChest) ||
-          (rowPart && targetStr === rowProg + "_" + rowPart) ||
-          (rowAdm && targetStr === rowProg + "_" + rowAdm) ||
-          (rowId && targetStr === rowProg + "_" + rowId)
+          (rowPart && targetStr === rowProg + "_" + rowPart)
         ) {
           matchFound = true;
         }
@@ -1042,78 +1096,5 @@ function deleteRowById(sheet, id) {
       sheet.deleteRow(i + 1);
     }
   }
-  SpreadsheetApp.flush();
-}
-
-function readSheetData(sheet) {
-  if (!sheet) return [];
-  var data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return [];
-
-  var headerRowIdx = 0;
-  if (data.length > 1) {
-    var row0 = data[0].map(function(k) { return String(k).trim().toLowerCase(); });
-    var row1 = data[1].map(function(k) { return String(k).trim().toLowerCase(); });
-    var knownKeys = ["id", "code", "chestno", "programcode", "rulekey", "title", "sport", "setting key"];
-    var row0HasKey = row0.some(function(k) { return knownKeys.indexOf(k) !== -1; });
-    var row1HasKey = row1.some(function(k) { return knownKeys.indexOf(k) !== -1; });
-    if (!row0HasKey && row1HasKey) {
-      headerRowIdx = 1;
-    }
-  }
-
-  var headers = data[headerRowIdx];
-  var rows = [];
-  for (var i = headerRowIdx + 1; i < data.length; i++) {
-    var rowObj = {};
-    var hasContent = false;
-    for (var j = 0; j < headers.length; j++) {
-      var key = headers[j];
-      if (!key) continue;
-      var val = data[i][j];
-      rowObj[key] = val;
-      if (val !== "" && val !== null && val !== undefined) {
-        hasContent = true;
-      }
-    }
-    if (hasContent) {
-      var mainId = rowObj.id || rowObj.code || rowObj.chestNo || rowObj.title || rowObj.programCode || rowObj.ruleKey;
-      if (mainId && String(mainId).trim() !== "") {
-        rows.push(rowObj);
-      }
-    }
-  }
-  return rows;
-}
-
-function readScoringRules(sheet) {
-  if (!sheet) return null;
-  var data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return null;
-
-  var headerRowIdx = 0;
-  if (data.length > 1) {
-    var row0 = data[0].map(function(k) { return String(k).trim().toLowerCase(); });
-    var row1 = data[1].map(function(k) { return String(k).trim().toLowerCase(); });
-    if (!row0.some(function(k) { return k === "rulekey"; }) && row1.some(function(k) { return k === "rulekey"; })) {
-      headerRowIdx = 1;
-    }
-  }
-
-  var rules = {};
-  for (var i = headerRowIdx + 1; i < data.length; i++) {
-    var key = data[i][0];
-    var val = Number(data[i][2]);
-    if (key) rules[key] = isNaN(val) ? data[i][2] : val;
-  }
-  return rules;
-}
-
-function formatRuleName(camelCase) {
-  return camelCase
-    .replace(/([A-Z])/g, " $1")
-    .replace(/^./, function(str) { return str.toUpperCase(); })
-    .replace(/A_ Plus/g, "A+")
-    .replace(/B_ Plus/g, "B+");
 }
 `;

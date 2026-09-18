@@ -10,8 +10,14 @@ import {
   collection,
   onSnapshot,
   serverTimestamp,
+  setLogLevel,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
+
+// Silence benign Firestore internal connection probe warnings in iframe sandbox
+try {
+  setLogLevel('error');
+} catch {}
 
 // Clean up any stale Firestore mutation keys in localStorage from previous multi-tab manager sessions to prevent QuotaExceededError
 try {
@@ -36,7 +42,7 @@ try {
 // Initialize Firebase App
 export const firebaseApp = initializeApp(firebaseConfig);
 
-// Initialize Firestore with memory local cache and auto-detect long polling for reliable iframe connectivity
+// Initialize Firestore with memory local cache and forced long polling for robust iframe sandbox connectivity
 const databaseId =
   firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
     ? firebaseConfig.firestoreDatabaseId
@@ -46,28 +52,25 @@ export const db = initializeFirestore(
   firebaseApp,
   {
     localCache: memoryLocalCache(),
-    experimentalAutoDetectLongPolling: true,
+    experimentalForceLongPolling: true,
   },
   databaseId
 );
 
-// Test Connection gracefully as recommended by the firebase-integration skill
+// Test Connection as mandated by the firebase-integration skill
 async function testConnection() {
   try {
     if (typeof window !== 'undefined' && navigator.onLine) {
       await getDocFromServer(doc(db, 'test', 'connection'));
     }
   } catch (error: any) {
-    // In iframe environments, slow networks, or offline mode, Firestore operates gracefully with local cache fallback
-    const msg = error?.message || '';
-    if (msg.includes('offline') || msg.includes('unavailable') || error?.code === 'unavailable') {
-      return;
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn('Firestore operating in offline cache mode.');
     }
   }
 }
 
 if (typeof window !== 'undefined') {
-  // Run after a short delay so the main thread and network channel can initialize smoothly
   setTimeout(() => {
     testConnection();
   }, 1000);

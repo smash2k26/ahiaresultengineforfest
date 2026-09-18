@@ -188,9 +188,9 @@ export const CertificateVerificationHub: React.FC<CertificateVerificationHubProp
             )}
 
             <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-              <span className="text-slate-500">Total Medals:</span>
+              <span className="text-slate-500">Total Points:</span>
               <span className="font-mono font-bold text-slate-900">
-                🥇 {searchedParticipant.golds} Gold • 🥈 {searchedParticipant.silvers} Silver • 🥉 {searchedParticipant.bronzes} Bronze
+                {searchedParticipant.totalPoints} PTS
               </span>
             </div>
           </div>

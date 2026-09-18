@@ -162,13 +162,6 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
                   <span className="text-purple-600 font-semibold">Arts Points Standings</span>
                 )}
               </div>
-
-            </div>
-
-            <div className="flex items-center justify-center gap-2 pt-1 border-t border-slate-100 text-xs font-mono">
-              <span className="text-amber-600" title="Gold Medals">🥇 {second.golds}</span>
-              <span className="text-slate-600" title="Silver Medals">🥈 {second.silvers}</span>
-              <span className="text-orange-600" title="Bronze Medals">🥉 {second.bronzes}</span>
             </div>
           </div>
         </div>
@@ -212,19 +205,15 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
                   <span className="text-purple-700 font-bold">Leading in Arts Points</span>
                 )}
               </div>
-
             </div>
 
-            <div className="flex items-center justify-center gap-3 pt-1 border-t border-amber-100 text-xs font-mono font-bold">
-              <span className="text-amber-600">🥇 {first.golds}</span>
-              <span className="text-slate-600">🥈 {first.silvers}</span>
-              <span className="text-orange-600">🥉 {first.bronzes}</span>
-              {leadDiff > 0 && (
-                <span className="text-emerald-600 font-sans flex items-center gap-0.5">
+            {leadDiff > 0 && (
+              <div className="flex items-center justify-center pt-1 border-t border-amber-100 text-xs">
+                <span className="text-emerald-600 font-sans font-semibold flex items-center gap-0.5">
                   <TrendingUp className="w-3 h-3" /> +{leadDiff}% Lead
                 </span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -262,13 +251,6 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
                   <span className="text-purple-600 font-semibold">Arts Points Standings</span>
                 )}
               </div>
-
-            </div>
-
-            <div className="flex items-center justify-center gap-2 pt-1 border-t border-slate-100 text-xs font-mono">
-              <span className="text-amber-600" title="Gold Medals">🥇 {third.golds}</span>
-              <span className="text-slate-600" title="Silver Medals">🥈 {third.silvers}</span>
-              <span className="text-orange-600" title="Bronze Medals">🥉 {third.bronzes}</span>
             </div>
           </div>
         </div>

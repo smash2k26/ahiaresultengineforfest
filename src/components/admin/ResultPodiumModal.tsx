@@ -29,6 +29,7 @@ interface PodiumSlotState {
 
 export const isProgramPublished = (p?: ArtsProgram | null): boolean => {
   if (!p) return false;
+  if (!p.results || p.results.length === 0) return false;
   if (p.publishStatus === 'Published') return true;
   if (Array.isArray(p.results) && p.results.length > 0) {
     if (p.publishStatus === 'Published' || p.results.some((r) => r.status === 'Published')) {

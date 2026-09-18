@@ -127,6 +127,11 @@ export function isSportsProgram(p: Partial<ArtsProgram> | any): boolean {
     'swimming',
     'archery',
     'dodgeball',
+    'lemon',
+    'spoon',
+    'sack race',
+    'three leg',
+    'bombing the city',
   ];
   if (sportsKeywords.some((kw) => name.includes(kw))) return true;
 
@@ -140,4 +145,73 @@ export function isSportsProgram(p: Partial<ArtsProgram> | any): boolean {
   }
 
   return false;
+}
+
+/**
+ * Deduplicates and canonicalizes a collection of Arts & Sports programs.
+ * Prevents repeating duplicate programs caused by slight ID discrepancies or sync latency.
+ */
+export function deduplicatePrograms(programs?: ArtsProgram[]): ArtsProgram[] {
+  if (!Array.isArray(programs) || programs.length === 0) return [];
+
+  const seenIds = new Set<string>();
+  const seenCodes = new Set<string>();
+  const seenNameCategory = new Set<string>();
+  const deduplicated: ArtsProgram[] = [];
+
+  programs.forEach((pr) => {
+    if (!pr) return;
+    const pId = pr.id ? String(pr.id).trim().toLowerCase() : '';
+    const pCode = pr.code ? String(pr.code).trim().toLowerCase() : '';
+    const cleanName = pr.name ? String(pr.name).trim().toLowerCase().replace(/\s+/g, ' ') : '';
+    const cleanCat = pr.category ? String(pr.category).trim().toLowerCase() : '';
+    const nameCatKey = cleanName ? `${cleanName}__${cleanCat}` : '';
+
+    // Check if duplicate
+    let existingMatchIdx = -1;
+    if (pId && seenIds.has(pId)) {
+      existingMatchIdx = deduplicated.findIndex((dp) => dp.id && String(dp.id).trim().toLowerCase() === pId);
+    } else if (pCode && seenCodes.has(pCode)) {
+      existingMatchIdx = deduplicated.findIndex((dp) => dp.code && String(dp.code).trim().toLowerCase() === pCode);
+    } else if (nameCatKey && seenNameCategory.has(nameCatKey)) {
+      existingMatchIdx = deduplicated.findIndex((dp) => {
+        const dpName = dp.name ? String(dp.name).trim().toLowerCase().replace(/\s+/g, ' ') : '';
+        const dpCat = dp.category ? String(dp.category).trim().toLowerCase() : '';
+        return dpName && `${dpName}__${dpCat}` === nameCatKey;
+      });
+    }
+
+    const cleanResults = deduplicateProgramResults(pr.results || []);
+
+    if (existingMatchIdx !== -1) {
+      // Merge with existing program without creating a duplicate row
+      const existing = deduplicated[existingMatchIdx];
+      const mergedResults = deduplicateProgramResults([...(existing.results || []), ...cleanResults]);
+      const isCompleted = existing.status === 'COMPLETED' || pr.status === 'COMPLETED' || mergedResults.length > 0;
+      const isPublished = existing.publishStatus === 'Published' || pr.publishStatus === 'Published' || mergedResults.some((r) => r.status === 'Published');
+
+      deduplicated[existingMatchIdx] = {
+        ...existing,
+        ...pr,
+        id: existing.id || pr.id,
+        code: existing.code || pr.code,
+        name: existing.name || pr.name,
+        category: existing.category || pr.category,
+        results: mergedResults,
+        status: isCompleted ? 'COMPLETED' : (existing.status || pr.status || 'UPCOMING'),
+        publishStatus: isPublished ? 'Published' : (existing.publishStatus || pr.publishStatus || 'Draft'),
+      };
+    } else {
+      if (pId) seenIds.add(pId);
+      if (pCode) seenCodes.add(pCode);
+      if (nameCatKey) seenNameCategory.add(nameCatKey);
+
+      deduplicated.push({
+        ...pr,
+        results: cleanResults,
+      });
+    }
+  });
+
+  return deduplicated;
 }

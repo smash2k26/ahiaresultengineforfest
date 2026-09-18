@@ -37,7 +37,7 @@ import {
   INITIAL_GOOGLE_SHEETS_CONFIG,
   INITIAL_ADMIN_USER
 } from '../data/initialData';
-import { isSportsProgram, deduplicateProgramResults } from '../utils/programHelpers';
+import { isSportsProgram, deduplicateProgramResults, deduplicatePrograms } from '../utils/programHelpers';
 import {
   persistCelebrationMode,
   listenToCelebrationMode,
@@ -241,22 +241,44 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const [artsPrograms, setArtsPrograms] = useState<ArtsProgram[]>(() => {
+    let rawDeleted: string[] = [];
+    try {
+      const storedDel = localStorage.getItem('ahia_deleted_ids_v2');
+      if (storedDel) rawDeleted = JSON.parse(storedDel);
+    } catch {}
+    const delSet = new Set(rawDeleted.map((d) => String(d).trim().toLowerCase()));
+
+    const isInitiallyDeleted = (id?: string | null) => {
+      if (!id) return false;
+      const clean = String(id).trim().toLowerCase();
+      return delSet.has(clean) || delSet.has(clean.replace(/[^a-z0-9]/g, ''));
+    };
+
     const saved = localStorage.getItem('ahia_arts_programs');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.map((p) => ({
-            ...p,
-            results: deduplicateProgramResults(p.results || []),
-          }));
+          const filtered = parsed.filter(
+            (p) => p && !isInitiallyDeleted(p.id) && !isInitiallyDeleted(p.code) && !isInitiallyDeleted(p.name)
+          );
+          return deduplicatePrograms(
+            filtered.map((p) => ({
+              ...p,
+              results: deduplicateProgramResults(p.results || []),
+            }))
+          );
         }
       } catch (e) {}
     }
-    return INITIAL_ARTS_PROGRAMS.map((p) => ({
-      ...p,
-      results: deduplicateProgramResults(p.results || []),
-    }));
+    return deduplicatePrograms(
+      INITIAL_ARTS_PROGRAMS.filter(
+        (p) => p && !isInitiallyDeleted(p.id) && !isInitiallyDeleted(p.code) && !isInitiallyDeleted(p.name)
+      ).map((p) => ({
+        ...p,
+        results: deduplicateProgramResults(p.results || []),
+      }))
+    );
   });
 
   const [sportsMatches, setSportsMatches] = useState<SportsMatch[]>(() => {
@@ -757,35 +779,64 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         };
       });
 
+      // Recalculate participant individual points & ranks for Arts and Sports
+      const participantIdMap = new Map<string, string>();
+      const participantChestMap = new Map<string, string>();
+      const participantAdmMap = new Map<string, string>();
+      prevParts.forEach((p) => {
+        participantIdMap.set(p.id, p.id);
+        if (p.chestNo) participantChestMap.set(String(p.chestNo).trim().toLowerCase(), p.id);
+        if (p.admissionNo) participantAdmMap.set(String(p.admissionNo).trim().toLowerCase(), p.id);
+      });
+
       artsPrograms.forEach((prog) => {
-        if (prog.publishStatus === 'Published' && prog.results) {
+        const cleanResults = deduplicateProgramResults(prog.results || []);
+        if (cleanResults.length > 0) {
+          const isGroup = prog.section === 'Group';
+          const multiplier = isGroup ? scoringRules.groupEventMultiplier : 1;
           const isSports = isSportsProgram(prog);
 
-          prog.results.forEach((res) => {
-            const stat = partStats[res.participantId];
+          cleanResults.forEach((res) => {
+            const resolvedId =
+              (res.participantId && participantIdMap.get(res.participantId)) ||
+              (res.chestNo && participantChestMap.get(String(res.chestNo).trim().toLowerCase())) ||
+              (res.admissionNo && participantAdmMap.get(String(res.admissionNo).trim().toLowerCase())) ||
+              res.participantId;
+
+            const stat = resolvedId ? partStats[resolvedId] : undefined;
             if (stat) {
               let pts = 0;
               let isGold = false;
               let isSilver = false;
               let isBronze = false;
 
-              if (res.rank === 1) {
-                pts += scoringRules.goldPoints;
-                isGold = true;
-              } else if (res.rank === 2) {
-                pts += scoringRules.silverPoints;
-                isSilver = true;
-              } else if (res.rank === 3) {
-                pts += scoringRules.bronzePoints;
-                isBronze = true;
+              if (res.pointsAwarded !== undefined && res.pointsAwarded !== null && !isNaN(Number(res.pointsAwarded))) {
+                pts = Number(res.pointsAwarded);
               } else {
-                pts += scoringRules.participationPoints;
+                if (res.rank === 1) {
+                  pts += scoringRules.goldPoints;
+                  isGold = true;
+                } else if (res.rank === 2) {
+                  pts += scoringRules.silverPoints;
+                  isSilver = true;
+                } else if (res.rank === 3) {
+                  pts += scoringRules.bronzePoints;
+                  isBronze = true;
+                } else {
+                  pts += scoringRules.participationPoints;
+                }
+
+                if (res.grade === 'A+') pts += scoringRules.gradePointsA_Plus;
+                else if (res.grade === 'A') pts += scoringRules.gradePointsA;
+                else if (res.grade === 'B+') pts += scoringRules.gradePointsB_Plus;
+                else if (res.grade === 'B') pts += scoringRules.gradePointsB;
+
+                pts = Math.round(pts * multiplier);
               }
 
-              if (res.grade === 'A+') pts += scoringRules.gradePointsA_Plus;
-              else if (res.grade === 'A') pts += scoringRules.gradePointsA;
-              else if (res.grade === 'B+') pts += scoringRules.gradePointsB_Plus;
-              else if (res.grade === 'B') pts += scoringRules.gradePointsB;
+              if (res.rank === 1) isGold = true;
+              else if (res.rank === 2) isSilver = true;
+              else if (res.rank === 3) isBronze = true;
 
               if (isSports) {
                 stat.sportsPts += pts;
@@ -985,11 +1036,14 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Immediate remote delete dispatcher with instant Firestore broadcasting
   const dispatchRemoteDelete = useCallback((sheetName: string, id: string) => {
     if (!id) return;
-    recordDeletedId(id);
+    const cleanId = String(id).trim();
+    recordDeletedId(cleanId);
+    recordDeletedId(cleanId.toLowerCase());
+    recordDeletedId(cleanId.toLowerCase().replace(/[^a-z0-9]/g, ''));
 
     // Broadcast deletion tombstone to Firestore so all devices/accounts update in real time
     persistRemoteDeletion({
-      id: String(id).trim(),
+      id: cleanId,
       itemType: sheetName,
       deletedAt: new Date().toISOString(),
     });
@@ -1003,7 +1057,12 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       body: JSON.stringify({
         action: 'deleteItem',
         sheetName,
-        id: String(id).trim(),
+        targetSheet: sheetName,
+        sheet: sheetName,
+        id: cleanId,
+        targetId: cleanId,
+        code: cleanId,
+        name: cleanId,
         timestamp: new Date().toISOString(),
       }),
       redirect: 'follow',
@@ -1131,24 +1190,87 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [showToast, triggerAutoPush]);
 
   const deleteArtsProgram = useCallback((id: string) => {
-    const prog = artsPrograms.find((p) => p.id === id || p.code === id);
+    const cleanId = String(id || '').trim().toLowerCase();
+    const prog = artsPrograms.find(
+      (p) =>
+        p.id === id ||
+        String(p.id).trim().toLowerCase() === cleanId ||
+        (p.code && p.code.trim().toLowerCase() === cleanId) ||
+        (p.name && p.name.trim().toLowerCase() === cleanId)
+    );
     const progId = prog?.id || id;
     const progCode = prog?.code || '';
+    const progName = prog?.name || '';
 
+    // Record deletion tombstones for all identifiers and normalized variants
+    const idsToTombstone = [
+      progId,
+      progId.toLowerCase().trim(),
+      progCode,
+      progCode.toLowerCase().trim(),
+      progCode.toLowerCase().replace(/[^a-z0-9]/g, ''),
+      progName,
+      progName.toLowerCase().trim(),
+      progName.toLowerCase().replace(/[^a-z0-9]/g, ''),
+    ].filter(Boolean);
+
+    idsToTombstone.forEach((k) => recordDeletedId(k));
+
+    // Also delete any result marks / tombstones for this program
+    (prog?.results || []).forEach((r) => {
+      if (r.id) recordDeletedId(r.id);
+      if (r.participantId) {
+        recordDeletedId(`${progId}_${r.participantId}`);
+        if (progCode) recordDeletedId(`${progCode}_${r.participantId}`);
+      }
+      if (r.chestNo) {
+        recordDeletedId(`${progId}_${r.chestNo}`);
+        if (progCode) recordDeletedId(`${progCode}_${r.chestNo}`);
+      }
+    });
+
+    // Remote deletion dispatches for Google Apps Script & Firestore
     persistLiveProgramResult(progId, progCode, [], 'Draft');
     dispatchRemoteDelete('Programs', progId);
     if (progCode) {
-      recordDeletedId(progCode);
       dispatchRemoteDelete('Programs', progCode);
     }
+    if (progName) {
+      dispatchRemoteDelete('Programs', progName);
+    }
+    dispatchRemoteDelete('ResultsMarks', progId);
+    if (progCode) {
+      dispatchRemoteDelete('ResultsMarks', progCode);
+    }
+
     setArtsPrograms((prev) => {
-      const updated = prev.filter((p) => p.id !== progId && (!progCode || p.code !== progCode));
+      const filtered = prev.filter((p) => {
+        if (p.id === progId) return false;
+        if (progCode && p.code && p.code.trim().toLowerCase() === progCode.trim().toLowerCase()) return false;
+        if (progName && p.name && p.name.trim().toLowerCase() === progName.trim().toLowerCase()) return false;
+        if (isDeleted(p.id) || (p.code && isDeleted(p.code)) || (p.name && isDeleted(p.name))) return false;
+        return true;
+      });
+      const updated = deduplicatePrograms(filtered);
       localStorage.setItem('ahia_arts_programs', JSON.stringify(updated));
       triggerAutoPush({ artsPrograms: updated });
       return updated;
     });
-    showToast('Program Deleted', 'Arts event deleted.', 'warning');
-  }, [artsPrograms, showToast, triggerAutoPush, dispatchRemoteDelete, recordDeletedId]);
+
+    // Also remove from schedule
+    setSchedule((prev) => {
+      const updated = prev.filter((s) => {
+        if (s.referenceId === progId || (progCode && s.referenceId === progCode)) return false;
+        if (progName && s.title && s.title.trim().toLowerCase() === progName.trim().toLowerCase()) return false;
+        return true;
+      });
+      localStorage.setItem('ahia_schedule', JSON.stringify(updated));
+      return updated;
+    });
+
+    showToast('Program Deleted', `"${progName || progCode || progId}" has been deleted.`, 'warning');
+    setTimeout(recalculateAllStandings, 50);
+  }, [artsPrograms, showToast, triggerAutoPush, dispatchRemoteDelete, recordDeletedId, isDeleted, recalculateAllStandings]);
 
   // Sports Actions
   const updateSportsScore = useCallback((
@@ -2931,6 +3053,11 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
       });
 
+      const deletedItems = Array.from(deletedIdsRef.current).map((id) => ({
+        id,
+        itemType: 'Programs',
+      }));
+
       const payload = {
         action: 'syncData',
         timestamp: new Date().toISOString(),
@@ -2949,6 +3076,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         certificates: currentCertificates,
         documents: currentDocuments,
         scoringRules: currentRules,
+        deletedItems,
       };
 
       const targetUrl = googleSheetsConfig.appsScriptUrl || 'https://script.google.com/macros/s/AKfycbwwh4ZwnwW2C98pwlgoVfN4MI3VokZjr12fO6z5BflcLrFwJoTAhyE4NSvy4JeClymp8w/exec';

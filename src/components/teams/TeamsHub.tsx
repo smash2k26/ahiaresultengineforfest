@@ -37,7 +37,7 @@ export const TeamsHub: React.FC<TeamsHubProps> = ({
             House Rosters, Captains &amp; Standings
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            Meet the 5 royal houses of AHIA FEST 2026. Explore team rosters, captain profiles, arts &amp; sports point breakdown, and championship medals.
+            Meet the 5 royal houses of AHIA FEST 2026. Explore team rosters, captain profiles, and arts &amp; sports point breakdown.
           </p>
         </div>
       </div>
@@ -108,7 +108,7 @@ export const TeamsHub: React.FC<TeamsHubProps> = ({
                   </div>
                 </div>
 
-                {/* Points Split & Medals */}
+                {/* Points Split */}
                 <div className={`mt-4 grid ${(team.minusPoints || 0) > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-2 text-xs`}>
                   <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 text-center">
                     <span className="text-[10px] text-purple-700 uppercase font-mono font-semibold block truncate">Arts</span>
@@ -124,13 +124,6 @@ export const TeamsHub: React.FC<TeamsHubProps> = ({
                       <span className="text-base font-bold font-mono text-rose-700">-{team.minusPoints}</span>
                     </div>
                   )}
-                </div>
-
-                {/* Medals Row */}
-                <div className="mt-3 flex items-center justify-around p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono font-bold">
-                  <span className="text-amber-700">🥇 {team.golds} Gold</span>
-                  <span className="text-slate-700">🥈 {team.silvers} Silver</span>
-                  <span className="text-amber-900">🥉 {team.bronzes} Bronze</span>
                 </div>
               </div>
 

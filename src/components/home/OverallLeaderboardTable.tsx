@@ -116,7 +116,6 @@ export const OverallLeaderboardTable: React.FC<OverallLeaderboardTableProps> = (
               <th className="py-3 px-4">House / Team</th>
               <th className="py-3 px-3 text-right">Arts Pts</th>
               <th className="py-3 px-3 text-right">Sports Pts</th>
-              <th className="py-3 px-3 text-center hidden md:table-cell">Medals</th>
               <th className="py-3 px-4 sm:px-6 text-right font-bold text-slate-900">
                 {boardType === 'arts' ? 'Net Arts Points' : 'Net Sports Points'}
               </th>
@@ -199,15 +198,6 @@ export const OverallLeaderboardTable: React.FC<OverallLeaderboardTableProps> = (
                   {/* Sports Points */}
                   <td className={`py-4 px-3 text-right font-mono font-semibold ${boardType === 'sports' ? 'text-sky-600 font-bold' : 'text-slate-400'}`}>
                     {team.sportsPoints}
-                  </td>
-
-                  {/* Medals */}
-                  <td className="py-4 px-3 text-center hidden md:table-cell">
-                    <div className="inline-flex items-center gap-2 text-xs font-mono">
-                      <span className="text-amber-600" title="Gold">🥇 {team.golds}</span>
-                      <span className="text-slate-600" title="Silver">🥈 {team.silvers}</span>
-                      <span className="text-orange-600" title="Bronze">🥉 {team.bronzes}</span>
-                    </div>
                   </td>
 
                   {/* Net Total Points for Active Category */}

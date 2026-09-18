@@ -291,9 +291,9 @@ export function generateResultsPDF(
     });
   });
 
-  // Accumulate points & podium medals per category per team
+  // Accumulate points & podium positions per category per team
   allRecords.forEach((r) => {
-    const cat = r.category;
+    const cat = normalizeCategory(r.category);
     if (r.teamId && categoryTeamPoints[cat] && categoryTeamPoints[cat][r.teamId]) {
       categoryTeamPoints[cat][r.teamId].points += Number(r.pointsAwarded) || 0;
       if (r.rankNumber === 1) categoryTeamPoints[cat][r.teamId].golds += 1;
@@ -528,10 +528,10 @@ export function generateResultsPDF(
     const senPts = categoryTeamPoints['Senior'][t.id]?.points || 0;
     const genPts = categoryTeamPoints['General'][t.id]?.points || 0;
 
-    const sumCategoryPts = subPts + junPts + senPts + genPts;
-    const officialArts = Number(t.artsPoints) || 0;
-    // Gross total without minus points
-    const grossTotal = Math.max(sumCategoryPts, officialArts);
+    // Sub Grand Total of category divisions (Sub Junior + Junior + Senior)
+    const subGrandTotal = subPts + junPts + senPts;
+    // Gross total without minus points (Sub Grand Total + General)
+    const grossTotal = subGrandTotal + genPts;
     const applyArtsPenalties = options.festConfig?.applyArtsPenalties ?? (options.festConfig?.applyPenaltiesToPodium ?? true);
     const minusPoints = applyArtsPenalties ? (Number(t.artsMinusPoints) || 0) : 0;
     // Net grand total with minus points deducted
@@ -544,6 +544,7 @@ export function generateResultsPDF(
       subPts,
       junPts,
       senPts,
+      subGrandTotal,
       genPts,
       artsPoints: t.artsPoints || 0,
       sportsPoints: t.sportsPoints || 0,
@@ -572,17 +573,16 @@ export function generateResultsPDF(
       'Sub Jun',
       'Junior',
       'Senior',
+      'Sub Grand Total',
       'General',
       'Total (w/o Minus)',
-      'Minus Points',
-      'Grand Total (With Minus)',
-      'Medals (G/S/B)',
+      'Minus Pts',
+      'Grand Total',
     ],
   ];
 
   const grandRows = grandTotalTeams.map((t, idx) => {
     const rankBadge = idx === 0 ? '1st [Champion]' : idx === 1 ? '2nd' : idx === 2 ? '3rd' : `${idx + 1}th`;
-    const medals = `${t.golds}G • ${t.silvers}S • ${t.bronzes}B`;
     const minusStr = t.minusPoints > 0 ? `-${t.minusPoints} PTS` : '0';
     const teamDisplayName = t.shortCode ? `${t.name} (${t.shortCode})` : t.name;
 
@@ -592,11 +592,11 @@ export function generateResultsPDF(
       t.subPts.toString(),
       t.junPts.toString(),
       t.senPts.toString(),
+      `${t.subGrandTotal} PTS`,
       t.genPts.toString(),
       `${t.grossTotal} PTS`,
       minusStr,
       `${t.netGrandTotal} PTS`,
-      medals,
     ];
   });
 
@@ -626,29 +626,34 @@ export function generateResultsPDF(
       fillColor: [248, 250, 252],
     },
     columnStyles: {
-      0: { cellWidth: 20, fontStyle: 'bold', halign: 'center' }, // Rank
-      1: { cellWidth: 34, fontStyle: 'bold' },                   // Team
+      0: { cellWidth: 18, fontStyle: 'bold', halign: 'center' }, // Rank
+      1: { cellWidth: 36, fontStyle: 'bold' },                   // Team
       2: { cellWidth: 13, halign: 'center' },                   // Sub Junior
       3: { cellWidth: 13, halign: 'center' },                   // Junior
       4: { cellWidth: 13, halign: 'center' },                   // Senior
-      5: { cellWidth: 13, halign: 'center' },                   // General
-      6: { cellWidth: 22, fontStyle: 'bold', halign: 'center' }, // Gross Total (Without Minus)
-      7: { cellWidth: 18, fontStyle: 'bold', halign: 'center' }, // Minus Points
-      8: { cellWidth: 24, fontStyle: 'bold', halign: 'center' }, // Net Grand Total (With Minus)
-      9: { cellWidth: 16, halign: 'center' },                   // Medals
+      5: { cellWidth: 20, fontStyle: 'bold', halign: 'center' }, // Sub Grand Total
+      6: { cellWidth: 13, halign: 'center' },                   // General
+      7: { cellWidth: 20, fontStyle: 'bold', halign: 'center' }, // Gross Total (Without Minus)
+      8: { cellWidth: 16, fontStyle: 'bold', halign: 'center' }, // Minus Points
+      9: { cellWidth: 24, fontStyle: 'bold', halign: 'center' }, // Net Grand Total (With Minus)
     },
     didParseCell: (data) => {
       if (data.section === 'body') {
         if (data.row.index === 0) {
           data.cell.styles.fillColor = [254, 249, 195]; // Amber-50 (Champion gold accent)
         }
-        // Column 6: Gross Total without minus
-        if (data.column.index === 6) {
+        // Column 5: Sub Grand Total
+        if (data.column.index === 5) {
+          data.cell.styles.textColor = [124, 58, 237]; // Violet-600
+          data.cell.styles.fontStyle = 'bold';
+        }
+        // Column 7: Gross Total without minus
+        if (data.column.index === 7) {
           data.cell.styles.textColor = [51, 65, 85]; // Slate-700
           data.cell.styles.fontStyle = 'bold';
         }
-        // Column 7: Minus Points
-        if (data.column.index === 7) {
+        // Column 8: Minus Points
+        if (data.column.index === 8) {
           const rawVal = String(data.cell.raw || '');
           if (rawVal.startsWith('-')) {
             data.cell.styles.textColor = [225, 29, 72]; // Rose-600
@@ -657,8 +662,8 @@ export function generateResultsPDF(
             data.cell.styles.textColor = [148, 163, 184]; // Slate-400
           }
         }
-        // Column 8: Net Grand Total (With Minus)
-        if (data.column.index === 8) {
+        // Column 9: Net Grand Total (With Minus)
+        if (data.column.index === 9) {
           data.cell.styles.textColor = [79, 70, 229]; // Indigo-600
           data.cell.styles.fontStyle = 'bold';
         }
@@ -928,7 +933,7 @@ export function generateSportsResultsPDF(
   });
 
   allRecords.forEach((r) => {
-    const cat = r.category;
+    const cat = normalizeCategory(r.category);
     if (r.teamId && categoryTeamPoints[cat] && categoryTeamPoints[cat][r.teamId]) {
       categoryTeamPoints[cat][r.teamId].points += Number(r.pointsAwarded) || 0;
       if (r.rankNumber === 1) categoryTeamPoints[cat][r.teamId].golds += 1;
@@ -1213,9 +1218,10 @@ export function generateSportsResultsPDF(
     const senPts = categoryTeamPoints['Senior'][t.id]?.points || 0;
     const genPts = categoryTeamPoints['General'][t.id]?.points || 0;
 
-    const sumCategoryPts = subPts + junPts + senPts + genPts;
-    const officialSports = Number(t.sportsPoints) || 0;
-    const grossTotal = Math.max(sumCategoryPts, officialSports);
+    // Sub Grand Total of category divisions (Sub Junior + Junior + Senior)
+    const subGrandTotal = subPts + junPts + senPts;
+    // Gross total without minus points (Sub Grand Total + General)
+    const grossTotal = subGrandTotal + genPts;
     const applySportsPenalties = options.festConfig?.applySportsPenalties ?? (options.festConfig?.applyPenaltiesToPodium ?? true);
     const minusPoints = applySportsPenalties ? (Number(t.sportsMinusPoints) || 0) : 0;
     const netGrandTotal = Math.max(0, grossTotal - minusPoints);
@@ -1227,6 +1233,7 @@ export function generateSportsResultsPDF(
       subPts,
       junPts,
       senPts,
+      subGrandTotal,
       genPts,
       grossTotal,
       minusPoints,
@@ -1251,17 +1258,16 @@ export function generateSportsResultsPDF(
       'Sub Jun',
       'Junior',
       'Senior',
+      'Sub Grand Total',
       'General',
       'Total (w/o Minus)',
-      'Minus Points',
-      'Grand Total (With Minus)',
-      'Medals (G/S/B)',
+      'Minus Pts',
+      'Grand Total',
     ],
   ];
 
   const grandRows = grandTotalTeams.map((t, idx) => {
     const rankBadge = idx === 0 ? '1st [Champion]' : idx === 1 ? '2nd' : idx === 2 ? '3rd' : `${idx + 1}th`;
-    const medals = `${t.golds}G • ${t.silvers}S • ${t.bronzes}B`;
     const minusStr = t.minusPoints > 0 ? `-${t.minusPoints} PTS` : '0';
     const teamDisplayName = t.shortCode ? `${t.name} (${t.shortCode})` : t.name;
 
@@ -1271,11 +1277,11 @@ export function generateSportsResultsPDF(
       t.subPts.toString(),
       t.junPts.toString(),
       t.senPts.toString(),
+      `${t.subGrandTotal} PTS`,
       t.genPts.toString(),
       `${t.grossTotal} PTS`,
       minusStr,
       `${t.netGrandTotal} PTS`,
-      medals,
     ];
   });
 
@@ -1305,27 +1311,31 @@ export function generateSportsResultsPDF(
       fillColor: [248, 250, 252],
     },
     columnStyles: {
-      0: { cellWidth: 20, fontStyle: 'bold', halign: 'center' },
-      1: { cellWidth: 34, fontStyle: 'bold' },
+      0: { cellWidth: 18, fontStyle: 'bold', halign: 'center' },
+      1: { cellWidth: 36, fontStyle: 'bold' },
       2: { cellWidth: 13, halign: 'center' },
       3: { cellWidth: 13, halign: 'center' },
       4: { cellWidth: 13, halign: 'center' },
-      5: { cellWidth: 13, halign: 'center' },
-      6: { cellWidth: 22, fontStyle: 'bold', halign: 'center' },
-      7: { cellWidth: 18, fontStyle: 'bold', halign: 'center' },
-      8: { cellWidth: 24, fontStyle: 'bold', halign: 'center' },
-      9: { cellWidth: 16, halign: 'center' },
+      5: { cellWidth: 20, fontStyle: 'bold', halign: 'center' },
+      6: { cellWidth: 13, halign: 'center' },
+      7: { cellWidth: 20, fontStyle: 'bold', halign: 'center' },
+      8: { cellWidth: 16, fontStyle: 'bold', halign: 'center' },
+      9: { cellWidth: 24, fontStyle: 'bold', halign: 'center' },
     },
     didParseCell: (data) => {
       if (data.section === 'body') {
         if (data.row.index === 0) {
           data.cell.styles.fillColor = [254, 249, 195];
         }
-        if (data.column.index === 6) {
-          data.cell.styles.textColor = [51, 65, 85];
+        if (data.column.index === 5) {
+          data.cell.styles.textColor = [124, 58, 237];
           data.cell.styles.fontStyle = 'bold';
         }
         if (data.column.index === 7) {
+          data.cell.styles.textColor = [51, 65, 85];
+          data.cell.styles.fontStyle = 'bold';
+        }
+        if (data.column.index === 8) {
           const rawVal = String(data.cell.raw || '');
           if (rawVal.startsWith('-')) {
             data.cell.styles.textColor = [225, 29, 72];
@@ -1334,7 +1344,7 @@ export function generateSportsResultsPDF(
             data.cell.styles.textColor = [148, 163, 184];
           }
         }
-        if (data.column.index === 8) {
+        if (data.column.index === 9) {
           data.cell.styles.textColor = [79, 70, 229];
           data.cell.styles.fontStyle = 'bold';
         }

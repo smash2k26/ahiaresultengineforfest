@@ -62,7 +62,7 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
     >
       <div className="space-y-6">
         {/* House Overview Banner */}
-        <div className={`p-5 rounded-3xl bg-white border border-slate-200 shadow-sm grid grid-cols-2 ${(team.minusPoints || 0) > 0 ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-4 text-center`}>
+        <div className={`p-5 rounded-3xl bg-white border border-slate-200 shadow-sm grid grid-cols-2 ${(team.minusPoints || 0) > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-4 text-center`}>
           <div className="space-y-1 p-2 rounded-2xl bg-amber-50/50 border border-amber-100">
             <span className="text-[10px] font-mono uppercase text-slate-500 font-semibold block">Total Points</span>
             <span className="text-2xl sm:text-3xl font-black font-display font-mono text-amber-700">
@@ -92,13 +92,6 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
               </span>
             </div>
           )}
-
-          <div className="space-y-1 p-2 rounded-2xl bg-slate-50 border border-slate-100">
-            <span className="text-[10px] font-mono uppercase text-slate-500 font-semibold block">Medals Tally</span>
-            <div className="text-xs sm:text-sm font-mono font-bold text-slate-900 pt-1">
-              🥇 {team.golds} | 🥈 {team.silvers} | 🥉 {team.bronzes}
-            </div>
-          </div>
         </div>
 
         {/* House Leadership details */}
@@ -164,7 +157,6 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
                   <th className="py-2.5 px-3">Participant</th>
                   <th className="py-2.5 px-3">Category</th>
                   <th className="py-2.5 px-3">Class</th>
-                  <th className="py-2.5 px-3 text-center">Medals</th>
                   <th className="py-2.5 px-3 text-right">Pts Contributed</th>
                   <th className="py-2.5 px-3 text-center">Action</th>
                 </tr>
@@ -191,9 +183,6 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
                     </td>
                     <td className="py-3 px-3 text-slate-600">{member.category}</td>
                     <td className="py-3 px-3 text-slate-500 font-mono">{member.gradeClass}</td>
-                    <td className="py-3 px-3 text-center font-mono text-[11px]">
-                      🥇 {member.golds} 🥈 {member.silvers} 🥉 {member.bronzes}
-                    </td>
                     <td className="py-3 px-3 text-right font-mono font-bold text-amber-700">
                       +{member.totalPoints} PTS
                     </td>

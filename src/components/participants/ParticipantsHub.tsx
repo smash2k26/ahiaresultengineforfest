@@ -133,8 +133,8 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
               {activeView === 'directory'
                 ? 'Complete index of registered student competitors across all Arts stages, literary contests, and athletic track events.'
                 : activeView === 'arts_leaderboard'
-                ? 'Official individual participant rankings, medals, and points accumulated exclusively in Arts and Cultural programs.'
-                : 'Official individual participant rankings, medals, and points accumulated exclusively in Athletics and Sports events.'}
+                ? 'Official individual participant rankings and points accumulated exclusively in Arts and Cultural programs.'
+                : 'Official individual participant rankings and points accumulated exclusively in Athletics and Sports events.'}
             </p>
           </div>
 
@@ -261,9 +261,6 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                 const secondP = currentLeaderboardData[1];
                 const team = teams.find((t) => t.id === secondP.teamId);
                 const pts = activeView === 'arts_leaderboard' ? secondP.artsPoints || 0 : secondP.sportsPoints || 0;
-                const golds = activeView === 'arts_leaderboard' ? secondP.artsGolds || secondP.golds || 0 : secondP.sportsGolds || secondP.golds || 0;
-                const silvers = activeView === 'arts_leaderboard' ? secondP.artsSilvers || secondP.silvers || 0 : secondP.sportsSilvers || secondP.silvers || 0;
-                const bronzes = activeView === 'arts_leaderboard' ? secondP.artsBronzes || secondP.bronzes || 0 : secondP.sportsBronzes || secondP.bronzes || 0;
 
                 return (
                   <div
@@ -299,9 +296,6 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                           {activeView === 'arts_leaderboard' ? 'ARTS PTS' : 'SPORTS PTS'}
                         </span>
                       </div>
-                      <div className="text-xs font-mono text-slate-600 mt-1">
-                        🥇 {golds} 🥈 {silvers} 🥉 {bronzes}
-                      </div>
                     </div>
                   </div>
                 );
@@ -312,9 +306,6 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                 const firstP = currentLeaderboardData[0];
                 const team = teams.find((t) => t.id === firstP.teamId);
                 const pts = activeView === 'arts_leaderboard' ? firstP.artsPoints || 0 : firstP.sportsPoints || 0;
-                const golds = activeView === 'arts_leaderboard' ? firstP.artsGolds || firstP.golds || 0 : firstP.sportsGolds || firstP.golds || 0;
-                const silvers = activeView === 'arts_leaderboard' ? firstP.artsSilvers || firstP.silvers || 0 : firstP.sportsSilvers || firstP.silvers || 0;
-                const bronzes = activeView === 'arts_leaderboard' ? firstP.artsBronzes || firstP.bronzes || 0 : firstP.sportsBronzes || firstP.bronzes || 0;
 
                 return (
                   <div
@@ -354,9 +345,6 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                           {activeView === 'arts_leaderboard' ? 'ARTS PTS' : 'SPORTS PTS'}
                         </span>
                       </div>
-                      <div className="text-xs font-mono text-amber-800 font-bold mt-1">
-                        🥇 {golds} Gold • 🥈 {silvers} Silver • 🥉 {bronzes} Bronze
-                      </div>
                     </div>
                   </div>
                 );
@@ -367,9 +355,6 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                 const thirdP = currentLeaderboardData[2];
                 const team = teams.find((t) => t.id === thirdP.teamId);
                 const pts = activeView === 'arts_leaderboard' ? thirdP.artsPoints || 0 : thirdP.sportsPoints || 0;
-                const golds = activeView === 'arts_leaderboard' ? thirdP.artsGolds || thirdP.golds || 0 : thirdP.sportsGolds || thirdP.golds || 0;
-                const silvers = activeView === 'arts_leaderboard' ? thirdP.artsSilvers || thirdP.silvers || 0 : thirdP.sportsSilvers || thirdP.silvers || 0;
-                const bronzes = activeView === 'arts_leaderboard' ? thirdP.artsBronzes || thirdP.bronzes || 0 : thirdP.sportsBronzes || thirdP.bronzes || 0;
 
                 return (
                   <div
@@ -405,9 +390,6 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                           {activeView === 'arts_leaderboard' ? 'ARTS PTS' : 'SPORTS PTS'}
                         </span>
                       </div>
-                      <div className="text-xs font-mono text-slate-600 mt-1">
-                        🥇 {golds} 🥈 {silvers} 🥉 {bronzes}
-                      </div>
                     </div>
                   </div>
                 );
@@ -437,7 +419,6 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                   <th className="py-3 px-4">Participant Name</th>
                   <th className="py-3 px-4">House / Team</th>
                   <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4 text-center">Medals</th>
                   <th className="py-3 px-4 text-right">
                     {activeView === 'arts_leaderboard' ? 'Arts Points' : 'Sports Points'}
                   </th>
@@ -449,9 +430,6 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                   const team = teams.find((t) => t.id === p.teamId);
                   const rankNum = idx + 1;
                   const pts = activeView === 'arts_leaderboard' ? p.artsPoints || 0 : p.sportsPoints || 0;
-                  const golds = activeView === 'arts_leaderboard' ? p.artsGolds || p.golds || 0 : p.sportsGolds || p.golds || 0;
-                  const silvers = activeView === 'arts_leaderboard' ? p.artsSilvers || p.silvers || 0 : p.sportsSilvers || p.silvers || 0;
-                  const bronzes = activeView === 'arts_leaderboard' ? p.artsBronzes || p.bronzes || 0 : p.sportsBronzes || p.bronzes || 0;
 
                   return (
                     <tr
@@ -499,11 +477,6 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                         </div>
                       </td>
                       <td className="py-3 px-4 text-slate-700 font-medium">{p.category}</td>
-                      <td className="py-3 px-4 text-center font-mono">
-                        <span className="text-amber-600 font-semibold">🥇 {golds}</span>{' '}
-                        <span className="text-slate-600 font-semibold">🥈 {silvers}</span>{' '}
-                        <span className="text-orange-600 font-semibold">🥉 {bronzes}</span>
-                      </td>
                       <td className="py-3 px-4 text-right font-mono font-black text-sm">
                         <span className={activeView === 'arts_leaderboard' ? 'text-purple-600' : 'text-sky-600'}>
                           {pts}
@@ -599,11 +572,11 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                         </div>
                       </div>
 
-                      {/* Results Count & Medals */}
+                      {/* Results Count */}
                       <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500">
                         <span>{eventsCount} Events Recorded</span>
-                        <span className="font-mono text-amber-600 font-semibold">
-                          🥇 {p.golds} 🥈 {p.silvers} 🥉 {p.bronzes}
+                        <span className="font-mono text-indigo-700 font-bold">
+                          {(p.artsPoints || 0) + (p.sportsPoints || 0)} PTS
                         </span>
                       </div>
                     </div>
@@ -629,7 +602,6 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                     <th className="py-3 px-4">Category</th>
                     <th className="py-3 px-4 text-center">Arts Pts</th>
                     <th className="py-3 px-4 text-center">Sports Pts</th>
-                    <th className="py-3 px-4 text-center">Medals</th>
                     <th className="py-3 px-4 text-right">Total Points</th>
                   </tr>
                 </thead>
@@ -669,9 +641,6 @@ export const ParticipantsHub: React.FC<ParticipantsHubProps> = ({
                         </td>
                         <td className="py-3 px-4 text-center font-mono font-bold text-sky-700">
                           {p.sportsPoints || 0}
-                        </td>
-                        <td className="py-3 px-4 text-center font-mono">
-                          🥇 {p.golds} 🥈 {p.silvers} 🥉 {p.bronzes}
                         </td>
                         <td className="py-3 px-4 text-right font-mono font-bold text-indigo-700">
                           {p.artsPoints + p.sportsPoints} PTS

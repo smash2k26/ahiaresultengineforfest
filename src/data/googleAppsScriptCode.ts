@@ -425,10 +425,36 @@ function doPost(e) {
         deleteRowById(targetSheet, payload.targetId);
       }
     } else {
+      if (payload.deletedItems && Array.isArray(payload.deletedItems)) {
+        payload.deletedItems.forEach(function(del) {
+          var targetSheet = ss.getSheetByName(del.itemType || del.targetSheet || "Programs");
+          if (targetSheet && del.id) {
+            deleteRowById(targetSheet, del.id);
+          }
+        });
+      }
+
       if (payload.festConfig || payload.siteSettings) {
         var config = payload.festConfig || payload.siteSettings;
         var settingsSheet = ss.getSheetByName("SiteSettings") || ss.insertSheet("SiteSettings", 0);
         initSiteSettingsSheet(settingsSheet, config);
+      }
+
+      if (payload.artsPrograms && Array.isArray(payload.artsPrograms)) {
+        var deletedSet = {};
+        if (payload.deletedItems && Array.isArray(payload.deletedItems)) {
+          payload.deletedItems.forEach(function(d) {
+            if (d.id) deletedSet[String(d.id).trim().toLowerCase()] = true;
+          });
+        }
+        payload.artsPrograms = payload.artsPrograms.filter(function(pr) {
+          if (!pr) return false;
+          var pid = pr.id ? String(pr.id).trim().toLowerCase() : "";
+          var pcode = pr.code ? String(pr.code).trim().toLowerCase() : "";
+          var pname = pr.name ? String(pr.name).trim().toLowerCase() : "";
+          if (deletedSet[pid] || deletedSet[pcode] || deletedSet[pname]) return false;
+          return true;
+        });
       }
 
       if (payload.teams && Array.isArray(payload.teams)) {

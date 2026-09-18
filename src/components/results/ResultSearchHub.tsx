@@ -231,7 +231,7 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
             }`}
           >
             <Trophy className="w-4 h-4" />
-            House Standings & Medals
+            House Standings
           </button>
         </div>
 
@@ -412,8 +412,8 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
                     <div className="mt-4 space-y-2">
                       <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
                         <span>Recorded Events ({pResults.length})</span>
-                        <span className="text-amber-600 font-mono font-semibold">
-                          🥇 {participant.golds} | 🥈 {participant.silvers} | 🥉 {participant.bronzes}
+                        <span className="text-purple-700 font-mono font-bold">
+                          Total: {participant.totalPoints} PTS
                         </span>
                       </div>
 
@@ -627,71 +627,161 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* TAB 3: HOUSE STANDINGS & MEDAL TALLY */}
+      {/* TAB 3: HOUSE STANDINGS & CATEGORY TOTALS */}
       {/* ------------------------------------------------------------- */}
-      {viewTab === 'houses' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
-              Inter-House Championship Standings ({teams.length})
-            </h3>
-            <span className="text-xs text-slate-400 font-medium">Recalculated Live with Every Mark</span>
-          </div>
+      {viewTab === 'houses' && (() => {
+        // Calculate category point breakdown per team
+        const normalizeCat = (catStr?: string): 'Sub Junior' | 'Junior' | 'Senior' | 'General' => {
+          if (!catStr) return 'General';
+          const s = catStr.toLowerCase().replace(/[-_ ]/g, '');
+          if (s.includes('subjunior') || s.includes('subjun')) return 'Sub Junior';
+          if (s.includes('junior')) return 'Junior';
+          if (s.includes('senior')) return 'Senior';
+          return 'General';
+        };
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {teams.map((team, idx) => (
-              <div
-                key={team.id ? `rsh-team-${team.id}-${idx}` : `rsh-team-${idx}`}
-                className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <TeamLogo logo={team.logo} name={team.name} color={team.color} size="xl" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                          {team.shortCode}
-                        </span>
-                        <span className="text-xs text-slate-500 font-semibold">Rank #{team.rank}</span>
+        const teamCatPoints: Record<string, { sub: number; jun: number; sen: number; gen: number }> = {};
+        teams.forEach((t) => {
+          teamCatPoints[t.id] = { sub: 0, jun: 0, sen: 0, gen: 0 };
+        });
+
+        artsPrograms.forEach((prog) => {
+          const cleanResults = deduplicateProgramResults(prog.results || []);
+          const catKey = normalizeCat(prog.category);
+          cleanResults.forEach((res) => {
+            if (res.teamId && teamCatPoints[res.teamId]) {
+              const pts = Number(res.pointsAwarded) || 0;
+              if (catKey === 'Sub Junior') teamCatPoints[res.teamId].sub += pts;
+              else if (catKey === 'Junior') teamCatPoints[res.teamId].jun += pts;
+              else if (catKey === 'Senior') teamCatPoints[res.teamId].sen += pts;
+              else teamCatPoints[res.teamId].gen += pts;
+            }
+          });
+        });
+
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                Inter-House Championship Standings ({teams.length})
+              </h3>
+              <span className="text-xs text-slate-400 font-medium">Recalculated Live with Every Mark</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {teams.map((team, idx) => (
+                <div
+                  key={team.id ? `rsh-team-${team.id}-${idx}` : `rsh-team-${idx}`}
+                  className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <TeamLogo logo={team.logo} name={team.name} color={team.color} size="xl" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                            {team.shortCode}
+                          </span>
+                          <span className="text-xs text-slate-500 font-semibold">Rank #{team.rank}</span>
+                        </div>
+                        <h4 className="text-lg font-bold font-display text-slate-900 mt-0.5">
+                          {team.name}
+                        </h4>
+                        <p className="text-xs text-slate-500">
+                          Captain: <strong className="text-slate-700">{team.captain || 'Assigned in Admin'}</strong>
+                        </p>
                       </div>
-                      <h4 className="text-lg font-bold font-display text-slate-900 mt-0.5">
-                        {team.name}
-                      </h4>
-                      <p className="text-xs text-slate-500">
-                        Captain: <strong className="text-slate-700">{team.captain || 'Assigned in Admin'}</strong>
-                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="text-2xl font-black font-display font-mono text-amber-600">
+                        {team.totalPoints}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono font-semibold">TOTAL PTS</div>
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <div className="text-2xl font-black font-display font-mono text-amber-600">
-                      {team.totalPoints}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-center">
+                    <div className="p-2.5 rounded-xl bg-purple-50/50 border border-purple-100">
+                      <div className="text-xs font-bold text-purple-800">{team.artsPoints}</div>
+                      <div className="text-[10px] text-purple-600">Arts Points</div>
                     </div>
-                    <div className="text-[10px] text-slate-400 font-mono font-semibold">TOTAL PTS</div>
+                    <div className="p-2.5 rounded-xl bg-sky-50/50 border border-sky-100">
+                      <div className="text-xs font-bold text-sky-800">{team.sportsPoints}</div>
+                      <div className="text-[10px] text-sky-600">Sports Points</div>
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
 
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="text-xs font-bold text-slate-700">{team.artsPoints}</div>
-                    <div className="text-[10px] text-slate-400">Arts Points</div>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="text-xs font-bold text-slate-700">{team.sportsPoints}</div>
-                    <div className="text-[10px] text-slate-400">Sports Points</div>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="text-xs font-bold text-amber-600 font-mono">
-                      🥇 {team.golds} 🥈 {team.silvers} 🥉 {team.bronzes}
-                    </div>
-                    <div className="text-[10px] text-slate-400">Medal Tally</div>
-                  </div>
+            {/* Category Points Breakdown Table */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-base font-bold text-slate-900">Category & Grand Total Breakdown</h4>
+                  <p className="text-xs text-slate-500">Sub Grand Total (Sub Jun + Junior + Senior), General, Penalties & Grand Total</p>
                 </div>
               </div>
-            ))}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold">
+                      <th className="py-2.5 px-3">Rank</th>
+                      <th className="py-2.5 px-3">House / Team</th>
+                      <th className="py-2.5 px-3 text-center">Sub Jun</th>
+                      <th className="py-2.5 px-3 text-center">Junior</th>
+                      <th className="py-2.5 px-3 text-center">Senior</th>
+                      <th className="py-2.5 px-3 text-center font-bold text-violet-700 bg-violet-50/50">Sub Grand Total</th>
+                      <th className="py-2.5 px-3 text-center">General</th>
+                      <th className="py-2.5 px-3 text-center font-bold text-slate-800">Total (w/o Minus)</th>
+                      <th className="py-2.5 px-3 text-center font-bold text-rose-600">Minus Pts</th>
+                      <th className="py-2.5 px-3 text-center font-bold text-indigo-700 bg-indigo-50/50">Grand Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {teams.map((t, idx) => {
+                      const cp = teamCatPoints[t.id] || { sub: 0, jun: 0, sen: 0, gen: 0 };
+                      const subGrandTotal = cp.sub + cp.jun + cp.sen;
+                      const grossTotal = subGrandTotal + cp.gen;
+                      const minusPts = Number(t.artsMinusPoints || t.minusPoints) || 0;
+                      const netGrandTotal = Math.max(0, grossTotal - minusPts);
+
+                      return (
+                        <tr key={t.id} className={idx === 0 ? 'bg-amber-50/40 font-medium' : 'hover:bg-slate-50/60'}>
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-700">
+                            {idx === 0 ? '1st 🏆' : idx === 1 ? '2nd' : idx === 2 ? '3rd' : `${idx + 1}th`}
+                          </td>
+                          <td className="py-2.5 px-3 font-bold text-slate-900">
+                            {t.name} {t.shortCode ? `(${t.shortCode})` : ''}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-mono">{cp.sub}</td>
+                          <td className="py-2.5 px-3 text-center font-mono">{cp.jun}</td>
+                          <td className="py-2.5 px-3 text-center font-mono">{cp.sen}</td>
+                          <td className="py-2.5 px-3 text-center font-mono font-bold text-violet-700 bg-violet-50/30">
+                            {subGrandTotal}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-mono">{cp.gen}</td>
+                          <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800">
+                            {grossTotal}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-mono font-bold text-rose-600">
+                            {minusPts > 0 ? `-${minusPts}` : '0'}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-mono font-bold text-indigo-700 bg-indigo-50/30">
+                            {netGrandTotal}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

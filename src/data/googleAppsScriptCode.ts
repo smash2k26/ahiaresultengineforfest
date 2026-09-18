@@ -258,20 +258,31 @@ function doGet(e) {
     var resultsMarks = readSheetData(ss.getSheetByName("ResultsMarks"));
     var scoringRules = readScoringRules(ss.getSheetByName("ScoringRules"));
 
-    // Index results marks by program code and name
+    // Index results marks by program code and name (with sanitized keys for 100% match)
     var marksByProgCode = {};
     if (Array.isArray(resultsMarks)) {
       resultsMarks.forEach(function(rm) {
         if (!rm) return;
         var pCode = String(rm.programCode || "").trim().toLowerCase();
         var pName = String(rm.programName || "").trim().toLowerCase();
+        var pCodeClean = pCode.replace(/[^a-z0-9]/g, "");
+        var pNameClean = pName.replace(/[^a-z0-9]/g, "");
+
         if (pCode) {
           if (!marksByProgCode[pCode]) marksByProgCode[pCode] = [];
           marksByProgCode[pCode].push(rm);
         }
+        if (pCodeClean && pCodeClean !== pCode) {
+          if (!marksByProgCode[pCodeClean]) marksByProgCode[pCodeClean] = [];
+          marksByProgCode[pCodeClean].push(rm);
+        }
         if (pName && pName !== pCode) {
           if (!marksByProgCode[pName]) marksByProgCode[pName] = [];
           marksByProgCode[pName].push(rm);
+        }
+        if (pNameClean && pNameClean !== pName) {
+          if (!marksByProgCode[pNameClean]) marksByProgCode[pNameClean] = [];
+          marksByProgCode[pNameClean].push(rm);
         }
       });
     }
@@ -288,7 +299,10 @@ function doGet(e) {
       if ((!p.results || p.results.length === 0) && marksByProgCode) {
         var pCodeKey = String(p.code || p.id || "").trim().toLowerCase();
         var pNameKey = String(p.name || "").trim().toLowerCase();
-        var extra = marksByProgCode[pCodeKey] || marksByProgCode[pNameKey] || [];
+        var pCodeClean = pCodeKey.replace(/[^a-z0-9]/g, "");
+        var pNameClean = pNameKey.replace(/[^a-z0-9]/g, "");
+
+        var extra = marksByProgCode[pCodeKey] || marksByProgCode[pCodeClean] || marksByProgCode[pNameKey] || marksByProgCode[pNameClean] || [];
         if (extra.length > 0) {
           p.results = extra.map(function(rm, idx) {
             return {
@@ -449,7 +463,7 @@ function doPost(e) {
     }
 
     // 2. Full or Partial Data Sync (Smooth in-place write)
-    if (action === "syncData" || payload.teams || payload.participants || payload.artsPrograms || payload.sportsMatches) {
+    if (action === "syncData" || action === "saveResultMark" || action === "savePodiumResults" || payload.teams || payload.participants || payload.artsPrograms || payload.programs || payload.resultsMarks || payload.sportsMatches) {
       // TEAMS
       if (payload.teams && Array.isArray(payload.teams)) {
         writeDecoratedSheetData(
@@ -488,8 +502,13 @@ function doPost(e) {
       }
 
       // PROGRAMS (Arts & Cultural)
-      if (payload.artsPrograms && Array.isArray(payload.artsPrograms)) {
-        var progFormatted = payload.artsPrograms.map(function(pr) {
+      var incomingProgs = payload.artsPrograms || payload.programs;
+      if (incomingProgs && Array.isArray(incomingProgs)) {
+        var progFormatted = incomingProgs.map(function(pr) {
+          var resultsJson = pr.results;
+          if (typeof resultsJson !== "string") {
+            resultsJson = JSON.stringify(resultsJson || []);
+          }
           return {
             id: pr.id,
             code: pr.code || "",
@@ -504,7 +523,7 @@ function doPost(e) {
             maxMarks: pr.maxMarks || 100,
             status: pr.status || "UPCOMING",
             publishStatus: pr.publishStatus || "Draft",
-            results: JSON.stringify(pr.results || [])
+            results: resultsJson
           };
         });
         writeDecoratedSheetData(
@@ -512,12 +531,20 @@ function doPost(e) {
           progFormatted,
           FEST_SHEETS_CONFIG.Programs
         );
+      }
 
-        // Flatten and generate detailed ResultsMarks scorecard
-        var flatMarks = [];
-        payload.artsPrograms.forEach(function(prog) {
-          if (Array.isArray(prog.results)) {
-            prog.results.forEach(function(res) {
+      // RESULTS MARKS & DETAILED SCORECARD (First-Class Robust Persistence)
+      var flatMarks = [];
+      if (payload.resultsMarks && Array.isArray(payload.resultsMarks) && payload.resultsMarks.length > 0) {
+        flatMarks = payload.resultsMarks;
+      } else if (incomingProgs && Array.isArray(incomingProgs)) {
+        incomingProgs.forEach(function(prog) {
+          var resList = prog.results;
+          if (typeof resList === "string" && resList.trim()) {
+            try { resList = JSON.parse(resList); } catch (e) { resList = []; }
+          }
+          if (Array.isArray(resList)) {
+            resList.forEach(function(res) {
               flatMarks.push({
                 programCode: prog.code || prog.id,
                 programName: prog.name,
@@ -534,7 +561,9 @@ function doPost(e) {
             });
           }
         });
-        
+      }
+
+      if (flatMarks.length > 0 || payload.resultsMarks !== undefined || incomingProgs !== undefined) {
         writeDecoratedSheetData(
           ss.getSheetByName("ResultsMarks") || ss.insertSheet("ResultsMarks"),
           flatMarks,

@@ -295,7 +295,7 @@ const MainFestivalApp: React.FC = () => {
 
       <CelebrationFireworks activeTab={activeTab} />
       {/* Toast Notifications */}
-      {activeTab === 'admin' && <ToastContainer />}
+      <ToastContainer />
     </div>
   );
 };

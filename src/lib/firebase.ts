@@ -7,6 +7,7 @@ import {
   getDocFromServer,
   setDoc,
   addDoc,
+  deleteDoc,
   collection,
   onSnapshot,
   serverTimestamp,
@@ -134,6 +135,21 @@ export async function persistRemoteDeletion(record: DeletionRecord): Promise<boo
     return true;
   } catch (err) {
     console.error('Failed to persist deletion to Firestore:', err);
+    return false;
+  }
+}
+
+/**
+ * Removes a remote deletion tombstone so a newly created/entered record can persist cleanly.
+ */
+export async function removeRemoteDeletion(id: string): Promise<boolean> {
+  try {
+    const safeId = encodeURIComponent(id).replace(/%/g, '_');
+    const deletionDocRef = doc(db, 'deletions', safeId);
+    await deleteDoc(deletionDocRef);
+    return true;
+  } catch (err) {
+    console.warn('Failed to remove remote deletion from Firestore:', err);
     return false;
   }
 }

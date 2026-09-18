@@ -42,6 +42,7 @@ import {
   persistCelebrationMode,
   listenToCelebrationMode,
   persistRemoteDeletion,
+  removeRemoteDeletion,
   listenToDeletions,
   persistLiveProgramResult,
   listenToLiveResults,
@@ -389,24 +390,33 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       localStorage.setItem('ahia_deleted_ids_v2', JSON.stringify(Array.from(deletedIdsRef.current)));
     } catch {}
+    // Erase tombstone from Firestore so remote snapshots never resurrect it
+    removeRemoteDeletion(clean);
   }, []);
 
   const clearResultTombstones = useCallback((pId: string, pCode?: string, participantId?: string, chestNo?: string, resId?: string) => {
-    const keys = [
-      `${pId}_${participantId}`,
-      `${pId}_${chestNo}`,
-      pCode ? `${pCode}_${participantId}` : '',
-      pCode ? `${pCode}_${chestNo}` : '',
-      resId,
-      participantId,
-      chestNo,
-    ].filter(Boolean);
-    keys.forEach((k) => clearDeletedId(k!));
+    const keys: string[] = [];
+    const cleanPid = pId ? String(pId).trim().toLowerCase() : '';
+    const cleanPcode = pCode ? String(pCode).trim().toLowerCase() : '';
+    const cleanPartId = participantId ? String(participantId).trim().toLowerCase() : '';
+    const cleanChest = chestNo ? String(chestNo).trim().toLowerCase() : '';
+    const cleanResId = resId ? String(resId).trim().toLowerCase() : '';
+
+    if (cleanPid && cleanPartId) keys.push(`${cleanPid}_${cleanPartId}`);
+    if (cleanPid && cleanChest) keys.push(`${cleanPid}_${cleanChest}`);
+    if (cleanPcode && cleanPartId) keys.push(`${cleanPcode}_${cleanPartId}`);
+    if (cleanPcode && cleanChest) keys.push(`${cleanPcode}_${cleanChest}`);
+    if (cleanResId) keys.push(cleanResId);
+    if (cleanPartId) keys.push(cleanPartId);
+    if (cleanChest) keys.push(cleanChest);
+
+    keys.forEach((k) => clearDeletedId(k));
   }, [clearDeletedId]);
 
   const isDeleted = useCallback((id: string | number | undefined | null) => {
     if (id === undefined || id === null) return false;
     const clean = String(id).trim().toLowerCase();
+    if (!clean || clean.endsWith('_') || clean.startsWith('_')) return false;
     return deletedIdsRef.current.has(clean);
   }, []);
 
@@ -868,16 +878,9 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const cleaned = prev.map((p) => {
             const currentResults = p.results || [];
             const filtered = currentResults.filter((r) => {
-              const keys = [
-                `${p.id}_${r.participantId}`,
-                `${p.id}_${r.chestNo}`,
-                p.code ? `${p.code}_${r.participantId}` : '',
-                p.code ? `${p.code}_${r.chestNo}` : '',
-                r.participantId,
-                r.chestNo,
-                r.id,
-              ].filter(Boolean);
-              return !keys.some((k) => isDeleted(k));
+              if (!r) return false;
+              if (r.id && isDeleted(r.id)) return false;
+              return true;
             });
             if (filtered.length !== currentResults.length) {
               modified = true;
@@ -915,14 +918,9 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
 
             const sanitizedLiveResults = liveData.results.filter((r) => {
-              const keys = [
-                `${p.id}_${r.participantId}`,
-                `${p.id}_${r.chestNo}`,
-                p.code ? `${p.code}_${r.participantId}` : '',
-                p.code ? `${p.code}_${r.chestNo}` : '',
-                r.id,
-              ].filter(Boolean);
-              return !keys.some((k) => isDeleted(k));
+              if (!r) return false;
+              if (r.id && isDeleted(r.id)) return false;
+              return true;
             });
 
             // If remote sanitized results are empty, retain existing local results
@@ -984,7 +982,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     setTimeout(() => {
       isRemoteSyncInProgressRef.current = false;
-    }, 4000);
+    }, 600);
   }, []);
 
   // Immediate remote delete dispatcher with instant Firestore broadcasting
@@ -1707,11 +1705,14 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Explicitly un-tombstone this participant result so it can never be blocked
     clearResultTombstones(prog.id, prog.code, participant.id, participant.chestNo, resultEntry.id);
 
+    let fullUpdatedResults: ArtsResultEntry[] = [];
+
     setArtsPrograms((prev) => {
       const updated = prev.map((p) => {
         if (p.id === prog.id || (p.code && prog.code && p.code.trim().toLowerCase() === prog.code.trim().toLowerCase())) {
           const existingResults = (p.results || []).filter((r) => r.participantId !== participant.id);
           const updatedResults = [...existingResults, resultEntry];
+          fullUpdatedResults = updatedResults;
           return {
             ...p,
             results: updatedResults,
@@ -1754,7 +1755,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     persistLiveProgramResult(
       prog.id,
       prog.code || '',
-      [resultEntry],
+      fullUpdatedResults.length > 0 ? fullUpdatedResults : [resultEntry],
       mark.publishNow ? 'Published' : prog.publishStatus || 'Draft'
     );
 
@@ -1909,39 +1910,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       clearResultTombstones(prog.id, prog.code, entry.participantId, entry.chestNo, entry.id);
     });
 
-    // 2. Only tombstone old results that were explicitly replaced / omitted from the podium
-    const newParticipantIds = new Set(validEntries.map((e) => e.participantId));
-    const newChestNos = new Set(validEntries.map((e) => (e.chestNo ? String(e.chestNo).trim().toLowerCase() : '')));
-    (prog.results || []).forEach((oldRes) => {
-      const isRetained =
-        (oldRes.participantId && newParticipantIds.has(oldRes.participantId)) ||
-        (oldRes.chestNo && newChestNos.has(String(oldRes.chestNo).trim().toLowerCase()));
-      if (!isRetained) {
-        const keysToDelete = [
-          `${prog.id}_${oldRes.participantId}`,
-          `${prog.id}_${oldRes.chestNo || ''}`,
-          prog.code ? `${prog.code}_${oldRes.participantId}` : '',
-          prog.code ? `${prog.code}_${oldRes.chestNo || ''}` : '',
-          oldRes.id || '',
-        ].filter(Boolean);
-        keysToDelete.forEach((k) => {
-          recordDeletedId(k);
-          persistRemoteDeletion({
-            id: k,
-            itemType: 'result_mark',
-            programId: prog.id,
-            participantId: oldRes.participantId,
-            chestNo: oldRes.chestNo || '',
-            deletedAt: new Date().toISOString(),
-          });
-        });
-        if (prog.code && oldRes.chestNo) {
-          dispatchRemoteDelete('ResultsMarks', `${prog.code}_${oldRes.chestNo}`);
-        }
-      }
-    });
-
-    // 3. Immediately persist to state & localStorage
+    // 2. Immediately persist to state & localStorage
     const updatedPrograms = artsPrograms.map((p) => {
       if (
         p.id === prog.id ||
@@ -1964,11 +1933,8 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Immediately trigger auto-push with the updated programs
     triggerAutoPush({ artsPrograms: updatedPrograms });
-    if (pushToGoogleSheetsRef.current) {
-      pushToGoogleSheetsRef.current({ artsPrograms: updatedPrograms, silent: true });
-    }
 
-    // 4. Broadcast live results to Firestore in real-time for all accounts and devices
+    // 3. Broadcast live results to Firestore in real-time for all accounts and devices
     persistLiveProgramResult(
       prog.id,
       prog.code || '',
@@ -1978,7 +1944,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     showToast('Podium Results Published', `Top 3 results for "${prog.name}" saved & synced.`, 'success');
     setTimeout(recalculateAllStandings, 100);
-  }, [artsPrograms, participants, teams, showToast, recalculateAllStandings, triggerAutoPush, clearResultTombstones, recordDeletedId, dispatchRemoteDelete]);
+  }, [artsPrograms, participants, teams, showToast, recalculateAllStandings, triggerAutoPush, clearResultTombstones]);
 
   const deleteResultMark = useCallback((programId: string, participantId: string) => {
     if (!programId || !participantId) return;
@@ -2455,17 +2421,25 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             ? data.results
             : [];
 
-          // Index resultsMarks by program code/id/name if present in the response
+          // Index resultsMarks by program code/id/name (including normalized versions)
           const marksByProg = new Map<string, any[]>();
+          const addMarkToMap = (key: string, rm: any) => {
+            if (!key) return;
+            const k = key.trim().toLowerCase();
+            const kClean = k.replace(/[^a-z0-9]/g, '');
+            if (!marksByProg.has(k)) marksByProg.set(k, []);
+            marksByProg.get(k)!.push(rm);
+            if (kClean && kClean !== k) {
+              if (!marksByProg.has(kClean)) marksByProg.set(kClean, []);
+              marksByProg.get(kClean)!.push(rm);
+            }
+          };
+
           rawResultsMarks.forEach((rm: any) => {
             if (!rm) return;
-            const pCode = String(rm.programCode || '').trim().toLowerCase();
-            const pId = String(rm.programId || '').trim().toLowerCase();
-            const pName = String(rm.programName || '').trim().toLowerCase();
-            [pCode, pId, pName].filter(Boolean).forEach((k) => {
-              if (!marksByProg.has(k)) marksByProg.set(k, []);
-              marksByProg.get(k)!.push(rm);
-            });
+            if (rm.programCode) addMarkToMap(String(rm.programCode), rm);
+            if (rm.programId) addMarkToMap(String(rm.programId), rm);
+            if (rm.programName) addMarkToMap(String(rm.programName), rm);
           });
 
           if (Array.isArray(rawPrograms) && rawPrograms.length > 0) {
@@ -2482,7 +2456,18 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   const pCode = String(pr.code || '').trim().toLowerCase();
                   const pId = String(pr.id || '').trim().toLowerCase();
                   const pName = String(pr.name || '').trim().toLowerCase();
-                  const extraMarks = marksByProg.get(pCode) || marksByProg.get(pId) || marksByProg.get(pName) || [];
+                  const pCodeClean = pCode.replace(/[^a-z0-9]/g, '');
+                  const pIdClean = pId.replace(/[^a-z0-9]/g, '');
+                  const pNameClean = pName.replace(/[^a-z0-9]/g, '');
+
+                  const extraMarks =
+                    marksByProg.get(pCode) ||
+                    marksByProg.get(pCodeClean) ||
+                    marksByProg.get(pId) ||
+                    marksByProg.get(pIdClean) ||
+                    marksByProg.get(pName) ||
+                    marksByProg.get(pNameClean) ||
+                    [];
                   if (extraMarks.length > 0) {
                     results = extraMarks.map((rm, mIdx) => ({
                       id: `res-${pr.id || pr.code}-${rm.chestNo || mIdx}-${Date.now()}`,
@@ -2507,14 +2492,18 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
                 const filteredResults = Array.isArray(results)
                   ? results.filter((r: any) => {
-                      const keys = [
-                        `${pr.code || pr.id}_${r.participantId}`,
-                        `${pr.id}_${r.participantId}`,
-                        `${pr.code || pr.id}_${r.chestNo}`,
-                        `${pr.id}_${r.chestNo}`,
-                        r.id,
-                      ].filter(Boolean);
-                      return !keys.some((k) => isDeleted(k));
+                      if (!r) return false;
+                      if (r.id && isDeleted(r.id)) return false;
+                      const cleanPid = pr.id ? String(pr.id).trim().toLowerCase() : '';
+                      const cleanPcode = pr.code ? String(pr.code).trim().toLowerCase() : '';
+                      const cleanPartId = r.participantId ? String(r.participantId).trim().toLowerCase() : '';
+                      const cleanChest = r.chestNo ? String(r.chestNo).trim().toLowerCase() : '';
+
+                      if (cleanPid && cleanPartId && isDeleted(`${cleanPid}_${cleanPartId}`)) return false;
+                      if (cleanPid && cleanChest && isDeleted(`${cleanPid}_${cleanChest}`)) return false;
+                      if (cleanPcode && cleanPartId && isDeleted(`${cleanPcode}_${cleanPartId}`)) return false;
+                      if (cleanPcode && cleanChest && isDeleted(`${cleanPcode}_${cleanChest}`)) return false;
+                      return true;
                     })
                   : [];
                 const isSport = isSportsProgram(pr);
@@ -2534,35 +2523,32 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               const remoteMap = new Map<string, any>();
               remoteSanitized.forEach((pr: ArtsProgram) => {
                 remoteMap.set(pr.id, pr);
-                if (pr.code) remoteMap.set(String(pr.code).trim().toLowerCase(), pr);
+                if (pr.code) {
+                  remoteMap.set(String(pr.code).trim().toLowerCase(), pr);
+                  remoteMap.set(String(pr.code).trim().toLowerCase().replace(/[^a-z0-9]/g, ''), pr);
+                }
               });
 
               const merged: ArtsProgram[] = remoteSanitized.map((remotePr: ArtsProgram) => {
                 const localMatch = prevLocal.find(
-                  (lp) => lp.id === remotePr.id || (lp.code && remotePr.code && lp.code.trim().toLowerCase() === remotePr.code.trim().toLowerCase())
+                  (lp) =>
+                    lp.id === remotePr.id ||
+                    (lp.code && remotePr.code && lp.code.trim().toLowerCase() === remotePr.code.trim().toLowerCase()) ||
+                    (lp.code && remotePr.code && lp.code.replace(/[^a-z0-9]/gi, '').toLowerCase() === remotePr.code.replace(/[^a-z0-9]/gi, '').toLowerCase()) ||
+                    (lp.name && remotePr.name && lp.name.trim().toLowerCase() === remotePr.name.trim().toLowerCase())
                 );
                 if (localMatch) {
                   // LOCAL-FIRST MERGE: Never discard local entered podium marks or published results!
                   const localResults = (localMatch.results || []).filter((r: any) => {
-                    const keys = [
-                      `${remotePr.code || remotePr.id}_${r.participantId}`,
-                      `${remotePr.id}_${r.participantId}`,
-                      `${remotePr.code || remotePr.id}_${r.chestNo}`,
-                      `${remotePr.id}_${r.chestNo}`,
-                      r.id,
-                    ].filter(Boolean);
-                    return !keys.some((k) => isDeleted(k));
+                    if (!r) return false;
+                    if (r.id && isDeleted(r.id)) return false;
+                    return true;
                   });
 
                   const remoteResults = (remotePr.results || []).filter((r: any) => {
-                    const keys = [
-                      `${remotePr.code || remotePr.id}_${r.participantId}`,
-                      `${remotePr.id}_${r.participantId}`,
-                      `${remotePr.code || remotePr.id}_${r.chestNo}`,
-                      `${remotePr.id}_${r.chestNo}`,
-                      r.id,
-                    ].filter(Boolean);
-                    return !keys.some((k) => isDeleted(k));
+                    if (!r) return false;
+                    if (r.id && isDeleted(r.id)) return false;
+                    return true;
                   });
 
                   let finalResults: ArtsResultEntry[] = [];
@@ -2573,31 +2559,31 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   } else if (remoteResults.length > 0 && localResults.length === 0) {
                     finalResults = remoteResults;
                   } else {
-                    // Both have results: merge by participant/rank/chestNo
+                    // Both have results: merge by participant / chestNo / rank / id
                     const resultMap = new Map<string, any>();
-                    remoteResults.forEach((r: any) => {
-                      const key = r.participantId || r.chestNo || r.id;
-                      if (key) resultMap.set(key, r);
+                    remoteResults.forEach((r: any, rIdx: number) => {
+                      const key = r.participantId || (r.chestNo ? String(r.chestNo).trim().toLowerCase() : '') || (r.rank ? `rank_${r.rank}` : `idx_${rIdx}`);
+                      resultMap.set(key, r);
                     });
-                    localResults.forEach((lr: any) => {
-                      const key = lr.participantId || lr.chestNo || lr.id;
-                      if (key) {
-                        if (!resultMap.has(key)) {
-                          resultMap.set(key, lr);
-                          hasLocalAdditionsToSyncBack = true;
-                        } else {
-                          // Merge local attributes: keep local points, position, rank, grade if richer
-                          const existing = resultMap.get(key);
-                          resultMap.set(key, {
-                            ...existing,
-                            ...lr,
-                            pointsAwarded: lr.pointsAwarded !== undefined && lr.pointsAwarded !== 0 ? lr.pointsAwarded : (existing.pointsAwarded ?? lr.pointsAwarded),
-                            position: lr.position && lr.position !== '-' ? lr.position : (existing.position || lr.position),
-                            rank: lr.rank && lr.rank !== 999 ? lr.rank : (existing.rank || lr.rank),
-                            grade: lr.grade && lr.grade !== '-' ? lr.grade : (existing.grade || lr.grade),
-                            status: lr.status === 'Published' || existing.status === 'Published' ? 'Published' : (existing.status || lr.status),
-                          });
-                        }
+                    localResults.forEach((lr: any, lIdx: number) => {
+                      const key = lr.participantId || (lr.chestNo ? String(lr.chestNo).trim().toLowerCase() : '') || (lr.rank ? `rank_${lr.rank}` : `idx_${lIdx}`);
+                      if (!resultMap.has(key)) {
+                        resultMap.set(key, lr);
+                        hasLocalAdditionsToSyncBack = true;
+                      } else {
+                        // Merge local attributes: keep local points, position, rank, grade if richer
+                        const existing = resultMap.get(key);
+                        resultMap.set(key, {
+                          ...existing,
+                          ...lr,
+                          participantName: lr.participantName || existing.participantName,
+                          teamId: lr.teamId || existing.teamId,
+                          pointsAwarded: lr.pointsAwarded !== undefined && lr.pointsAwarded !== 0 ? lr.pointsAwarded : (existing.pointsAwarded ?? lr.pointsAwarded),
+                          position: lr.position && lr.position !== '-' ? lr.position : (existing.position || lr.position),
+                          rank: lr.rank && lr.rank !== 999 ? lr.rank : (existing.rank || lr.rank),
+                          grade: lr.grade && lr.grade !== '-' ? lr.grade : (existing.grade || lr.grade),
+                          status: lr.status === 'Published' || existing.status === 'Published' ? 'Published' : (existing.status || lr.status),
+                        });
                       }
                     });
                     finalResults = Array.from(resultMap.values());
@@ -2606,7 +2592,7 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   const isPublished =
                     localMatch.publishStatus === 'Published' ||
                     remotePr.publishStatus === 'Published' ||
-                    finalResults.some((r) => r.status === 'Published');
+                    finalResults.length > 0;
                   const isCompleted =
                     localMatch.status === 'COMPLETED' ||
                     remotePr.status === 'COMPLETED' ||
@@ -2634,16 +2620,18 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const codeKey = localPr.code ? localPr.code.trim().toLowerCase() : '';
                 if (!mergedIdSet.has(localPr.id) && (!codeKey || !mergedCodeSet.has(codeKey))) {
                   const validResults = (localPr.results || []).filter((r) => {
-                    const keys = [
-                      `${localPr.code || localPr.id}_${r.participantId}`,
-                      `${localPr.id}_${r.participantId}`,
-                      `${localPr.code || localPr.id}_${r.chestNo}`,
-                      `${localPr.id}_${r.chestNo}`,
-                      r.participantId,
-                      r.chestNo,
-                      r.id,
-                    ].filter(Boolean);
-                    return !keys.some((k) => isDeleted(k));
+                    if (!r) return false;
+                    if (r.id && isDeleted(r.id)) return false;
+                    const cleanPid = localPr.id ? String(localPr.id).trim().toLowerCase() : '';
+                    const cleanPcode = localPr.code ? String(localPr.code).trim().toLowerCase() : '';
+                    const cleanPartId = r.participantId ? String(r.participantId).trim().toLowerCase() : '';
+                    const cleanChest = r.chestNo ? String(r.chestNo).trim().toLowerCase() : '';
+
+                    if (cleanPid && cleanPartId && isDeleted(`${cleanPid}_${cleanPartId}`)) return false;
+                    if (cleanPid && cleanChest && isDeleted(`${cleanPid}_${cleanChest}`)) return false;
+                    if (cleanPcode && cleanPartId && isDeleted(`${cleanPcode}_${cleanPartId}`)) return false;
+                    if (cleanPcode && cleanChest && isDeleted(`${cleanPcode}_${cleanChest}`)) return false;
+                    return true;
                   });
                   merged.push({ ...localPr, results: validResults });
                   mergedIdSet.add(localPr.id);

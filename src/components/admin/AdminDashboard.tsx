@@ -21,7 +21,12 @@ import { AdminCertificatesSection } from './AdminCertificatesSection';
 import { AdminBulkDataModal } from './AdminBulkDataModal';
 import { ResultPodiumModal, isProgramPublished } from './ResultPodiumModal';
 import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
-import { generateResultsPDF, generateSportsResultsPDF, generateArtsResultsOnlyPDF } from '../../utils/pdfExport';
+import {
+  generateResultsPDF,
+  generateSportsResultsPDF,
+  generateArtsResultsOnlyPDF,
+  generateResultsPDFFromGoogleSheets,
+} from '../../utils/pdfExport';
 
 interface AdminDashboardProps {
   onClose?: () => void;
@@ -41,6 +46,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     participants,
     documents,
     festConfig,
+    scoringRules,
     updateFestConfig,
     addDocument,
     deleteDocument,
@@ -217,6 +223,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
 
       generateResultsPDF(artsPrograms, teams, participants, {
         festConfig,
+        scoringRules,
         filterProgramId: filterCurrentView && resultsProgramFilter !== 'All' ? resultsProgramFilter : undefined,
         filterProgramTitle: filterCurrentView && selectedProg ? selectedProg.name : undefined,
         filterHouseId: filterCurrentView && resultsHouseFilter !== 'All' ? resultsHouseFilter : undefined,
@@ -237,9 +244,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     }
   };
 
+  const [isExportingSheetPdf, setIsExportingSheetPdf] = useState(false);
+
+  const handleDownloadPDFFromGoogleSheets = async () => {
+    setIsExportingSheetPdf(true);
+    showToast('Syncing & Generating PDF', 'Fetching live verified data from Google Sheets...', 'info');
+    try {
+      await generateResultsPDFFromGoogleSheets(
+        { festConfig, scoringRules },
+        artsPrograms,
+        teams,
+        participants
+      );
+      showToast('PDF Downloaded', 'Official PDF generated from verified Google Sheets data.', 'success');
+    } catch (err: any) {
+      console.error('Failed to generate PDF from Google Sheets:', err);
+      showToast('Export Error', 'Failed to generate PDF from Google Sheets. Using current data.', 'error');
+    } finally {
+      setIsExportingSheetPdf(false);
+    }
+  };
+
   const handleDownloadSportsResultsPDF = () => {
     try {
-      generateSportsResultsPDF(sportsMatches, teams, participants, { festConfig }, artsPrograms);
+      generateSportsResultsPDF(sportsMatches, teams, participants, { festConfig, scoringRules }, artsPrograms);
       showToast('Sports PDF Downloaded', 'Official Sports Championship & Athletics results exported to PDF.', 'success');
     } catch (err: any) {
       console.error('Failed to generate sports results PDF:', err);
@@ -253,7 +281,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       return;
     }
     try {
-      generateArtsResultsOnlyPDF(artsPrograms, teams, participants, { festConfig });
+      generateArtsResultsOnlyPDF(artsPrograms, teams, participants, { festConfig, scoringRules });
       showToast('Arts Results Only PDF Downloaded', 'Official Arts competition results statement (results only) exported.', 'success');
     } catch (err: any) {
       console.error('Failed to generate arts results only PDF:', err);
@@ -498,6 +526,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [newTeamSlogan, setNewTeamSlogan] = useState('');
   const [newTeamLogo, setNewTeamLogo] = useState('');
   const [newTeamCaptain, setNewTeamCaptain] = useState('');
+  const [newTeamViceCaptain, setNewTeamViceCaptain] = useState('');
+  const [newTeamStaffInCharge, setNewTeamStaffInCharge] = useState('');
   const [newTeamDesc, setNewTeamDesc] = useState('');
 
   const filteredHouses = useMemo(() => {
@@ -518,6 +548,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     setNewTeamSlogan('Glory and Excellence');
     setNewTeamLogo('https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=150&auto=format&fit=crop&q=80');
     setNewTeamCaptain('House Captain');
+    setNewTeamViceCaptain('Vice Captain');
+    setNewTeamStaffInCharge('Staff Advisor');
     setNewTeamDesc('Official festival championship house.');
     setIsNewTeamModalOpen(true);
   };
@@ -535,6 +567,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       accentColor: newTeamAccentColor || newTeamColor,
       logo: newTeamLogo.trim() || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=150&auto=format&fit=crop&q=80',
       captain: newTeamCaptain.trim() || 'House Captain',
+      viceCaptain: newTeamViceCaptain.trim() || 'Vice Captain',
+      staffInCharge: newTeamStaffInCharge.trim() || 'Staff Advisor',
+      staffAdvisor: newTeamStaffInCharge.trim() || 'Staff Advisor',
       description: newTeamDesc.trim() || newTeamSlogan.trim() || 'Official Championship House',
       slogan: newTeamSlogan.trim() || 'Championship Contender',
       membersCount: 0,
@@ -1435,6 +1470,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
               >
                 <Download className="w-4 h-4 text-amber-300" />
                 <span>Download Sports Results (PDF)</span>
+              </button>
+
+              <button
+                onClick={handleDownloadPDFFromGoogleSheets}
+                disabled={isExportingSheetPdf}
+                className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                title="Fetch live data directly from Google Sheets and generate verified PDF statement"
+              >
+                <Download className="w-4 h-4 text-emerald-200" />
+                <span>{isExportingSheetPdf ? 'Generating PDF...' : 'Download PDF (Google Sheets Data)'}</span>
               </button>
 
               <button
@@ -2470,6 +2515,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                       <TeamLogo logo={t.logo} name={t.name} color={t.color} size="md" roundedClassName="rounded-md" />
                     </div>
                   </div>
+
+                  {/* Team Leadership Section */}
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                    <div className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                      <span>👑 House Leadership & Officers</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">
+                          House Captain
+                        </label>
+                        <input
+                          type="text"
+                          value={t.captain || ''}
+                          onChange={(e) => editTeam(t.id, { captain: e.target.value })}
+                          placeholder="Captain Name"
+                          className="w-full px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">
+                          Vice Captain
+                        </label>
+                        <input
+                          type="text"
+                          value={t.viceCaptain || ''}
+                          onChange={(e) => editTeam(t.id, { viceCaptain: e.target.value })}
+                          placeholder="Vice Captain Name"
+                          className="w-full px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">
+                          Staff In-Charge
+                        </label>
+                        <input
+                          type="text"
+                          value={t.staffInCharge || t.staffAdvisor || ''}
+                          onChange={(e) => editTeam(t.id, { staffInCharge: e.target.value, staffAdvisor: e.target.value })}
+                          placeholder="Staff Advisor Name"
+                          className="w-full px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -2593,6 +2686,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                       />
                       <TeamLogo logo={newTeamLogo} name={newTeamName || 'Team'} color={newTeamColor} size="md" roundedClassName="rounded-md" />
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+                      👑 House Leadership & Officers
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">
+                          House Captain
+                        </label>
+                        <input
+                          type="text"
+                          value={newTeamCaptain}
+                          onChange={(e) => setNewTeamCaptain(e.target.value)}
+                          placeholder="Captain Name"
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">
+                          Vice Captain
+                        </label>
+                        <input
+                          type="text"
+                          value={newTeamViceCaptain}
+                          onChange={(e) => setNewTeamViceCaptain(e.target.value)}
+                          placeholder="Vice Captain Name"
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">
+                          Staff In-Charge
+                        </label>
+                        <input
+                          type="text"
+                          value={newTeamStaffInCharge}
+                          onChange={(e) => setNewTeamStaffInCharge(e.target.value)}
+                          placeholder="Staff Advisor Name"
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                        />
+                      </div>
                     </div>
                   </div>
 

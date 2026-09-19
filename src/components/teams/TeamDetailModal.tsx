@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   UserGroupIcon as Users,
   Alert02Icon as AlertTriangle,
+  Edit02Icon as Edit2,
+  Tick01Icon as Check,
+  Cancel01Icon as X,
 } from 'hugeicons-react';
 import { GlassModal } from '../ui/GlassModal';
 import { Team } from '../../types/festival';
@@ -22,12 +25,35 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
   setActiveTab,
   onSelectParticipant,
 }) => {
-  const { participants, teamMinuses } = useFestival();
+  const { participants, teamMinuses, editTeam } = useFestival();
+  const [isEditingLeaders, setIsEditingLeaders] = useState(false);
+  const [captain, setCaptain] = useState(team?.captain || '');
+  const [viceCaptain, setViceCaptain] = useState(team?.viceCaptain || '');
+  const [staffInCharge, setStaffInCharge] = useState(team?.staffInCharge || team?.staffAdvisor || '');
+
+  useEffect(() => {
+    if (team) {
+      setCaptain(team.captain || '');
+      setViceCaptain(team.viceCaptain || '');
+      setStaffInCharge(team.staffInCharge || team.staffAdvisor || '');
+      setIsEditingLeaders(false);
+    }
+  }, [team]);
 
   if (!team) return null;
 
   const houseMembers = participants.filter((p) => p.teamId === team.id);
   const housePenalties = teamMinuses.filter((m) => m.teamId === team.id);
+
+  const handleSaveLeaders = () => {
+    editTeam(team.id, {
+      captain: captain.trim() || 'House Captain',
+      viceCaptain: viceCaptain.trim() || 'Vice Captain',
+      staffInCharge: staffInCharge.trim() || 'Staff Advisor',
+      staffAdvisor: staffInCharge.trim() || 'Staff Advisor',
+    });
+    setIsEditingLeaders(false);
+  };
 
   const handleParticipantClick = (identifier: string) => {
     if (onSelectParticipant) {
@@ -95,19 +121,88 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
         </div>
 
         {/* House Leadership details */}
-        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <div>
-            <span className="text-slate-500 block font-mono text-[10px] uppercase font-semibold">Captain</span>
-            <span className="font-bold text-slate-900 text-sm">{team.captain}</span>
+        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <span>👑</span> House Leadership & Officers
+            </span>
+            {!isEditingLeaders ? (
+              <button
+                onClick={() => setIsEditingLeaders(true)}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 cursor-pointer bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>Edit Leaders</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSaveLeaders}
+                  className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Save</span>
+                </button>
+                <button
+                  onClick={() => setIsEditingLeaders(false)}
+                  className="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold flex items-center gap-1 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Cancel</span>
+                </button>
+              </div>
+            )}
           </div>
-          <div>
-            <span className="text-slate-500 block font-mono text-[10px] uppercase font-semibold">Vice Captain</span>
-            <span className="font-bold text-slate-900 text-sm">{team.viceCaptain}</span>
-          </div>
-          <div>
-            <span className="text-slate-500 block font-mono text-[10px] uppercase font-semibold">Staff In-Charge</span>
-            <span className="font-semibold text-slate-800">{team.staffInCharge}</span>
-          </div>
+
+          {!isEditingLeaders ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div>
+                <span className="text-slate-500 block font-mono text-[10px] uppercase font-semibold">House Captain</span>
+                <span className="font-bold text-slate-900 text-sm">{team.captain || 'Not Set'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block font-mono text-[10px] uppercase font-semibold">Vice Captain</span>
+                <span className="font-bold text-slate-900 text-sm">{team.viceCaptain || 'Not Set'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block font-mono text-[10px] uppercase font-semibold">Staff In-Charge</span>
+                <span className="font-semibold text-slate-800 text-sm">{team.staffInCharge || team.staffAdvisor || 'Not Set'}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+              <div>
+                <label className="block text-slate-500 font-mono text-[10px] uppercase font-semibold mb-1">House Captain</label>
+                <input
+                  type="text"
+                  value={captain}
+                  onChange={(e) => setCaptain(e.target.value)}
+                  placeholder="House Captain"
+                  className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-500 font-mono text-[10px] uppercase font-semibold mb-1">Vice Captain</label>
+                <input
+                  type="text"
+                  value={viceCaptain}
+                  onChange={(e) => setViceCaptain(e.target.value)}
+                  placeholder="Vice Captain"
+                  className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-500 font-mono text-[10px] uppercase font-semibold mb-1">Staff In-Charge</label>
+                <input
+                  type="text"
+                  value={staffInCharge}
+                  onChange={(e) => setStaffInCharge(e.target.value)}
+                  placeholder="Staff In-Charge"
+                  className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* House Penalties Log if any */}

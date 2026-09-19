@@ -111,10 +111,6 @@ const MainFestivalApp: React.FC = () => {
                 onOpenSportsDetail={(match) => setSelectedSportsMatch(match)}
               />
               <PodiumLeaderboard setActiveTab={setActiveTab} />
-              <OverallLeaderboardTable
-                setActiveTab={setActiveTab}
-                onSelectTeam={handleSelectTeamById}
-              />
               <RecentResultsFeed
                 setActiveTab={setActiveTab}
                 onOpenArtsDetail={(prog) => setSelectedArtsProgram(prog)}

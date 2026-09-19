@@ -5,7 +5,7 @@ import { GlassBadge, GlassButton } from '../ui/GlassCard';
 import { Participant, ArtsResultEntry, ArtsProgram } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
 import { TeamLogo, ParticipantAvatar } from '../ui/TeamLogo';
-import { generateResultsPDF } from '../../utils/pdfExport';
+import { generateResultsPDF, generateResultsPDFFromGoogleSheets } from '../../utils/pdfExport';
 import { deduplicateProgramResults } from '../../utils/programHelpers';
 
 interface ResultSearchHubProps {
@@ -21,12 +21,29 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
   setActiveTab,
   onOpenCertificateModal,
 }) => {
-  const { participants, teams, artsPrograms, sportsMatches, festConfig } = useFestival();
+  const { participants, teams, artsPrograms, sportsMatches, festConfig, scoringRules } = useFestival();
   const [viewTab, setViewTab] = useState<'participants' | 'programs' | 'houses'>('participants');
   const [query, setQuery] = useState(initialAdmissionNo || initialChestNo || '');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedTeam, setSelectedTeam] = useState<string>('All');
   const [selectedProgramFilter, setSelectedProgramFilter] = useState<string>('All');
+  const [isDownloadingSheetPdf, setIsDownloadingSheetPdf] = useState(false);
+
+  const handleDownloadSheetPdf = async () => {
+    setIsDownloadingSheetPdf(true);
+    try {
+      await generateResultsPDFFromGoogleSheets(
+        { festConfig, scoringRules },
+        artsPrograms,
+        teams,
+        participants
+      );
+    } catch (err) {
+      console.error('Failed to generate PDF from Google Sheets:', err);
+    } finally {
+      setIsDownloadingSheetPdf(false);
+    }
+  };
 
   useEffect(() => {
     const initVal = initialAdmissionNo || initialChestNo;
@@ -235,15 +252,27 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => generateResultsPDF(artsPrograms, teams, participants, { festConfig })}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-sm hover:shadow-md transition-all cursor-pointer shrink-0"
-          title="Download complete certified Results PDF containing Category Totals & Grand Total With/Without Minus"
-        >
-          <Download className="w-4 h-4 text-amber-400" />
-          <span>Download Official PDF (Grand Total)</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={handleDownloadSheetPdf}
+            disabled={isDownloadingSheetPdf}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm shadow-sm hover:shadow-md transition-all cursor-pointer shrink-0 disabled:opacity-60"
+            title="Download verified PDF statement generated directly from Google Sheets data"
+          >
+            <Download className="w-4 h-4 text-emerald-300" />
+            <span>{isDownloadingSheetPdf ? 'Generating PDF...' : 'PDF (Google Sheets Data)'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => generateResultsPDF(artsPrograms, teams, participants, { festConfig, scoringRules })}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-sm hover:shadow-md transition-all cursor-pointer shrink-0"
+            title="Download complete certified Results PDF containing Category Totals & Grand Total With/Without Minus"
+          >
+            <Download className="w-4 h-4 text-amber-400" />
+            <span>Download Official PDF (Grand Total)</span>
+          </button>
+        </div>
       </div>
 
       {/* Search Input Box */}
@@ -742,11 +771,14 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {teams.map((t, idx) => {
-                      const cp = teamCatPoints[t.id] || { sub: 0, jun: 0, sen: 0, gen: 0 };
-                      const subGrandTotal = cp.sub + cp.jun + cp.sen;
-                      const grossTotal = subGrandTotal + cp.gen;
+                      const subPts = t.subJuniorPoints ?? 0;
+                      const junPts = t.juniorPoints ?? 0;
+                      const senPts = t.seniorPoints ?? 0;
+                      const genPts = t.generalPoints ?? 0;
+                      const subGrandTotal = subPts + junPts + senPts;
+                      const grossTotal = t.grossTotal ?? (subGrandTotal + genPts);
                       const minusPts = Number(t.artsMinusPoints || t.minusPoints) || 0;
-                      const netGrandTotal = Math.max(0, grossTotal - minusPts);
+                      const netGrandTotal = t.netGrandTotal ?? Math.max(0, grossTotal - minusPts);
 
                       return (
                         <tr key={t.id} className={idx === 0 ? 'bg-amber-50/40 font-medium' : 'hover:bg-slate-50/60'}>
@@ -756,13 +788,13 @@ export const ResultSearchHub: React.FC<ResultSearchHubProps> = ({
                           <td className="py-2.5 px-3 font-bold text-slate-900">
                             {t.name} {t.shortCode ? `(${t.shortCode})` : ''}
                           </td>
-                          <td className="py-2.5 px-3 text-center font-mono">{cp.sub}</td>
-                          <td className="py-2.5 px-3 text-center font-mono">{cp.jun}</td>
-                          <td className="py-2.5 px-3 text-center font-mono">{cp.sen}</td>
+                          <td className="py-2.5 px-3 text-center font-mono">{subPts}</td>
+                          <td className="py-2.5 px-3 text-center font-mono">{junPts}</td>
+                          <td className="py-2.5 px-3 text-center font-mono">{senPts}</td>
                           <td className="py-2.5 px-3 text-center font-mono font-bold text-violet-700 bg-violet-50/30">
                             {subGrandTotal}
                           </td>
-                          <td className="py-2.5 px-3 text-center font-mono">{cp.gen}</td>
+                          <td className="py-2.5 px-3 text-center font-mono">{genPts}</td>
                           <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800">
                             {grossTotal}
                           </td>

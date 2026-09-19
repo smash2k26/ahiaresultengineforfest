@@ -66,6 +66,12 @@ export interface Team {
   slogan?: string;
   artsPoints: number;
   sportsPoints: number;
+  subJuniorPoints?: number;
+  juniorPoints?: number;
+  seniorPoints?: number;
+  generalPoints?: number;
+  grossTotal?: number;
+  netGrandTotal?: number;
   artsMinusPoints?: number;
   sportsMinusPoints?: number;
   minusPoints?: number;
@@ -85,6 +91,7 @@ export interface TeamMinus {
   teamId: string;
   teamName: string;
   pointsDeducted: number;
+  points?: number;
   reason: string;
   scope: 'arts' | 'sports';
   category?: 'Discipline' | 'Late Arrival' | 'Code of Conduct' | 'Attendance' | 'Unsportsmanlike' | 'Disciplinary' | 'Late Entry' | 'Rule Violation' | 'Stage Time Exceeded' | 'Dress Code' | 'Misconduct' | 'Other' | string;

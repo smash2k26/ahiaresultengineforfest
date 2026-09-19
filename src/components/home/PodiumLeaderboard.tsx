@@ -2,6 +2,7 @@ import React from 'react';
 import { Award01Icon as Trophy, CrownIcon as Crown, ArrowUpRight01Icon as TrendingUp, SparklesIcon as Sparkles, BrushIcon as Palette, Activity02Icon as Activity } from 'hugeicons-react';
 import confetti from 'canvas-confetti';
 import { useFestival } from '../../context/FestivalContext';
+import { Team } from '../../types/festival';
 import { ActiveTab } from '../layout/Sidebar';
 import { TeamLogo } from '../ui/TeamLogo';
 
@@ -14,61 +15,65 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
 
   if (teams.length < 3) return null;
 
-  const podiumCategory = festConfig.podiumCategory || 'arts';
+  const [mode, setMode] = React.useState<'championship' | 'sports' | 'arts'>('championship');
   const applyArtsPenalties = festConfig.applyArtsPenalties ?? (festConfig.applyPenaltiesToPodium ?? true);
   const applySportsPenalties = festConfig.applySportsPenalties ?? (festConfig.applyPenaltiesToPodium ?? true);
 
-  // Sort strictly by the selected podium mode after optionally subtracting registered team minuses
-  const sortedTeams = [...teams].sort((a, b) => {
-    if (podiumCategory === 'sports') {
-      const aMinus = applySportsPenalties ? (Number(a.sportsMinusPoints) || 0) : 0;
-      const bMinus = applySportsPenalties ? (Number(b.sportsMinusPoints) || 0) : 0;
-      const aNet = Math.max(0, (a.sportsPoints || 0) - aMinus);
-      const bNet = Math.max(0, (b.sportsPoints || 0) - bMinus);
-      if (bNet !== aNet) return bNet - aNet;
-      if (b.golds !== a.golds) return b.golds - a.golds;
-      return b.totalWins - a.totalWins;
+  // Calculate final championship points for a team
+  // teamFinalPoints = SubJuniorPoints + JuniorPoints + SeniorPoints + GeneralPoints - MinusPoints
+  const getTeamPoints = (team: Team, selectedMode: 'championship' | 'sports' | 'arts') => {
+    if (!team) return 0;
+    if (selectedMode === 'sports') {
+      const minus = applySportsPenalties ? (Number(team.sportsMinusPoints) || 0) : 0;
+      return Math.max(0, (Number(team.sportsPoints) || 0) - minus);
     }
-    
-    // Arts mode (default)
-    const aMinus = applyArtsPenalties ? (Number(a.artsMinusPoints) || 0) : 0;
-    const bMinus = applyArtsPenalties ? (Number(b.artsMinusPoints) || 0) : 0;
-    const aNet = Math.max(0, (a.artsPoints || 0) - aMinus);
-    const bNet = Math.max(0, (b.artsPoints || 0) - bMinus);
-    if (bNet !== aNet) return bNet - aNet;
-    if (b.golds !== a.golds) return b.golds - a.golds;
-    return b.totalWins - a.totalWins;
+    if (selectedMode === 'arts') {
+      const minus = applyArtsPenalties ? (Number(team.artsMinusPoints) || 0) : 0;
+      return Math.max(0, (Number(team.artsPoints) || 0) - minus);
+    }
+    // Championship (Overall)
+    if (team.netGrandTotal !== undefined && team.netGrandTotal !== null) {
+      return Number(team.netGrandTotal) || 0;
+    }
+    if (team.totalPoints !== undefined && team.totalPoints !== null) {
+      return Number(team.totalPoints) || 0;
+    }
+    const sub = Number(team.subJuniorPoints) || 0;
+    const jun = Number(team.juniorPoints) || 0;
+    const sen = Number(team.seniorPoints) || 0;
+    const gen = Number(team.generalPoints) || 0;
+    const minus = Number(team.minusPoints) || 0;
+    return Math.max(0, sub + jun + sen + gen - minus);
+  };
+
+  // Sort teams strictly DESCENDING by calculated final points
+  const sortedTeams = [...teams].sort((a, b) => {
+    const ptsA = getTeamPoints(a, mode);
+    const ptsB = getTeamPoints(b, mode);
+    if (ptsB !== ptsA) return ptsB - ptsA;
+    if (b.golds !== a.golds) return (b.golds || 0) - (a.golds || 0);
+    return (b.silvers || 0) - (a.silvers || 0);
   });
 
   const first = sortedTeams[0] || teams[0];
   const second = sortedTeams[1] || teams[1];
   const third = sortedTeams[2] || teams[2];
 
-  // Helper to compute net points after subtracting minus points
-  const getPoints = (team: typeof first) => {
-    if (!team) return 0;
-    if (podiumCategory === 'sports') {
-      const minus = applySportsPenalties ? (Number(team.sportsMinusPoints) || 0) : 0;
-      return Math.max(0, (team.sportsPoints || 0) - minus);
-    }
-    const minus = applyArtsPenalties ? (Number(team.artsMinusPoints) || 0) : 0;
-    return Math.max(0, (team.artsPoints || 0) - minus);
-  };
-
-  const getGrossPoints = (team: typeof first) => {
-    if (!team) return 0;
-    if (podiumCategory === 'sports') return team.sportsPoints || 0;
-    return team.artsPoints || 0;
-  };
+  const firstPts = getTeamPoints(first, mode);
+  const secondPts = getTeamPoints(second, mode);
+  const thirdPts = getTeamPoints(third, mode);
+  const leadDiff = secondPts > 0 ? Math.round(((firstPts - secondPts) / secondPts) * 100) : 0;
 
   const getCategoryTitle = () => {
-    if (podiumCategory === 'sports') return 'CHAMPIONSHIP PODIUM — SPORTS LEADING';
-    return 'CHAMPIONSHIP PODIUM — ARTS LEADING';
+    if (mode === 'sports') return 'PODIUM — SPORTS STANDINGS';
+    if (mode === 'arts') return 'PODIUM — ARTS STANDINGS';
+    return 'CHAMPIONSHIP PODIUM — FINAL STANDINGS';
   };
 
   const getLeaderBadge = () => {
-    if (podiumCategory === 'sports') return '⚽ SPORTS LEADER';
-    return '🎭 ARTS LEADER';
+    if (mode === 'sports') return '⚽ SPORTS LEADER';
+    if (mode === 'arts') return '🎭 ARTS LEADER';
+    return '🏆 CHAMPIONSHIP LEADER';
   };
 
   const triggerConfetti = () => {
@@ -84,18 +89,13 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
     }
   };
 
-  const firstPts = getPoints(first);
-  const secondPts = getPoints(second);
-  const thirdPts = getPoints(third);
-  const leadDiff = secondPts > 0 ? Math.round(((firstPts - secondPts) / secondPts) * 100) : 0;
-
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          {podiumCategory === 'sports' ? (
+          {mode === 'sports' ? (
             <Activity className="w-5 h-5 text-sky-500" />
-          ) : podiumCategory === 'arts' ? (
+          ) : mode === 'arts' ? (
             <Palette className="w-5 h-5 text-purple-500" />
           ) : (
             <Trophy className="w-5 h-5 text-amber-500" />
@@ -103,16 +103,42 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
           <h2 className="text-lg sm:text-xl font-bold font-display text-slate-900 tracking-wide">
             {getCategoryTitle()}
           </h2>
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-              podiumCategory === 'sports'
-                ? 'bg-sky-100 text-sky-800 border border-sky-200'
-                : 'bg-purple-100 text-purple-800 border border-purple-200'
+        </div>
+
+        {/* Category Filter Tabs */}
+        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+          <button
+            onClick={() => setMode('championship')}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              mode === 'championship'
+                ? 'bg-amber-400 text-slate-950 font-bold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            {podiumCategory === 'sports' ? 'SPORTS ONLY' : 'ARTS ONLY'}
-          </span>
+            🏆 Championship
+          </button>
+          <button
+            onClick={() => setMode('sports')}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              mode === 'sports'
+                ? 'bg-sky-600 text-white font-bold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            ⚽ Sports
+          </button>
+          <button
+            onClick={() => setMode('arts')}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              mode === 'arts'
+                ? 'bg-purple-600 text-white font-bold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            🎭 Arts
+          </button>
         </div>
+
         <button
           onClick={triggerConfetti}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-xs ${
@@ -156,10 +182,12 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
                 <span className="text-xs font-sans text-slate-500 font-semibold ml-1">PTS</span>
               </div>
               <div className="text-[10px] text-slate-500 flex items-center justify-center gap-2 mt-1">
-                {podiumCategory === 'sports' ? (
-                  <span className="text-sky-600 font-semibold">Sports Points Standings</span>
+                {mode === 'sports' ? (
+                  <span className="text-sky-600 font-semibold">Sports Points</span>
+                ) : mode === 'arts' ? (
+                  <span className="text-purple-600 font-semibold">Arts Points</span>
                 ) : (
-                  <span className="text-purple-600 font-semibold">Arts Points Standings</span>
+                  <span className="text-slate-600 font-semibold">Overall Grand Total</span>
                 )}
               </div>
             </div>
@@ -199,10 +227,12 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
                 <span className="text-sm font-sans text-amber-900/70 font-bold ml-1.5">PTS</span>
               </div>
               <div className="text-xs text-slate-600 flex items-center justify-center gap-3 mt-1 font-medium">
-                {podiumCategory === 'sports' ? (
+                {mode === 'sports' ? (
                   <span className="text-sky-700 font-bold">Leading in Sports Points</span>
-                ) : (
+                ) : mode === 'arts' ? (
                   <span className="text-purple-700 font-bold">Leading in Arts Points</span>
+                ) : (
+                  <span className="text-amber-800 font-bold">Leading Overall Standings</span>
                 )}
               </div>
             </div>
@@ -245,10 +275,12 @@ export const PodiumLeaderboard: React.FC<PodiumLeaderboardProps> = ({ setActiveT
                 <span className="text-xs font-sans text-slate-500 font-semibold ml-1">PTS</span>
               </div>
               <div className="text-[10px] text-slate-500 flex items-center justify-center gap-2 mt-1">
-                {podiumCategory === 'sports' ? (
-                  <span className="text-sky-600 font-semibold">Sports Points Standings</span>
+                {mode === 'sports' ? (
+                  <span className="text-sky-600 font-semibold">Sports Points</span>
+                ) : mode === 'arts' ? (
+                  <span className="text-purple-600 font-semibold">Arts Points</span>
                 ) : (
-                  <span className="text-purple-600 font-semibold">Arts Points Standings</span>
+                  <span className="text-slate-600 font-semibold">Overall Grand Total</span>
                 )}
               </div>
             </div>

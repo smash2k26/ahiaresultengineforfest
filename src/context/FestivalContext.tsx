@@ -37,7 +37,7 @@ import {
   INITIAL_GOOGLE_SHEETS_CONFIG,
   INITIAL_ADMIN_USER
 } from '../data/initialData';
-import { isSportsProgram, deduplicateProgramResults, deduplicatePrograms } from '../utils/programHelpers';
+import { isSportsProgram, deduplicateProgramResults, deduplicatePrograms, calculateDerivedTeamStats, validateTeamTotals } from '../utils/programHelpers';
 import {
   persistCelebrationMode,
   listenToCelebrationMode,
@@ -627,130 +627,51 @@ export const FestivalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Compute Standings from results based on ScoringRules
   const recalculateAllStandings = useCallback(() => {
     setTeams((prevTeams) => {
-      const teamStats: Record<string, { arts: number; sports: number; golds: number; silvers: number; bronzes: number; wins: number }> = {};
-      
-      prevTeams.forEach((t) => {
-        teamStats[t.id] = { arts: 0, sports: 0, golds: 0, silvers: 0, bronzes: 0, wins: 0 };
-      });
+      const derivedStats = calculateDerivedTeamStats(
+        prevTeams,
+        artsPrograms,
+        sportsMatches,
+        teamMinuses,
+        scoringRules,
+        festConfig
+      );
 
-      // 1. Process Arts Programs with Results
-      artsPrograms.forEach((prog) => {
-        const cleanResults = deduplicateProgramResults(prog.results || []);
-        if (cleanResults.length > 0) {
-          const isGroup = prog.section === 'Group';
-          const multiplier = isGroup ? scoringRules.groupEventMultiplier : 1;
-          const isSports = isSportsProgram(prog);
+      // Run assertion validation and diagnostic logging
+      validateTeamTotals(derivedStats);
 
-          cleanResults.forEach((res) => {
-            if (teamStats[res.teamId]) {
-              let pts = 0;
-              if (res.pointsAwarded !== undefined) {
-                pts = Number(res.pointsAwarded);
-              } else {
-                if (res.rank === 1) {
-                  pts += scoringRules.goldPoints;
-                } else if (res.rank === 2) {
-                  pts += scoringRules.silverPoints;
-                } else if (res.rank === 3) {
-                  pts += scoringRules.bronzePoints;
-                } else {
-                  pts += scoringRules.participationPoints;
-                }
-                
-                // Add Grade bonus
-                if (res.grade === 'A+') pts += scoringRules.gradePointsA_Plus;
-                else if (res.grade === 'A') pts += scoringRules.gradePointsA;
-                else if (res.grade === 'B+') pts += scoringRules.gradePointsB_Plus;
-                else if (res.grade === 'B') pts += scoringRules.gradePointsB;
-                
-                pts = Math.round(pts * multiplier);
-              }
+      return prevTeams
+        .map((team) => {
+          const derived = derivedStats.find((s) => s.id === team.id);
+          if (!derived) return team;
 
-              if (res.rank === 1) {
-                teamStats[res.teamId].golds += 1;
-                teamStats[res.teamId].wins += 1;
-              } else if (res.rank === 2) {
-                teamStats[res.teamId].silvers += 1;
-              } else if (res.rank === 3) {
-                teamStats[res.teamId].bronzes += 1;
-              }
+          const newRank = derived.rank;
+          const prevR = team.previousRank || newRank;
+          const trend: 'up' | 'down' | 'same' =
+            newRank < prevR ? 'up' : newRank > prevR ? 'down' : 'same';
 
-              if (isSports) {
-                teamStats[res.teamId].sports += pts;
-              } else {
-                teamStats[res.teamId].arts += pts;
-              }
-            }
-          });
-        }
-      });
-
-      // 2. Process Completed Sports Matches
-      sportsMatches.forEach((match) => {
-        if (match.publishStatus === 'Published' && match.status === 'COMPLETED' && match.winnerTeamId) {
-          if (teamStats[match.winnerTeamId]) {
-            teamStats[match.winnerTeamId].sports += scoringRules.sportsWinnerPoints;
-            teamStats[match.winnerTeamId].golds += (match.round === 'Final' ? 1 : 0);
-            teamStats[match.winnerTeamId].wins += 1;
-          }
-          const loserTeamId = match.winnerTeamId === match.teamAId ? match.teamBId : match.teamAId;
-          if (teamStats[loserTeamId]) {
-            if (match.round === 'Final') {
-              teamStats[loserTeamId].sports += scoringRules.sportsRunnerUpPoints;
-              teamStats[loserTeamId].silvers += 1;
-            } else if (match.round === '3rd Place Playoff') {
-              teamStats[loserTeamId].sports += scoringRules.sportsThirdPlacePoints;
-              teamStats[loserTeamId].bronzes += 1;
-            }
-          }
-        }
-      });
-
-      // Recalculate each team
-      const updatedTeams = prevTeams.map((team) => {
-        const stats = teamStats[team.id] || { arts: 0, sports: 0, golds: 0, silvers: 0, bronzes: 0, wins: 0 };
-        const teamMinusList = teamMinuses.filter((m) => m.teamId === team.id);
-        const applyArts = festConfig.applyArtsPenalties ?? (festConfig.applyPenaltiesToPodium ?? true);
-        const applySports = festConfig.applySportsPenalties ?? (festConfig.applyPenaltiesToPodium ?? true);
-        const artsMinusPoints = teamMinusList.filter((m) => (m.scope || 'arts') === 'arts').reduce((acc, m) => acc + (Number(m.pointsDeducted) || 0), 0);
-        const sportsMinusPoints = teamMinusList.filter((m) => m.scope === 'sports').reduce((acc, m) => acc + (Number(m.pointsDeducted) || 0), 0);
-        const minusPoints = artsMinusPoints + sportsMinusPoints;
-        const effectiveArtsMinus = applyArts ? artsMinusPoints : 0;
-        const effectiveSportsMinus = applySports ? sportsMinusPoints : 0;
-        const total = Math.max(0, stats.arts - effectiveArtsMinus) + Math.max(0, stats.sports - effectiveSportsMinus);
-        return {
-          ...team,
-          artsPoints: stats.arts,
-          sportsPoints: stats.sports,
-          artsMinusPoints,
-          sportsMinusPoints,
-          minusPoints: minusPoints,
-          totalPoints: total,
-          golds: stats.golds,
-          silvers: stats.silvers,
-          bronzes: stats.bronzes,
-          totalWins: stats.wins,
-        };
-      });
-
-      // Sort by Total Points (descending), then Golds, then Silvers
-      updatedTeams.sort((a, b) => {
-        if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
-        if (b.golds !== a.golds) return b.golds - a.golds;
-        return b.silvers - a.silvers;
-      });
-
-      // Assign ranks & trends
-      return updatedTeams.map((team, idx) => {
-        const newRank = idx + 1;
-        const trend: 'up' | 'down' | 'same' =
-          newRank < team.previousRank ? 'up' : newRank > team.previousRank ? 'down' : 'same';
-        return {
-          ...team,
-          rank: newRank,
-          trend,
-        };
-      });
+          return {
+            ...team,
+            subJuniorPoints: derived.subJuniorPoints,
+            juniorPoints: derived.juniorPoints,
+            seniorPoints: derived.seniorPoints,
+            generalPoints: derived.generalPoints,
+            artsPoints: derived.artsPoints,
+            sportsPoints: derived.sportsPoints,
+            grossTotal: derived.grossTotal,
+            netGrandTotal: derived.netGrandTotal,
+            totalPoints: derived.netGrandTotal,
+            artsMinusPoints: derived.artsMinusPoints,
+            sportsMinusPoints: derived.sportsMinusPoints,
+            minusPoints: derived.minusPoints,
+            golds: derived.golds,
+            silvers: derived.silvers,
+            bronzes: derived.bronzes,
+            totalWins: derived.totalWins,
+            rank: newRank,
+            trend,
+          };
+        })
+        .sort((a, b) => a.rank - b.rank);
     });
 
     // Also recalculate participant individual points & ranks for Arts and Sports

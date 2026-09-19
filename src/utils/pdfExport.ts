@@ -1,8 +1,15 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { ArtsProgram, SportsMatch, Team, Participant, FestConfig } from '../types/festival';
+import { ArtsProgram, SportsMatch, Team, Participant, FestConfig, ScoringRules } from '../types/festival';
 import { INITIAL_SCORING_RULES } from '../data/initialData';
-import { isSportsProgram } from './programHelpers';
+import {
+  isSportsProgram,
+  deduplicateProgramResults,
+  calculateDerivedTeamStats,
+  validateTeamTotals,
+  normalizeCategory,
+  normalizeTeamId,
+} from './programHelpers';
 
 export interface PDFResultRecord {
   programCode: string;
@@ -22,13 +29,25 @@ export interface PDFResultRecord {
 
 export interface ExportPDFOptions {
   festConfig?: FestConfig;
+  scoringRules?: ScoringRules;
   filterProgramId?: string;
   filterProgramTitle?: string;
   filterHouseId?: string;
   filterHouseName?: string;
   searchTerm?: string;
   onlyPublished?: boolean;
+  artsOnly?: boolean;
+  googleSheetData?: any;
 }
+
+const getScoringRules = (options: ExportPDFOptions): ScoringRules => {
+  if (options.scoringRules) return options.scoringRules;
+  try {
+    const saved = localStorage.getItem('ahia_scoring_rules');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return INITIAL_SCORING_RULES;
+};
 
 /**
  * Format rank for clean, clear display (e.g., "1st", "2nd", "3rd", or numeric)
@@ -42,25 +61,6 @@ function formatRank(rank: number | undefined, position: string | undefined): str
   if (rank === 2) return '2nd';
   if (rank === 3) return '3rd';
   return `${rank}th`;
-}
-
-/**
- * Normalize category string into one of the canonical categories:
- * 'Sub Junior' | 'Junior' | 'Senior' | 'General'
- */
-function normalizeCategory(rawCategory: string | undefined): 'Sub Junior' | 'Junior' | 'Senior' | 'General' {
-  if (!rawCategory) return 'General';
-  const clean = rawCategory.trim().toLowerCase();
-  if (clean.includes('sub') || clean.includes('sub-junior') || clean.includes('sub junior')) {
-    return 'Sub Junior';
-  }
-  if (clean.includes('junior')) {
-    return 'Junior';
-  }
-  if (clean.includes('senior')) {
-    return 'Senior';
-  }
-  return 'General';
 }
 
 /**
@@ -81,28 +81,75 @@ export function generateResultsPDF(
   const festTagline = options.festConfig?.tagline || 'Annual Arts & Athletics Festival';
   const festYear = options.festConfig?.year || '2026';
 
+  let programsToProcess: ArtsProgram[] = artsPrograms || [];
+  let teamsToProcess: Team[] = teams || [];
+  let participantsToProcess: Participant[] = participants || [];
+
+  // If raw Google Sheets data was supplied, extract and merge programs & resultsMarks
+  if (options.googleSheetData) {
+    const gData = options.googleSheetData;
+    if (Array.isArray(gData.teams) && gData.teams.length > 0) {
+      teamsToProcess = gData.teams;
+    }
+    if (Array.isArray(gData.participants) && gData.participants.length > 0) {
+      participantsToProcess = gData.participants;
+    }
+    if (Array.isArray(gData.programs) && gData.programs.length > 0) {
+      const marksByProg = new Map<string, any[]>();
+      if (Array.isArray(gData.resultsMarks)) {
+        gData.resultsMarks.forEach((rm: any) => {
+          const code = String(rm.programCode || '').trim().toLowerCase();
+          if (!marksByProg.has(code)) marksByProg.set(code, []);
+          marksByProg.get(code)!.push(rm);
+        });
+      }
+      programsToProcess = gData.programs.map((p: any) => {
+        const code = String(p.code || '').trim().toLowerCase();
+        let results = p.results;
+        if (typeof results === 'string' && results.trim()) {
+          try { results = JSON.parse(results); } catch { results = []; }
+        }
+        if ((!Array.isArray(results) || results.length === 0) && marksByProg.has(code)) {
+          results = marksByProg.get(code)!.map((rm: any) => ({
+            participantName: rm.participantName,
+            chestNo: rm.chestNo,
+            teamId: rm.teamId,
+            position: rm.position,
+            rank: rm.position && rm.position.includes('1') ? 1 : (rm.position && rm.position.includes('2') ? 2 : (rm.position && rm.position.includes('3') ? 3 : 99)),
+            pointsAwarded: Number(rm.pointsAwarded) || 0,
+            status: rm.status || 'Published',
+          }));
+        }
+        return {
+          ...p,
+          results: Array.isArray(results) ? results : [],
+        };
+      });
+    }
+  }
+
   // Fast lookup maps for participants
   const participantMapById = new Map<string, Participant>();
   const participantMapByChest = new Map<string, Participant>();
   const participantMapByAdm = new Map<string, Participant>();
 
-  participants.forEach((p) => {
+  participantsToProcess.forEach((p) => {
     if (p.id) participantMapById.set(p.id, p);
     if (p.chestNo) participantMapByChest.set(String(p.chestNo).trim().toLowerCase(), p);
     if (p.admissionNo) participantMapByAdm.set(String(p.admissionNo).trim().toLowerCase(), p);
   });
 
   const teamMap = new Map<string, Team>();
-  teams.forEach((t) => {
+  teamsToProcess.forEach((t) => {
     teamMap.set(t.id, t);
   });
 
   // Flatten and extract all results across programs
   let allRecords: PDFResultRecord[] = [];
 
-  artsPrograms.forEach((p) => {
-    // Exclude sports programs from Arts PDF unless explicitly filtered by program id
-    if (isSportsProgram(p) && options.filterProgramId !== p.id && options.filterProgramId !== p.code) {
+  programsToProcess.forEach((p) => {
+    // Only exclude sports programs if explicitly requested via options.artsOnly
+    if (options.artsOnly && isSportsProgram(p) && options.filterProgramId !== p.id && options.filterProgramId !== p.code) {
       return;
     }
 
@@ -116,19 +163,30 @@ export function generateResultsPDF(
       return;
     }
 
+    // Only include published / completed programs (unless explicitly filtered by program id)
+    const isProgramPublished =
+      p.publishStatus === 'Published' ||
+      (p.status === 'COMPLETED' && p.publishStatus !== 'Draft');
+    if (!isProgramPublished && options.filterProgramId !== p.id && options.filterProgramId !== p.code) {
+      return;
+    }
+
     const isGroup = p.section === 'Group';
-    const scoringRules = INITIAL_SCORING_RULES;
+    const scoringRules = getScoringRules(options);
     const multiplier = isGroup ? scoringRules.groupEventMultiplier : 1;
 
-    const progResults = p.results || [];
+    const progResults = deduplicateProgramResults(p.results || []);
     progResults.forEach((r) => {
+      // Exclude draft or pending marks from official certified results
+      if (r.status && r.status === 'Draft') return;
+
       // Find matching participant to guarantee accurate Admission No & Category
       const part =
         (r.participantId ? participantMapById.get(r.participantId) : undefined) ||
         (r.chestNo ? participantMapByChest.get(String(r.chestNo).trim().toLowerCase()) : undefined) ||
         (r.admissionNo ? participantMapByAdm.get(String(r.admissionNo).trim().toLowerCase()) : undefined);
 
-      const effectiveTeamId = r.teamId || part?.teamId || '';
+      const effectiveTeamId = normalizeTeamId(r.teamId || part?.teamId || '', teamsToProcess);
       // If team/house filter is active and doesn't match, skip
       if (
         options.filterHouseId &&
@@ -141,11 +199,11 @@ export function generateResultsPDF(
       const team = teamMap.get(effectiveTeamId);
       const admissionNo = r.admissionNo || part?.admissionNo || '-';
       const participantName = r.participantName || part?.name || 'Participant';
-      const category = normalizeCategory(p.category || part?.category);
+      const category = normalizeCategory(p.category, `${p.name} ${part?.category || ''}`);
       const rankText = formatRank(r.rank, r.position);
 
       let pts = 0;
-      if (r.pointsAwarded !== undefined) {
+      if (r.pointsAwarded !== undefined && r.pointsAwarded !== null && !isNaN(Number(r.pointsAwarded))) {
         pts = Number(r.pointsAwarded);
       } else {
         if (r.rank === 1) pts += scoringRules.goldPoints;
@@ -285,7 +343,7 @@ export function generateResultsPDF(
     'General': {},
   };
 
-  teams.forEach((t) => {
+  teamsToProcess.forEach((t) => {
     ['Sub Junior', 'Junior', 'Senior', 'General'].forEach((cat) => {
       categoryTeamPoints[cat][t.id] = { points: 0, golds: 0, silvers: 0, bronzes: 0 };
     });
@@ -294,11 +352,12 @@ export function generateResultsPDF(
   // Accumulate points & podium positions per category per team
   allRecords.forEach((r) => {
     const cat = normalizeCategory(r.category);
-    if (r.teamId && categoryTeamPoints[cat] && categoryTeamPoints[cat][r.teamId]) {
-      categoryTeamPoints[cat][r.teamId].points += Number(r.pointsAwarded) || 0;
-      if (r.rankNumber === 1) categoryTeamPoints[cat][r.teamId].golds += 1;
-      else if (r.rankNumber === 2) categoryTeamPoints[cat][r.teamId].silvers += 1;
-      else if (r.rankNumber === 3) categoryTeamPoints[cat][r.teamId].bronzes += 1;
+    const tId = normalizeTeamId(r.teamId, teamsToProcess);
+    if (tId && categoryTeamPoints[cat] && categoryTeamPoints[cat][tId]) {
+      categoryTeamPoints[cat][tId].points += Number(r.pointsAwarded) || 0;
+      if (r.rankNumber === 1) categoryTeamPoints[cat][tId].golds += 1;
+      else if (r.rankNumber === 2) categoryTeamPoints[cat][tId].silvers += 1;
+      else if (r.rankNumber === 3) categoryTeamPoints[cat][tId].bronzes += 1;
     }
   });
 
@@ -417,7 +476,7 @@ export function generateResultsPDF(
     ensureSpace(24);
 
     // Compute sorted team totals for this specific category
-    const catTeamScores = teams.map((t) => {
+    const catTeamScores = teamsToProcess.map((t) => {
       const stats = categoryTeamPoints[catMeta.key][t.id] || { points: 0, golds: 0, silvers: 0, bronzes: 0 };
       return {
         id: t.id,
@@ -521,49 +580,40 @@ export function generateResultsPDF(
 
   startY += 14;
 
-  // Compute grand total summary per team
-  const grandTotalTeams = teams.map((t) => {
-    const subPts = categoryTeamPoints['Sub Junior'][t.id]?.points || 0;
-    const junPts = categoryTeamPoints['Junior'][t.id]?.points || 0;
-    const senPts = categoryTeamPoints['Senior'][t.id]?.points || 0;
-    const genPts = categoryTeamPoints['General'][t.id]?.points || 0;
+  // Calculate authoritative derived team stats using the unified calculation engine
+  const currentScoringRules = getScoringRules(options);
+  const currentFestConfig = options.festConfig || { festivalName: festName, tagline: festTagline, year: festYear, statusBanner: 'LIVE' as const, logoUrl: '' };
+  
+  const derivedStats = calculateDerivedTeamStats(
+    teamsToProcess,
+    programsToProcess,
+    [],
+    [],
+    currentScoringRules,
+    currentFestConfig
+  );
 
-    // Sub Grand Total of category divisions (Sub Junior + Junior + Senior)
-    const subGrandTotal = subPts + junPts + senPts;
-    // Gross total without minus points (Sub Grand Total + General)
-    const grossTotal = subGrandTotal + genPts;
-    const applyArtsPenalties = options.festConfig?.applyArtsPenalties ?? (options.festConfig?.applyPenaltiesToPodium ?? true);
-    const minusPoints = applyArtsPenalties ? (Number(t.artsMinusPoints) || 0) : 0;
-    // Net grand total with minus points deducted
-    const netGrandTotal = Math.max(0, grossTotal - minusPoints);
+  validateTeamTotals(derivedStats);
 
+  const grandTotalTeams = derivedStats.map((st) => {
+    const subGrandTotal = st.subJuniorPoints + st.juniorPoints + st.seniorPoints;
     return {
-      id: t.id,
-      name: t.name,
-      shortCode: t.shortCode || '',
-      subPts,
-      junPts,
-      senPts,
+      id: st.id,
+      name: st.name,
+      shortCode: st.shortCode,
+      subPts: st.subJuniorPoints,
+      junPts: st.juniorPoints,
+      senPts: st.seniorPoints,
       subGrandTotal,
-      genPts,
-      artsPoints: t.artsPoints || 0,
-      sportsPoints: t.sportsPoints || 0,
-      grossTotal,
-      minusPoints,
-      netGrandTotal,
-      golds: t.golds || 0,
-      silvers: t.silvers || 0,
-      bronzes: t.bronzes || 0,
-      rank: t.rank || 1,
+      genPts: st.generalPoints,
+      grossTotal: st.grossTotal,
+      minusPoints: st.minusPoints,
+      netGrandTotal: st.netGrandTotal,
+      golds: st.golds,
+      silvers: st.silvers,
+      bronzes: st.bronzes,
+      rank: st.rank,
     };
-  });
-
-  // Sort grand totals descending by Net Grand Total (With Minus), then Gross Total, then Golds
-  grandTotalTeams.sort((a, b) => {
-    if (b.netGrandTotal !== a.netGrandTotal) return b.netGrandTotal - a.netGrandTotal;
-    if (b.grossTotal !== a.grossTotal) return b.grossTotal - a.grossTotal;
-    if (b.golds !== a.golds) return b.golds - a.golds;
-    return b.silvers - a.silvers;
   });
 
   const grandHeaders = [
@@ -755,18 +805,27 @@ export function generateSportsResultsPDF(
       return;
     }
 
+    const isProgramPublished =
+      p.publishStatus === 'Published' ||
+      (p.status === 'COMPLETED' && p.publishStatus !== 'Draft');
+    if (!isProgramPublished && options.filterProgramId !== p.id && options.filterProgramId !== p.code) {
+      return;
+    }
+
     const isGroup = p.section === 'Group';
-    const scoringRules = INITIAL_SCORING_RULES;
+    const scoringRules = getScoringRules(options);
     const multiplier = isGroup ? scoringRules.groupEventMultiplier : 1;
 
-    const progResults = p.results || [];
+    const progResults = deduplicateProgramResults(p.results || []);
     progResults.forEach((r) => {
+      if (r.status && r.status === 'Draft') return;
+
       const part =
         (r.participantId ? participantMapById.get(r.participantId) : undefined) ||
         (r.chestNo ? participantMapByChest.get(String(r.chestNo).trim().toLowerCase()) : undefined) ||
         (r.admissionNo ? participantMapByAdm.get(String(r.admissionNo).trim().toLowerCase()) : undefined);
 
-      const effectiveTeamId = r.teamId || part?.teamId || '';
+      const effectiveTeamId = normalizeTeamId(r.teamId || part?.teamId || '', teams);
       if (
         options.filterHouseId &&
         options.filterHouseId !== 'All' &&
@@ -778,11 +837,11 @@ export function generateSportsResultsPDF(
       const team = teamMap.get(effectiveTeamId);
       const admissionNo = r.admissionNo || part?.admissionNo || '-';
       const participantName = r.participantName || part?.name || 'Participant';
-      const category = normalizeCategory(p.category || part?.category);
+      const category = normalizeCategory(p.category, `${p.name} ${part?.category || ''}`);
       const rankText = formatRank(r.rank, r.position);
 
       let pts = 0;
-      if (r.pointsAwarded !== undefined) {
+      if (r.pointsAwarded !== undefined && r.pointsAwarded !== null && !isNaN(Number(r.pointsAwarded))) {
         pts = Number(r.pointsAwarded);
       } else {
         if (r.rank === 1) pts += scoringRules.goldPoints;
@@ -934,11 +993,12 @@ export function generateSportsResultsPDF(
 
   allRecords.forEach((r) => {
     const cat = normalizeCategory(r.category);
-    if (r.teamId && categoryTeamPoints[cat] && categoryTeamPoints[cat][r.teamId]) {
-      categoryTeamPoints[cat][r.teamId].points += Number(r.pointsAwarded) || 0;
-      if (r.rankNumber === 1) categoryTeamPoints[cat][r.teamId].golds += 1;
-      else if (r.rankNumber === 2) categoryTeamPoints[cat][r.teamId].silvers += 1;
-      else if (r.rankNumber === 3) categoryTeamPoints[cat][r.teamId].bronzes += 1;
+    const tId = normalizeTeamId(r.teamId, teams);
+    if (tId && categoryTeamPoints[cat] && categoryTeamPoints[cat][tId]) {
+      categoryTeamPoints[cat][tId].points += Number(r.pointsAwarded) || 0;
+      if (r.rankNumber === 1) categoryTeamPoints[cat][tId].golds += 1;
+      else if (r.rankNumber === 2) categoryTeamPoints[cat][tId].silvers += 1;
+      else if (r.rankNumber === 3) categoryTeamPoints[cat][tId].bronzes += 1;
     }
   });
 
@@ -1212,43 +1272,38 @@ export function generateSportsResultsPDF(
 
   startY += 14;
 
-  const grandTotalTeams = teams.map((t) => {
-    const subPts = categoryTeamPoints['Sub Junior'][t.id]?.points || 0;
-    const junPts = categoryTeamPoints['Junior'][t.id]?.points || 0;
-    const senPts = categoryTeamPoints['Senior'][t.id]?.points || 0;
-    const genPts = categoryTeamPoints['General'][t.id]?.points || 0;
+  const currentScoringRules = getScoringRules(options);
+  const currentFestConfig = options.festConfig || { festivalName: festName, tagline: festTagline, year: festYear, statusBanner: 'LIVE' as const, logoUrl: '' };
+  
+  const derivedStats = calculateDerivedTeamStats(
+    teams,
+    artsPrograms,
+    sportsMatches,
+    [],
+    currentScoringRules,
+    currentFestConfig
+  );
 
-    // Sub Grand Total of category divisions (Sub Junior + Junior + Senior)
-    const subGrandTotal = subPts + junPts + senPts;
-    // Gross total without minus points (Sub Grand Total + General)
-    const grossTotal = subGrandTotal + genPts;
-    const applySportsPenalties = options.festConfig?.applySportsPenalties ?? (options.festConfig?.applyPenaltiesToPodium ?? true);
-    const minusPoints = applySportsPenalties ? (Number(t.sportsMinusPoints) || 0) : 0;
-    const netGrandTotal = Math.max(0, grossTotal - minusPoints);
+  validateTeamTotals(derivedStats);
 
+  const grandTotalTeams = derivedStats.map((st) => {
+    const subGrandTotal = st.subJuniorPoints + st.juniorPoints + st.seniorPoints;
     return {
-      id: t.id,
-      name: t.name,
-      shortCode: t.shortCode || '',
-      subPts,
-      junPts,
-      senPts,
+      id: st.id,
+      name: st.name,
+      shortCode: st.shortCode,
+      subPts: st.subJuniorPoints,
+      junPts: st.juniorPoints,
+      senPts: st.seniorPoints,
       subGrandTotal,
-      genPts,
-      grossTotal,
-      minusPoints,
-      netGrandTotal,
-      golds: t.golds || 0,
-      silvers: t.silvers || 0,
-      bronzes: t.bronzes || 0,
+      genPts: st.generalPoints,
+      grossTotal: st.sportsPoints,
+      minusPoints: st.sportsMinusPoints,
+      netGrandTotal: Math.max(0, st.sportsPoints - st.sportsMinusPoints),
+      golds: st.golds,
+      silvers: st.silvers,
+      bronzes: st.bronzes,
     };
-  });
-
-  grandTotalTeams.sort((a, b) => {
-    if (b.netGrandTotal !== a.netGrandTotal) return b.netGrandTotal - a.netGrandTotal;
-    if (b.grossTotal !== a.grossTotal) return b.grossTotal - a.grossTotal;
-    if (b.golds !== a.golds) return b.golds - a.golds;
-    return b.silvers - a.silvers;
   });
 
   const grandHeaders = [
@@ -1402,18 +1457,27 @@ export function generateArtsResultsOnlyPDF(
       return;
     }
 
+    const isProgramPublished =
+      p.publishStatus === 'Published' ||
+      (p.status === 'COMPLETED' && p.publishStatus !== 'Draft');
+    if (!isProgramPublished && options.filterProgramId !== p.id && options.filterProgramId !== p.code) {
+      return;
+    }
+
     const isGroup = p.section === 'Group';
-    const scoringRules = INITIAL_SCORING_RULES;
+    const scoringRules = getScoringRules(options);
     const multiplier = isGroup ? scoringRules.groupEventMultiplier : 1;
 
-    const progResults = p.results || [];
+    const progResults = deduplicateProgramResults(p.results || []);
     progResults.forEach((r) => {
+      if (r.status && r.status === 'Draft') return;
+
       const part =
         (r.participantId ? participantMapById.get(r.participantId) : undefined) ||
         (r.chestNo ? participantMapByChest.get(String(r.chestNo).trim().toLowerCase()) : undefined) ||
         (r.admissionNo ? participantMapByAdm.get(String(r.admissionNo).trim().toLowerCase()) : undefined);
 
-      const effectiveTeamId = r.teamId || part?.teamId || '';
+      const effectiveTeamId = normalizeTeamId(r.teamId || part?.teamId || '', teams);
       if (
         options.filterHouseId &&
         options.filterHouseId !== 'All' &&
@@ -1425,11 +1489,11 @@ export function generateArtsResultsOnlyPDF(
       const team = teamMap.get(effectiveTeamId);
       const admissionNo = r.admissionNo || part?.admissionNo || '-';
       const participantName = r.participantName || part?.name || 'Participant';
-      const category = normalizeCategory(p.category || part?.category);
+      const category = normalizeCategory(p.category, `${p.name} ${part?.category || ''}`);
       const rankText = formatRank(r.rank, r.position);
 
       let pts = 0;
-      if (r.pointsAwarded !== undefined) {
+      if (r.pointsAwarded !== undefined && r.pointsAwarded !== null && !isNaN(Number(r.pointsAwarded))) {
         pts = Number(r.pointsAwarded);
       } else {
         if (r.rank === 1) pts += scoringRules.goldPoints;
@@ -1566,4 +1630,43 @@ export function generateArtsResultsOnlyPDF(
   const cleanFestName = festName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
   doc.save(`${cleanFestName}_arts_results_only_${dateStr.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
 }
+
+/**
+ * Fetches the latest live data from the connected Google Sheets Web App
+ * and generates the official festival results PDF with verified category and podium calculations.
+ */
+export async function generateResultsPDFFromGoogleSheets(
+  options: ExportPDFOptions = {},
+  fallbackPrograms: ArtsProgram[] = [],
+  fallbackTeams: Team[] = [],
+  fallbackParticipants: Participant[] = [],
+  customSheetUrl?: string
+): Promise<void> {
+  const url =
+    customSheetUrl ||
+    'https://script.google.com/macros/s/AKfycbwwh4ZwnwW2C98pwlgoVfN4MI3VokZjr12fO6z5BflcLrFwJoTAhyE4NSvy4JeClymp8w/exec?fresh=1&nocache=1';
+
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (Array.isArray(data.programs) || Array.isArray(data.resultsMarks))) {
+        generateResultsPDF(fallbackPrograms, fallbackTeams, fallbackParticipants, {
+          ...options,
+          googleSheetData: data,
+        });
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not reach Google Sheets API directly for PDF generation, using current synchronized app data:', err);
+  }
+
+  // Fallback to currently synced state if fetch is unavailable
+  generateResultsPDF(fallbackPrograms, fallbackTeams, fallbackParticipants, options);
+}
+
 
